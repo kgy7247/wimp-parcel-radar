@@ -111,12 +111,16 @@ lastscanned가 DHL을 포함하므로 보통은 필요하지 않습니다. DHL �
 
 ### 애드센스 (Google AdSense)
 
-1. 애드센스에서 사이트를 추가하고 `ca-pub-…` 퍼블리셔 ID를 받습니다.
-2. `public/index.html` 의 주석 처리된 스크립트를 풀고 `ca-pub-XXXXXXXXXXXXXXXX` 을 실제 ID로 바꿉니다.
-3. 광고를 넣을 자리는 `#ad-slot` 입니다. `hidden` 속성을 지우고 `<ins class="adsbygoogle" …>` 를 채우세요.
-4. 심사 필수 페이지인 **개인정보처리방침(`/privacy.html`)** 과 **이용약관(`/terms.html`)** 은 푸터에 연결되어 있습니다.
-   광고·쿠키 고지 내용은 실제 게재 시점에 맞춰 확인해 주세요.
-5. 배포 도메인이 `wimp-parcel-radar.vercel.app` 이 아니면 `public/sitemap.xml`, `robots.txt`, 각 페이지의 `canonical`/`og:url` 을 실제 도메인으로 바꿔 주세요.
+1. 애드센스에서 사이트를 추가하고 `ca-pub-…` 퍼블리셔 ID를 받습니다. 현재 `ca-pub-7205132235653329` 가 `index.html`·`guide.html`·`privacy.html`·`terms.html` 네 페이지에 모두 들어가 있습니다.
+2. 광고를 넣을 자리는 `index.html` 의 `#ad-slot` 입니다. `hidden` 속성을 지우고 `<ins class="adsbygoogle" …>` 를 채우세요. 조회 버튼·지구본 조작 버튼 바로 옆은 피하고, 조회 결과 아래나 안내 글 중간에 두는 편이 좋습니다.
+3. 심사에 필요한 **이용 안내(`/guide.html`)**, **개인정보처리방침(`/privacy.html`)**, **이용약관(`/terms.html`)** 은 푸터와 헤더에 연결되어 있습니다. 광고·쿠키 고지 내용은 실제 게재 시점에 맞춰 확인해 주세요.
+4. 배포 도메인이 `wimp-parcel-radar.vercel.app` 이 아니면 `public/sitemap.xml`, `robots.txt`, 각 페이지의 `canonical`/`og:url` 을 실제 도메인으로 바꿔 주세요.
+
+### 화면 구조 (2026-11 개편)
+
+- 헤더의 **이용 안내**는 `guide.html` 로 이동하는 링크이고, 설정 모달은 **⚙ 버튼만** 엽니다.
+- 조회 결과는 **현재 상태·도착 예정 → 마지막 확인 위치·마지막 스캔 → 3D 지구본 → 상세 이력** 순서로 배치됩니다(`#result-head` 가 `.workspace` 앞).
+- `guide.html` 은 배송 상태 뜻, 조회가 안 될 때의 5가지 이유, 해외배송 경유지, 도착 예정일 계산, FAQ 를 담은 독립 콘텐츠 페이지이며 `FAQPage` 구조화 데이터를 포함합니다.
 
 ---
 
@@ -202,12 +206,14 @@ npx vercel dev
 │   ├── style.css           # 원본 디자인 유지 + 로딩·에러·법적 링크 스타일
 │   ├── globe.min.js        # globe.gl 2.46.2 (MIT)
 │   ├── earth.jpg           # NASA Earth imagery
+│   ├── guide.html          # 이용 안내 (조회 방법·배송 상태 뜻·FAQ, AdSense용 콘텐츠)
 │   ├── privacy.html        # 개인정보처리방침
 │   ├── terms.html          # 이용약관
 │   ├── robots.txt
 │   └── sitemap.xml
 ├── test/
 │   ├── unit.mjs            # 픽스처 기반 단위 테스트
+│   ├── ui.mjs              # jsdom UI 테스트 (링크·화면 순서·콘텐츠 페이지)
 │   ├── smoke.mjs           # 실서버 스모크 테스트
 │   └── fixtures/           # 실제 응답 캡처 + 구조 기반 합성 픽스처
 ├── vercel.json

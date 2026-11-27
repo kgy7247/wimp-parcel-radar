@@ -53,7 +53,7 @@ const strings = {
     progress: '배송 진행 상황', international: '국제 운송 중', domestic: '국내 배송 중',
     notice: '인천 사전 통관 정보는 실제 도착을 의미하지 않습니다.', route: '국가별 이동 경로',
     footer: 'GPS 실시간 위치가 아닌 배송사 스캔 위치입니다.', settings: '글로벌 설정',
-    settingNote: '일회성 조회입니다. 송장번호와 조회 결과를 저장하지 않습니다.',
+    settingNote: '화면 설정과 자동 갱신만 다루는 창입니다. 송장번호와 조회 결과는 저장하지 않습니다.',
     auto: '자동 갱신',
     apiNote: '실시간 조회는 택배사가 남긴 스캔 정보를 그대로 보여줍니다. 조회 결과는 15분 동안 캐시됩니다.',
     privacy: '새로고침하거나 창을 닫으면 입력한 정보가 사라집니다.',
@@ -87,7 +87,14 @@ const strings = {
     openSite: '택배사 사이트에서 보기', again: '다시 조회', empty: '송장번호를 입력하면 배송 이력이 표시됩니다.',
     idle: '송장번호를 입력하면 배송 여정이 여기에 표시됩니다.', idleBadge: '대기',
     updated: '최종 갱신', events: '건', sampleNote: '예시 데이터 · 실제 조회가 아닙니다', liveNote: '택배사 스캔 기준',
-    privacyLink: '개인정보처리방침', termsLink: '이용약관', noKey: 'DHL 키 없이 예시로 보기', routeDomestic: '국내 이동 경로', notYet: '조회 전'
+    privacyLink: '개인정보처리방침', termsLink: '이용약관', noKey: 'DHL 키 없이 예시로 보기', routeDomestic: '국내 이동 경로', notYet: '조회 전',
+    currentStatus: '현재 배송 상태', lastScan: '마지막 스캔', noTime: '스캔 시각 미확인', historyFoot: '최신 스캔이 가장 위에 표시됩니다',
+    openGuide: '이용 안내 · 조회 방법과 오류 해결 보기 →',
+    guideTitle: '배송 상태가 헷갈릴 때',
+    guideLead: '“통관 중”이 멈췄는지, 송장번호가 왜 조회되지 않는지 — 해외배송 스캔 문구의 뜻과 해결법을 한 페이지에 정리했습니다.',
+    guideAll: '이용 안내 전체 보기 →', guideStatus: 'DHL·FedEx·UPS·알리 배송 상태 뜻',
+    guideNotFound: '송장번호가 조회되지 않는 5가지 이유', guideRoute: '해외배송 경유지 이해하기',
+    guideEdd: '도착 예정일은 어떻게 계산되나', guideFaq: '자주 묻는 질문'
   },
   en: {
     dashboard: 'Track a parcel', shipments: 'How it works', demo: 'SAMPLE DATA', live: 'LIVE',
@@ -99,7 +106,7 @@ const strings = {
     progress: 'Delivery progress', international: 'International transit', domestic: 'Domestic delivery',
     notice: 'Pre-clearance in Incheon does not mean the parcel has arrived.', route: 'Across borders',
     footer: 'Locations reflect carrier scans, not live GPS.', settings: 'Global settings',
-    settingNote: 'One-time lookup. Tracking numbers and results are not saved.',
+    settingNote: 'This window only holds display settings and auto-refresh. Tracking numbers and results are not saved.',
     auto: 'Auto refresh',
     apiNote: 'Live results show the scans your carrier recorded. Each lookup is cached for 15 minutes.',
     privacy: 'Refreshing or closing this page clears your input.',
@@ -133,7 +140,14 @@ const strings = {
     openSite: 'Open the carrier site', again: 'Try again', empty: 'Enter a tracking number to see its journey.',
     idle: 'Enter a tracking number and its journey appears here.', idleBadge: 'Idle',
     updated: 'Updated', events: 'events', sampleNote: 'Sample data · not a live lookup', liveNote: 'Based on carrier scans',
-    privacyLink: 'Privacy', termsLink: 'Terms', noKey: 'See the sample without a DHL key', routeDomestic: 'Domestic route', notYet: 'Not looked up yet'
+    privacyLink: 'Privacy', termsLink: 'Terms', noKey: 'See the sample without a DHL key', routeDomestic: 'Domestic route', notYet: 'Not looked up yet',
+    currentStatus: 'Current status', lastScan: 'Last scan', noTime: 'No scan time yet', historyFoot: 'Newest scan is shown first',
+    openGuide: 'Guide · how to look up a parcel and fix errors →',
+    guideTitle: 'When a tracking status makes no sense',
+    guideLead: 'Whether “customs clearance” is stuck, or why a tracking number returns nothing — what each overseas scan line means and what to do, on one page.',
+    guideAll: 'Read the full guide →', guideStatus: 'DHL · FedEx · UPS · AliExpress status meanings',
+    guideNotFound: 'Five reasons a tracking number returns nothing', guideRoute: 'How an overseas route is structured',
+    guideEdd: 'How the estimated delivery date is worked out', guideFaq: 'Frequently asked questions'
   },
   ja: {
     dashboard: '荷物追跡', shipments: '使い方', demo: 'サンプル', live: 'リアルタイム',
@@ -145,7 +159,7 @@ const strings = {
     progress: '配送状況', international: '国際輸送中', domestic: '国内配送中',
     notice: '仁川の事前通関情報は、実際の到着を意味しません。', route: '国別の経路',
     footer: '位置は配送スキャンに基づき、リアルタイムGPSではありません。', settings: 'グローバル設定',
-    settingNote: '一度きりの検索です。追跡番号と結果は保存されません。',
+    settingNote: 'この画面は表示設定と自動更新のみを扱います。追跡番号と結果は保存されません。',
     auto: '自動更新',
     apiNote: '実際の追跡結果は配送会社のスキャン情報です。結果は15分間キャッシュされます。',
     privacy: '再読み込みやタブを閉じると入力情報は消えます。',
@@ -179,7 +193,14 @@ const strings = {
     openSite: '配送会社サイトを開く', again: '再検索', empty: '追跡番号を入力すると配送履歴が表示されます。',
     idle: '追跡番号を入力すると、配送の旅がここに表示されます。', idleBadge: '待機中',
     updated: '最終更新', events: '件', sampleNote: 'サンプルデータ・実際の照会ではありません', liveNote: '配送会社スキャン基準',
-    privacyLink: 'プライバシー', termsLink: '利用規約', noKey: 'DHLキーなしでサンプルを見る', routeDomestic: '国内の経路', notYet: '照会前'
+    privacyLink: 'プライバシー', termsLink: '利用規約', noKey: 'DHLキーなしでサンプルを見る', routeDomestic: '国内の経路', notYet: '照会前',
+    currentStatus: '現在の配送状況', lastScan: '最終スキャン', noTime: 'スキャン時刻なし', historyFoot: '最新のスキャンが上に表示されます',
+    openGuide: '使い方ガイド・照会方法とエラー対処 →',
+    guideTitle: '配送状況の表示がわからないとき',
+    guideLead: '「通関中」が止まっているのか、追跡番号がなぜ照会できないのか — 海外配送のスキャン文言の意味と対処法を1ページにまとめました。',
+    guideAll: 'ガイドをすべて見る →', guideStatus: 'DHL・FedEx・UPS・AliExpressの状況の意味',
+    guideNotFound: '追跡番号が照会できない5つの理由', guideRoute: '海外配送の経由地を理解する',
+    guideEdd: '配達予定日の計算方法', guideFaq: 'よくある質問'
   }
 };
 
@@ -251,6 +272,17 @@ function clockNow() {
 
 function statusLabel(code) {
   return t().status[code] || t().status.UNKNOWN;
+}
+
+/* The newest event that carries a time — shown in the status strip before the globe. */
+function latestEvent(view) {
+  if (!view || !view.events || !view.events.length) return null;
+  let best = null;
+  for (const ev of view.events) {
+    if (!ev.time || Number.isNaN(Date.parse(ev.time))) continue;
+    if (!best || Date.parse(ev.time) > Date.parse(best.time)) best = ev;
+  }
+  return best || view.events[view.events.length - 1] || null;
 }
 
 function buildDataset(api, demo) {
@@ -882,7 +914,9 @@ function renderMapStatus() {
   const s = t();
   const view = state.view;
   const statusBox = $('.map-status');
-  statusBox.style.display = view || state.error ? 'flex' : 'none';
+  // The status strip stays in place so the three facts keep their order
+  // (status → last location → last scan) whether or not a parcel is loaded.
+  statusBox.classList.toggle('is-idle', !view && !state.error);
   const idleNote = $('#idle-note');
   if (idleNote) idleNote.hidden = Boolean(view || state.error || state.loading);
   if (state.error) {
@@ -896,6 +930,13 @@ function renderMapStatus() {
     $('.map-status .code').textContent = '—';
   }
   $('.map-status').classList.toggle('is-error', Boolean(state.error));
+
+  const lastTime = $('#last-time');
+  if (lastTime) {
+    const latest = view ? latestEvent(view) : null;
+    const when = latest ? formatTime(latest.time) : '';
+    lastTime.textContent = when || (view ? s.noTime : '—');
+  }
 
   const updated = $('#updated');
   if (state.error) {
@@ -1032,7 +1073,8 @@ if (numberField) {
   });
 }
 
-$('#settings').onclick = $('#saved').onclick = $('#notify').onclick = () => $('#modal').showModal();
+$('#settings').onclick = () => $('#modal').showModal();
+/* “이용 안내” and “조회 안내” are links to /guide.html — they must not open the settings dialog. */
 $('#refresh').onclick = () => {
   if (!state.number) { toast(t().empty); return; }
   lookup(state.number, state.carrier);

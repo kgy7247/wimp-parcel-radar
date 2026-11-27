@@ -4,12 +4,17 @@
   "private": true,
   "description": "WIMP — Where Is My Parcel? 실시간 택배 배송조회 (3D 지구본 + Vercel serverless API)",
   "scripts": {
-    "test": "node test/unit.mjs",
+    "test": "node test/unit.mjs && node test/ui.mjs",
+    "test:unit": "node test/unit.mjs",
+    "test:ui": "node test/ui.mjs",
     "test:live": "node test/smoke.mjs",
     "check": "node --check api/track.js && node --check public/app.js"
   },
   "engines": {
     "node": ">=20"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
 }

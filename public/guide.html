@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d13">
+<title>이용 안내 — 배송 조회 방법과 배송 상태 뜻 정리 · WIMP</title>
+<meta name="description" content="WIMP 이용 안내. 송장번호로 국내·해외 배송을 조회하는 방법, 지원 택배사, DHL·FedEx·UPS·알리익스프레스(Cainiao) 배송 상태 문구의 뜻, 송장번호가 조회되지 않는 5가지 이유와 해결법, 해외배송 경유지 구조, 도착 예정일 계산 방식, 자주 묻는 질문을 한 페이지에 정리했습니다.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.wimp911.com/guide.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="WIMP — Where Is My Parcel?">
+<meta property="og:title" content="이용 안내 — 배송 조회 방법과 배송 상태 뜻 정리">
+<meta property="og:description" content="조회 방법, 지원 택배사, 배송 상태 문구의 뜻, 조회가 안 될 때의 해결 순서, 해외배송 경유지, FAQ까지 한 페이지에.">
+<meta property="og:url" content="https://www.wimp911.com/guide.html">
+<meta property="og:image" content="https://www.wimp911.com/og-cover.png">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="WIMP 이용 안내 — 배송 상태 뜻과 조회 방법">
+<meta name="twitter:description" content="DHL·FedEx·UPS·알리 배송 상태 뜻, 조회가 안 될 때의 5가지 이유, 해외배송 경유지 구조.">
+<meta name="twitter:image" content="https://www.wimp911.com/og-cover.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080d13'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23b7f373' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23b7f373'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7205132235653329" crossorigin="anonymous"></script>
+<style>
+  .guide{max-width:900px;margin:0 auto;padding:34px 4% 70px}
+  .guide .lead{font-size:14.5px;color:#a9b8c7;line-height:1.95;margin:14px 0 0}
+  .guide h1{font-size:27px;letter-spacing:-.7px;margin:10px 0 0}
+  .guide h2{font-size:19px;margin:48px 0 6px;color:#eef4f8;letter-spacing:-.3px}
+  .guide h3{font-size:14.5px;margin:24px 0 6px;color:#dfe8f0}
+  .guide p,.guide li{color:#a3b2c1;font-size:13.5px;line-height:1.95}
+  .guide p{margin:8px 0}
+  .guide ul,.guide ol{padding-left:20px;margin:8px 0}
+  .guide li{margin:4px 0}
+  .guide a{color:var(--accent)}
+  .guide strong{color:#e4edf4}
+  .guide .meta{font-size:12px;color:#6d7c8d;margin:10px 0 0}
+  .guide .top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+  .guide .top a.home{font-size:15px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:1px}
+  .guide .top .back{font-weight:400;color:#8b98a8;font-size:12px;text-decoration:none;margin-left:14px}
+  .guide .top .back:hover{color:var(--accent)}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 0}
+  .toc a{font-size:12px;color:#c3d2e0;text-decoration:none;border:1px solid #2b3745;border-radius:999px;padding:7px 13px;background:#101923}
+  .toc a:hover{color:var(--accent);border-color:#4a6136}
+  .guide table{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:12.5px}
+  .guide th,.guide td{border:1px solid var(--line);padding:9px 11px;text-align:left;color:#a3b2c1;vertical-align:top;line-height:1.7}
+  .guide th{background:#111923;color:#cfd9e4;font-weight:600}
+  .guide tbody tr:nth-child(odd) td{background:#0c131b}
+  .guide .box{border:1px solid #344434;background:#101b16;border-radius:8px;padding:14px 16px;margin:18px 0}
+  .guide .box p{margin:0;color:#c6dcc9;font-size:13px}
+  .guide .warn{border-color:#4b4130;background:#1a1710}
+  .guide .warn p{color:#e2d3b3}
+  .guide .steps{display:grid;gap:12px;margin:18px 0 0;counter-reset:gs}
+  .guide .steps li{list-style:none;position:relative;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:14px 16px 14px 52px;margin:0}
+  .guide .steps li:before{counter-increment:gs;content:counter(gs);position:absolute;left:16px;top:14px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#1d2b1a;color:var(--accent);font-size:12px;font-weight:700;border:1px solid #4a6136}
+  .guide .steps b{color:#e8f0f6;display:block;margin-bottom:3px;font-size:13.5px}
+  .guide details{border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:14px 16px;margin:10px 0}
+  .guide details summary{cursor:pointer;color:#e6eef6;font-size:13.5px;font-weight:600;list-style:none}
+  .guide details summary::-webkit-details-marker{display:none}
+  .guide details summary:before{content:'＋';color:var(--accent);margin-right:9px;font-weight:400}
+  .guide details[open] summary:before{content:'−'}
+  .guide details p{margin:10px 0 0;font-size:13px}
+  .guide .anchor{scroll-margin-top:80px}
+  .guide hr{border:0;border-top:1px solid var(--line);margin:46px 0 10px}
+  .guide .en h2,.guide .ja h2{margin-top:34px}
+  .guide .cta{display:inline-block;margin:22px 0 0;background:var(--accent);color:#182310;border-radius:6px;padding:13px 22px;font-weight:700;text-decoration:none;font-size:13.5px}
+  .guide .cta:hover{background:#ccff91;color:#000}
+  @media(max-width:760px){header{gap:10px}header .brand-caption{display:none}header .guide-cta{font-size:12px;padding:9px 12px}.guide{padding:24px 4% 60px}.guide h1{font-size:22px}.guide h2{font-size:17px;margin-top:38px}.guide table{font-size:11.5px}.guide th,.guide td{padding:7px 8px}}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://www.wimp911.com/guide.html#page",
+      "url": "https://www.wimp911.com/guide.html",
+      "name": "이용 안내 — 배송 조회 방법과 배송 상태 뜻 정리",
+      "description": "WIMP 이용 안내. 송장번호로 국내·해외 배송을 조회하는 방법, 지원 택배사, 해외배송 상태 문구의 뜻, 조회가 되지 않을 때의 해결법, 도착 예정일 계산 방식, 자주 묻는 질문.",
+      "inLanguage": "ko",
+      "isPartOf": { "@type": "WebSite", "name": "WIMP — Where Is My Parcel?", "url": "https://www.wimp911.com/" },
+      "datePublished": "2026-11-28",
+      "dateModified": "2026-11-28",
+      "publisher": { "@type": "Organization", "name": "WIMP", "url": "https://www.wimp911.com/" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "WIMP 배송 조회", "item": "https://www.wimp911.com/" },
+        { "@type": "ListItem", "position": 2, "name": "이용 안내", "item": "https://www.wimp911.com/guide.html" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "WIMP 배송 조회는 무료인가요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "무료입니다. 회원가입이나 로그인 없이 송장번호만 입력하면 조회됩니다. 서비스 운영 비용은 페이지에 표시되는 광고로 충당합니다." }
+        },
+        {
+          "@type": "Question",
+          "name": "운송장 번호가 서버에 저장되나요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "저장하지 않습니다. 데이터베이스가 없고, 조회 결과는 같은 번호를 다시 조회할 때 택배사 호출을 줄이기 위해 서버 메모리에 최대 15분간만 임시 보관된 뒤 폐기됩니다. 브라우저에도 쿠키나 로컬 스토리지를 사용하지 않습니다." }
+        },
+        {
+          "@type": "Question",
+          "name": "택배사 앱과 조회 결과가 다른 이유는 무엇인가요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "택배사가 스캔을 등록하는 시점과 서비스가 조회하는 시점이 다르고, 같은 번호의 응답을 최대 15분간 캐시하기 때문입니다. 최신 스캔이 필요하면 조회 화면의 새로고침 버튼을 누르거나 잠시 뒤 다시 조회하세요." }
+        },
+        {
+          "@type": "Question",
+          "name": "지구본에 표시되는 위치는 실시간 GPS인가요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "아닙니다. 택배사가 스캔한 집하·허브·배송출발 지점을 좌표로 바꿔 보여주는 것이며, 차량의 실시간 위치가 아닙니다. 그래서 배송 중간에는 위치가 몇 시간씩 그대로일 수 있습니다." }
+        },
+        {
+          "@type": "Question",
+          "name": "알리익스프레스 배송이 조회되지 않아요.",
+          "acceptedAnswer": { "@type": "Answer", "text": "알리익스프레스는 Cainiao 번호로 조회하고, 국내에 인계되면 CJ대한통운이나 우체국 등 국내 택배사 번호가 새로 생기는 경우가 많습니다. 주문 상세의 국내 송장번호를 확인해 그 번호로 조회해 보세요." }
+        },
+        {
+          "@type": "Question",
+          "name": "도착 예정일은 어떻게 계산하나요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "택배사가 제공한 예상 도착일을 한국 시간 기준 날짜로 바꿔 표시합니다. 택배사가 예상일을 주지 않으면 임의로 추정하지 않고 표시하지 않으며, 배송이 완료되면 숨깁니다." }
+        },
+        {
+          "@type": "Question",
+          "name": "어떤 택배사까지 조회할 수 있나요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "CJ대한통운, 우체국택배, 한진택배, 롯데택배, 로젠택배, 일양택배, DHL, FedEx, UPS, USPS, 알리익스프레스(Cainiao), 우체국 EMS, 윈익스프레스와 그 밖의 전 세계 550개 이상 택배사를 조회할 수 있습니다." }
+        },
+        {
+          "@type": "Question",
+          "name": "모바일에서도 사용할 수 있나요?",
+          "acceptedAnswer": { "@type": "Answer", "text": "설치 없이 휴대폰 브라우저에서 바로 조회됩니다. 화면 폭이 좁으면 현재 배송 상태와 마지막 확인 위치가 먼저 보이고, 그 아래로 3D 지구본과 상세 이력이 이어집니다." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<header>
+  <a class="brand" href="./"><span class="logo">◉</span> WIMP<span class="brand-caption">/ parcel tracker</span></a>
+  <nav><a href="./">배송 조회</a><a class="active" href="guide.html">이용 안내</a></nav>
+  <div class="header-right">
+    <a class="guide-cta" href="./">송장번호로 조회하기 →</a>
+  </div>
+</header>
+
+<main class="guide">
+  <div class="top">
+    <a class="home" href="./">◉ WIMP <span class="muted">/ parcel tracker</span></a>
+    <span>
+      <a class="back" href="./">← 조회 화면</a>
+      <a class="back" href="privacy.html">개인정보처리방침</a>
+      <a class="back" href="terms.html">이용약관</a>
+    </span>
+  </div>
+
+  <span class="eyebrow">HOW WIMP WORKS</span>
+  <h1>이용 안내 — 조회 방법부터 배송 상태 문구의 뜻까지</h1>
+  <p class="meta">최종 수정 2026년 11월 28일 · 읽는 시간 약 8분</p>
+  <p class="lead">송장번호를 넣었는데 “조회된 배송 정보가 없습니다”가 나오거나, DHL 화면의 <em>Customs clearance</em>가 사흘째 그대로일 때 무엇을 확인해야 하는지 정리했습니다. 조회 방법 → 지원 택배사 → 배송 상태 뜻 → 조회가 안 될 때 → 해외배송 경유지 → 도착 예정일 → 자주 묻는 질문 순서로 읽으면 됩니다.</p>
+
+  <nav class="toc" aria-label="목차">
+    <a href="#how">조회 방법</a>
+    <a href="#carriers">지원 택배사</a>
+    <a href="#status">배송 상태 뜻</a>
+    <a href="#not-found">조회가 안 될 때</a>
+    <a href="#route">해외배송 경유지</a>
+    <a href="#edd">도착 예정일</a>
+    <a href="#privacy">개인정보</a>
+    <a href="#faq">자주 묻는 질문</a>
+  </nav>
+
+  <h2 id="how" class="anchor">1. 송장번호로 배송 조회하는 방법</h2>
+  <p>WIMP는 운송장 번호만 있으면 됩니다. 회원가입도, 앱 설치도, 별도 결제도 없습니다. 조회는 세 단계입니다.</p>
+  <ol class="steps">
+    <li><b>운송장 번호를 그대로 입력</b>문자나 주문내역에서 복사한 번호에 하이픈·공백·한글이 섞여 있어도 영문과 숫자만 남기고 자동으로 정리됩니다. 대문자·소문자 구분도 하지 않습니다.</li>
+    <li><b>택배사를 모르면 “배송사 자동 인식”</b>번호 자릿수와 형식을 보고 조회할 택배사를 먼저 좁힙니다. 자동 인식이 다른 회사를 먼저 조회해 헛걸음하는 경우가 있으니, 택배사를 아는 경우에는 목록에서 직접 고르는 편이 빠릅니다.</li>
+    <li><b>결과는 상태 → 위치 → 경로 순서로</b>화면 맨 위에서 현재 배송 상태와 도착 예정일을, 그 옆에서 마지막 확인 위치와 마지막 스캔 시각을 먼저 보여줍니다. 그 아래(모바일에서는 아래, 넓은 화면에서는 옆)에 3D 지구본 경로와 상세 스캔 이력이 이어집니다.</li>
+  </ol>
+
+  <h3>번호 형식별 자동 인식 순서</h3>
+  <table>
+    <thead>
+      <tr><th>번호 형식</th><th>먼저 조회하는 택배사</th><th>그래도 안 되면</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>숫자 13자리</td><td>우체국택배</td><td>전 세계 택배사 자동 인식</td></tr>
+      <tr><td>숫자 14자리</td><td>한진택배</td><td>전 세계 택배사 자동 인식</td></tr>
+      <tr><td>숫자 10자리</td><td>CJ대한통운</td><td>전 세계 택배사 자동 인식</td></tr>
+      <tr><td>숫자 12자리</td><td>CJ대한통운 → 롯데택배 → 한진택배</td><td>전 세계 택배사 자동 인식</td></tr>
+      <tr><td>숫자 11자리</td><td>롯데택배</td><td>전 세계 택배사 자동 인식</td></tr>
+      <tr><td>그 밖의 숫자 9자리 이상</td><td>CJ·우체국·한진·롯데 순차 조회</td><td>전 세계 택배사 자동 인식</td></tr>
+      <tr><td><code>1Z</code> + 영문·숫자 16자리</td><td>UPS</td><td>—</td></tr>
+      <tr><td>그 밖의 영문+숫자 (LP·LZ·YT 등)</td><td>전 세계 550개 이상 택배사 자동 인식</td><td>택배사를 직접 선택</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">같은 12자리 숫자라도 실제로는 로젠·일양 등 다른 회사 번호일 수 있습니다. 국내 번호는 <strong>택배사를 직접 선택</strong>하는 것이 가장 정확합니다.</p>
+
+  <h2 id="carriers" class="anchor">2. 지원 택배사</h2>
+  <p>국내 택배사는 공개 조회 화면에서 직접 가져오고, 해외 택배사와 나머지 국내 택배사는 전 세계 택배사 조회를 중계하는 서비스를 통해 조회합니다. 조회 방식이 달라도 화면에 표시되는 상태·경로·이력의 형식은 같습니다.</p>
+  <table>
+    <thead>
+      <tr><th>구분</th><th>택배사</th><th>바로가기</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>국내 (직접 조회)</td><td>CJ대한통운, 우체국택배, 한진택배, 롯데택배</td><td><a href="https://www.cjlogistics.com/ko/tool/parcel/tracking" target="_blank" rel="noopener">CJ</a> · <a href="https://service.epost.go.kr/trace.RetrieveDomRigiTraceList.comm" target="_blank" rel="noopener">우체국</a> · <a href="https://www.hanjin.com/kor/CMS/DeliveryMgr/WaybillResult.do?mCode=MN038" target="_blank" rel="noopener">한진</a> · <a href="https://www.lotteglogis.com/home/reservation/tracking/index" target="_blank" rel="noopener">롯데</a></td></tr>
+      <tr><td>국내 (중계 조회)</td><td>로젠택배, 일양택배, 우체국 EMS, 그 밖의 국내 사업자</td><td><a href="https://www.ilogen.com/web/personal/trace" target="_blank" rel="noopener">로젠</a> · <a href="https://www.ilyanglogis.com/waybill_search" target="_blank" rel="noopener">일양</a></td></tr>
+      <tr><td>해외</td><td>DHL, FedEx, UPS, USPS, 알리익스프레스(Cainiao), 윈익스프레스</td><td><a href="https://www.dhl.com/kr-ko/home/tracking.html" target="_blank" rel="noopener">DHL</a> · <a href="https://www.fedex.com/fedextrack/" target="_blank" rel="noopener">FedEx</a> · <a href="https://www.ups.com/track" target="_blank" rel="noopener">UPS</a> · <a href="https://tools.usps.com/go/TrackConfirmAction_input" target="_blank" rel="noopener">USPS</a> · <a href="https://global.cainiao.com/" target="_blank" rel="noopener">Cainiao</a></td></tr>
+      <tr><td>그 밖의 전 세계</td><td>550개 이상 택배사 자동 인식</td><td>택배사 이름을 알면 “기타 글로벌”을 선택</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="status" class="anchor">3. DHL·FedEx·UPS·알리 배송 상태 뜻 완벽 정리</h2>
+  <p>해외배송 조회에서 가장 답답한 순간은 영어 스캔 문구가 며칠씩 그대로일 때입니다. 대부분은 사고가 아니라 <strong>같은 단계 안에서 스캔이 반복되는 구간</strong>입니다. WIMP는 모든 택배사의 스캔을 다음 7가지 상태로 묶어서 보여줍니다.</p>
+
+  <table>
+    <thead>
+      <tr><th>WIMP 표시</th><th>뜻</th><th>이때 할 일</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>접수 (Label created)</td><td>판매처가 송장만 발급하고 상품은 아직 택배사에 넘기지 않은 상태</td><td>24~72시간 지켜봅니다. 3일이 지나도 그대로면 판매처에 출고 여부를 문의하세요.</td></tr>
+      <tr><td>집하 (Picked up / Collected)</td><td>택배사가 상품을 인수하고 첫 스캔을 남긴 상태</td><td>정상입니다. 이후 허브 이동 스캔까지 반나절~하루 걸릴 수 있습니다.</td></tr>
+      <tr><td>이동 중 (In transit)</td><td>허브·공항·간선 차량을 거쳐 이동하는 상태</td><td>가장 오래 머무는 단계입니다. 위치가 하루 이상 같아도 대부분 정상입니다.</td></tr>
+      <tr><td>통관 중 (Customs clearance)</td><td>세관 심사·서류 확인·관부가세 안내 단계</td><td>“사전 통관 정보 접수”는 도착이 아닙니다. 실제 보류 통지가 오면 관세청 유니패스나 택배사 안내를 확인하세요.</td></tr>
+      <tr><td>배송 출발 (Out for delivery)</td><td>배송 기사에게 인계되어 당일 배달 예정</td><td>부재 시 재방문 안내가 남습니다. 문자 알림을 확인하세요.</td></tr>
+      <tr><td>배달 완료 (Delivered)</td><td>수령 완료. 경비실·무인함 보관도 완료로 처리됩니다</td><td>문 앞에 없다면 경비실·택배함·이웃을 먼저 확인하세요.</td></tr>
+      <tr><td>예외·반송 (Exception / Returned)</td><td>주소 불명, 부재 반복, 파손, 통관 거절, 수취 거부 등</td><td>택배사 고객센터나 판매처에 사유를 확인해야 합니다. 스캔에 사유가 함께 표시됩니다.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>택배사별 실제 표기</h3>
+  <table>
+    <thead>
+      <tr><th>택배사</th><th>화면에 보이는 문구</th><th>읽는 법</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>DHL</td>
+        <td>Shipment information received · Processed at LEIPZIG - HUB · Customs clearance status updated · With delivery courier · Delivered</td>
+        <td>“Processed at ○○ - HUB”는 허브에서 분류를 마쳤다는 뜻입니다. “Customs clearance status updated”는 통관 서류가 갱신된 것으로, 통과·보류 어느 쪽도 아닐 수 있어 다음 스캔을 봐야 합니다.</td>
+      </tr>
+      <tr>
+        <td>FedEx</td>
+        <td>Shipment information sent to FedEx · Picked up · At local FedEx facility · In transit · Customs clearance in progress · On FedEx vehicle for delivery · Delivered</td>
+        <td>“At local FedEx facility”는 도착지 근처 허브 도착이며 아직 배송 출발이 아닙니다. 통관 관련 문구는 “Clearance delay”처럼 지연이 명시될 때만 문제로 보면 됩니다.</td>
+      </tr>
+      <tr>
+        <td>UPS</td>
+        <td>Label Created · Pickup Scan · Origin Scan · Arrived at Facility · Departed from Facility · Import Scan · Out For Delivery · Delivered</td>
+        <td>“Import Scan”은 수입 통관 절차를 거친 스캔입니다. 같은 시각의 “Arrived/Departed” 쌍은 허브를 지나간 기록이라 위치가 크게 바뀌지 않습니다.</td>
+      </tr>
+      <tr>
+        <td>알리익스프레스 (Cainiao)</td>
+        <td>주문 접수 · 판매자 발송 · 중국 허브 도착 · 항공편 탑재 · 한국 도착 · 통관 완료 · 국내 택배사 인계 · 배송 완료</td>
+        <td>중국어·영어가 섞여 표시될 수 있습니다. “국내 택배사 인계(Handed over to local carrier)” 뒤에는 CJ·우체국 등 <strong>다른 송장번호</strong>로 조회해야 하는 경우가 많습니다.</td>
+      </tr>
+      <tr>
+        <td>USPS / EMS</td>
+        <td>Accepted · In Transit to Next Facility · Arrived at USPS Regional Facility · Processed Through Facility · Out for Delivery</td>
+        <td>국제우편은 출발국 스캔과 도착국 스캔 사이에 며칠~2주 공백이 정상입니다. EMS는 우체국 홈페이지에서 국내 구간을 이어서 볼 수 있습니다.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="box">
+    <p><strong>핵심:</strong> “통관 중”, “허브 도착”, “항공편 탑재”는 모두 <em>정상 진행 중</em>이라는 뜻입니다. 진짜 확인이 필요한 신호는 <strong>Exception(예외)</strong>, <strong>Clearance delay(통관 지연)</strong>, <strong>Returned to sender(반송)</strong>, <strong>Delivery attempted(배달 시도 실패)</strong>처럼 사유가 함께 적히는 문구입니다.</p>
+  </div>
+
+  <h2 id="not-found" class="anchor">4. 송장번호가 조회되지 않는 5가지 이유와 해결법</h2>
+  <p>“조회된 배송 정보가 없습니다”는 대부분 번호가 틀렸거나, 택배사가 아직 그 번호로 스캔을 남기지 않은 경우입니다. 아래 순서대로 확인하면 대개 5분 안에 원인을 찾을 수 있습니다.</p>
+
+  <h3>① 집화 전 — 송장만 만들어진 상태</h3>
+  <p>판매처가 송장을 미리 발급하고 실제 출고는 나중에 하는 경우입니다. 국내 쇼핑몰은 출고 다음 날, 해외 구매대행은 결제 후 3~7일 뒤에야 첫 스캔이 생기기도 합니다. <strong>해결:</strong> 판매처의 출고 예정일을 확인하고 24~72시간 뒤 다시 조회하세요.</p>
+
+  <h3>② 하이픈·공백·비슷한 글자 오타</h3>
+  <p>문자로 받은 번호에는 하이픈과 공백이 섞여 있고, OCR로 옮긴 번호는 <code>0</code>과 <code>O</code>, <code>1</code>과 <code>I</code>, <code>8</code>과 <code>B</code>가 바뀌어 있기 쉽습니다. WIMP는 하이픈·공백·한글을 자동으로 지우지만, 잘못 옮겨 적힌 글자 자체는 고쳐 주지 못합니다. <strong>해결:</strong> 주문내역의 원본 번호를 복사해 붙여넣으세요.</p>
+
+  <h3>③ 국내 12자리 번호인데 다른 택배사를 먼저 조회</h3>
+  <p>12자리 숫자는 CJ·롯데·한진이 모두 쓰는 형식이라 자동 인식이 순서대로 확인합니다. 로젠·일양처럼 다른 회사 번호라면 자동 인식이 끝까지 가지 못할 수 있습니다. <strong>해결:</strong> 택배사를 목록에서 직접 선택해 조회하세요.</p>
+
+  <h3>④ 통관·허브 단계에서 스캔 누락</h3>
+  <p>해외배송은 출발국 출고와 도착국 통관 사이에 스캔이 비는 구간이 있습니다. 항공편이 뜬 뒤 착륙할 때까지, 혹은 세관 서류 확인 중에는 새 스캔이 없습니다. <strong>해결:</strong> 3~5일은 정상 범위로 보고, 그 뒤에도 변화가 없으면 택배사 고객센터에 송장번호로 문의하세요. 국제우편은 우체국 EMS 조회에서 도착국 구간을 함께 볼 수 있습니다.</p>
+
+  <h3>⑤ 취소·반송되었거나 재사용된 번호</h3>
+  <p>주문이 취소되었거나 반송이 끝난 송장은 조회 결과가 비어 있거나 “취소” 안내만 나옵니다. 오래된 송장번호를 재사용하는 경우에도 마찬가지입니다. <strong>해결:</strong> 판매처에 주문 상태를 확인하고 새 송장번호를 받으세요.</p>
+
+  <div class="box warn">
+    <p><strong>그래도 안 되면:</strong> 택배사 조회 서버가 잠시 응답하지 않거나 요청이 몰려 조회가 제한될 수 있습니다. 1분 뒤 다시 시도하고, 계속되면 택배사 공식 앱이나 홈페이지에서 같은 번호로 확인해 보세요. WIMP는 택배사가 응답하지 않을 때 <strong>결과를 지어내지 않고</strong> 오류와 해결 안내를 표시합니다.</p>
+  </div>
+
+  <h2 id="route" class="anchor">5. 해외배송 경유지 이해하기</h2>
+  <p>해외배송은 한 번에 한국으로 오지 않습니다. 원산지 허브 → 항공 이동 → 인천국제공항 세관 통관 → 국내 인계의 네 구간을 거치고, 각 구간마다 스캔의 성격이 다릅니다. 지구본에 찍히는 점은 <strong>택배사가 스캔한 지점</strong>이고, 점을 잇는 초록색 선은 확인된 경로, 점선은 예정 경로입니다.</p>
+  <table>
+    <thead>
+      <tr><th>구간</th><th>표시되는 스캔</th><th>보통 걸리는 시간</th><th>확인할 것</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>① 원산지 허브</td><td>출발지 집화, 원산지 허브 도착·출발 (예: Shenzhen, Istanbul, Leipzig)</td><td>1~3일</td><td>판매처 출고 여부</td></tr>
+      <tr><td>② 항공 이동</td><td>Departed origin country, Flight departed / arrived</td><td>1~5일 (직항·경유에 따라)</td><td>출발 스캔 이후 며칠 공백은 정상</td></tr>
+      <tr><td>③ 인천 도착·통관</td><td>Arrived at destination country, 사전 통관 정보 접수, 통관 완료</td><td>1~7일 (서류·물량에 따라)</td><td>“사전 통관 정보 접수”는 실제 도착이 아님</td></tr>
+      <tr><td>④ 국내 인계·배송</td><td>국내 택배사 인계, 간선 상차·하차, 배송 출발, 배달 완료</td><td>1~3일</td><td>국내 택배사 송장번호가 따로 생길 수 있음</td></tr>
+    </tbody>
+  </table>
+  <p>관부가세가 붙는 물품은 ③ 구간에서 안내가 오래 걸릴 수 있습니다. 면세 한도와 과세 기준은 출발 국가·품목·규정 개정에 따라 달라지므로, 결제 전 관세청 <strong>유니패스</strong>의 목록통관 안내나 판매처의 관부가세 안내를 확인하는 편이 정확합니다.</p>
+
+  <h2 id="edd" class="anchor">6. 도착 예정일(EDD)은 어떻게 계산되나</h2>
+  <p>화면 위쪽에 표시되는 “도착 예정 · 12월 3일”은 WIMP가 임의로 계산한 값이 아니라 <strong>택배사가 제공한 예상 도착일</strong>을 한국 시간 기준 날짜로 바꾼 것입니다.</p>
+  <ul>
+    <li>택배사가 예상일을 주지 않으면 표시하지 않습니다. 추정해서 채우지 않습니다.</li>
+    <li>배송이 완료되면 도착 예정일은 숨기고 상태를 “배달 완료”로 바꿉니다.</li>
+    <li>해외배송의 예상일은 항공편·세관 물량에 따라 자주 밀립니다. 예정일이 지났다고 해서 분실은 아닙니다.</li>
+    <li>같은 번호를 다시 조회하면 최대 15분간은 이전 응답을 재사용하므로, 방금 생긴 스캔은 새로고침 후 조금 뒤에 보일 수 있습니다.</li>
+  </ul>
+
+  <h2 id="privacy" class="anchor">7. 개인정보와 조회 기록</h2>
+  <p>WIMP는 회원가입도 데이터베이스도 없고, 입력한 운송장 번호를 서버에 저장하지 않습니다. 조회 결과는 같은 번호의 반복 조회를 줄이기 위해 서버 메모리에 최대 15분간만 임시 보관된 뒤 폐기되고, 브라우저에는 쿠키나 로컬 스토리지를 사용하지 않습니다. 새로고침하면 입력한 번호도 사라집니다. 조회를 위해 운송장 번호가 해당 택배사(해외는 중계 조회 서비스 포함)로 전송되는 것 외에 다른 곳으로 제공하지 않습니다. 자세한 내용은 <a href="privacy.html">개인정보처리방침</a>에 정리되어 있습니다.</p>
+
+  <h2 id="faq" class="anchor">8. 자주 묻는 질문</h2>
+
+  <details open>
+    <summary>WIMP 배송 조회는 무료인가요?</summary>
+    <p>무료입니다. 회원가입이나 로그인 없이 송장번호만 입력하면 조회됩니다. 서비스 운영 비용은 페이지에 표시되는 광고로 충당합니다.</p>
+  </details>
+  <details>
+    <summary>운송장 번호가 서버에 저장되나요?</summary>
+    <p>저장하지 않습니다. 데이터베이스가 없고, 조회 결과는 같은 번호를 다시 조회할 때 택배사 호출을 줄이기 위해 서버 메모리에 최대 15분간만 임시 보관된 뒤 폐기됩니다. 브라우저에도 쿠키나 로컬 스토리지를 사용하지 않습니다.</p>
+  </details>
+  <details>
+    <summary>택배사 앱과 조회 결과가 다른 이유는 무엇인가요?</summary>
+    <p>택배사가 스캔을 등록하는 시점과 서비스가 조회하는 시점이 다르고, 같은 번호의 응답을 최대 15분간 캐시하기 때문입니다. 최신 스캔이 필요하면 조회 화면의 새로고침 버튼을 누르거나 잠시 뒤 다시 조회하세요.</p>
+  </details>
+  <details>
+    <summary>지구본에 표시되는 위치는 실시간 GPS인가요?</summary>
+    <p>아닙니다. 택배사가 스캔한 집하·허브·배송출발 지점을 좌표로 바꿔 보여주는 것이며, 차량의 실시간 위치가 아닙니다. 그래서 배송 중간에는 위치가 몇 시간씩 그대로일 수 있습니다.</p>
+  </details>
+  <details>
+    <summary>알리익스프레스 배송이 조회되지 않아요.</summary>
+    <p>알리익스프레스는 Cainiao 번호로 조회하고, 국내에 인계되면 CJ대한통운이나 우체국 등 국내 택배사 번호가 새로 생기는 경우가 많습니다. 주문 상세의 국내 송장번호를 확인해 그 번호로 조회해 보세요.</p>
+  </details>
+  <details>
+    <summary>도착 예정일은 어떻게 계산하나요?</summary>
+    <p>택배사가 제공한 예상 도착일을 한국 시간 기준 날짜로 바꿔 표시합니다. 택배사가 예상일을 주지 않으면 임의로 추정하지 않고 표시하지 않으며, 배송이 완료되면 숨깁니다.</p>
+  </details>
+  <details>
+    <summary>어떤 택배사까지 조회할 수 있나요?</summary>
+    <p>CJ대한통운, 우체국택배, 한진택배, 롯데택배, 로젠택배, 일양택배, DHL, FedEx, UPS, USPS, 알리익스프레스(Cainiao), 우체국 EMS, 윈익스프레스와 그 밖의 전 세계 550개 이상 택배사를 조회할 수 있습니다.</p>
+  </details>
+  <details>
+    <summary>모바일에서도 사용할 수 있나요?</summary>
+    <p>설치 없이 휴대폰 브라우저에서 바로 조회됩니다. 화면 폭이 좁으면 현재 배송 상태와 마지막 확인 위치가 먼저 보이고, 그 아래로 3D 지구본과 상세 이력이 이어집니다.</p>
+  </details>
+
+  <a class="cta" href="./">송장번호로 배송 조회하기 →</a>
+
+  <hr>
+
+  <section class="en" lang="en">
+    <h2 id="english">English quick guide — what each tracking status means</h2>
+    <p>WIMP turns every carrier scan into one of seven states, so a DHL “Processed at LEIPZIG - HUB” and a FedEx “At local FedEx facility” read the same way.</p>
+    <ul>
+      <li><strong>Registered</strong> — the label exists but the carrier has not collected the parcel yet. Wait 24–72 hours before asking the seller.</li>
+      <li><strong>Collected</strong> — the carrier has the parcel and scanned it for the first time.</li>
+      <li><strong>In transit</strong> — moving between hubs, airports or line-haul vehicles. Staying in the same place for a day or two is normal.</li>
+      <li><strong>Customs clearance</strong> — duty and document checks. “Pre-clearance information received” does <em>not</em> mean the parcel has arrived.</li>
+      <li><strong>Out for delivery</strong> — handed to the courier for delivery today.</li>
+      <li><strong>Delivered</strong> — including parcels left with a concierge or in a locker.</li>
+      <li><strong>Exception / Returned</strong> — address problems, failed attempts, damage, refused customs clearance or a return to sender. Contact the carrier or the seller.</li>
+    </ul>
+    <p>If a number returns nothing: check for O/0 and I/1 mix-ups, pick the carrier manually for 11–12 digit Korean numbers, and remember that an international parcel can go several days without a new scan between the origin flight and import clearance. WIMP does not store tracking numbers; a result is kept in server memory for at most 15 minutes.</p>
+  </section>
+
+  <section class="ja" lang="ja">
+    <h2>日本語メモ — 追跡番号が照会できないとき</h2>
+    <p>ハイフンや空白は自動で除去されますが、文字の取り違え（0とO、1とI）は自動では直りません。韓国の11〜12桁の番号は複数の配送会社が同じ桁数を使うため、配送会社を手動で選ぶと確実です。海外配送は出発国のスキャンと輸入通関の間に数日間の空白ができることがあり、これは通常の状態です。WIMPは追跡番号を保存せず、照会結果はサーバーのメモリに最大15分だけ保持します。</p>
+  </section>
+
+  <hr>
+  <p class="meta">
+    <a href="./">WIMP 배송 조회</a> · <a href="guide.html#how">조회 방법</a> · <a href="guide.html#status">배송 상태 뜻</a> · <a href="guide.html#not-found">조회 안 될 때</a> ·
+    <a href="privacy.html">개인정보처리방침</a> · <a href="terms.html">이용약관</a> ·
+    <a href="https://github.com/kgy7247/wimp-parcel-radar" target="_blank" rel="noopener">GitHub</a>
+  </p>
+</main>
+</body>
+</html>

@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#080d13">
 <title>개인정보처리방침 · WIMP</title>
-<meta name="description" content="WIMP(Where Is My Parcel?)의 개인정보처리방침 — 수집 항목, 보관 기간, 제3자 제공, 쿠키와 광고에 대한 안내.">
+<meta name="description" content="WIMP(Where Is My Parcel?)의 개인정보처리방침 — 운송장 번호를 서버에 저장하지 않는 구조, 15분 메모리 캐시, 브라우저에 아무것도 남기지 않는 조회 방식, 제3자 전송 범위, 쿠키와 광고에 대한 안내.">
+<meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.wimp911.com/privacy.html">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080d13'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23b7f373' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23b7f373'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -18,77 +19,116 @@
   .doc ul{padding-left:18px}
   .doc a{color:var(--accent)}
   .doc .meta{font-size:12px;color:#6d7c8d;margin-bottom:26px}
-  .doc .top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:24px}
+  .doc .top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:24px;gap:12px;flex-wrap:wrap}
   .doc .top a{font-size:15px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:1px}
   .doc .top .back{font-weight:400;color:#8b98a8;font-size:12px}
   .doc table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.5px}
   .doc th,.doc td{border:1px solid var(--line);padding:9px 11px;text-align:left;color:#9fb0c1;vertical-align:top}
   .doc th{background:#111923;color:#cfd9e4;font-weight:600}
-  .doc .langs{display:grid;gap:2px}
+  .doc .box{border:1px solid #344434;background:#101b16;border-radius:8px;padding:14px 16px;margin:18px 0}
+  .doc .box p{margin:0;color:#c6dcc9}
 </style>
 </head>
 <body>
 <main class="doc">
   <div class="top">
     <a href="./">◉ WIMP <span class="muted">/ parcel tracker</span></a>
-    <a class="back" href="./">← 조회 화면으로</a>
+    <span>
+      <a class="back" href="guide.html">이용 안내</a> <span class="muted">·</span>
+      <a class="back" href="./">← 조회 화면으로</a>
+    </span>
   </div>
 
   <h1>개인정보처리방침</h1>
-  <p class="meta">시행일 2026년 11월 28일 · 최종 개정 2026년 11월 28일</p>
+  <p class="meta">시행일 2026년 11월 28일 · 최종 개정 2026년 11월 28일 (실제 동작 기준으로 문구 전면 정리)</p>
 
-  <p>WIMP(Where Is My Parcel?, 이하 "서비스")는 배송 조회를 위해 필요한 최소한의 정보만 다루며, 입력한 운송장 번호와 조회 결과를 서버에 저장하지 않습니다. 이 방침은 서비스가 어떤 정보를 어떤 목적으로 다루는지 설명합니다.</p>
+  <div class="box">
+    <p><strong>한 줄 요약:</strong> WIMP는 회원가입도, 데이터베이스도, 자체 쿠키도 없습니다. 입력한 운송장 번호는 조회 요청을 처리하는 동안에만 쓰이고, 조회 결과는 서버 메모리에 <strong>최대 15분</strong> 임시 보관된 뒤 사라집니다. 브라우저에는 아무것도 저장하지 않습니다.</p>
+  </div>
 
-  <h2>1. 처리하는 정보</h2>
+  <p>WIMP(Where Is My Parcel?, 이하 "서비스")는 택배 배송 현황을 확인하는 데 필요한 최소한의 정보만 다룹니다. 이 방침은 서비스가 실제로 어떤 정보를 어디에 두고, 무엇을 남기지 않는지 설명합니다.</p>
+
+  <h2>1. 처리하는 정보와 보관 방식</h2>
   <table>
-    <tr><th>구분</th><th>항목</th><th>목적</th><th>보관</th></tr>
-    <tr><td>이용자가 입력한 값</td><td>운송장 번호, 선택한 택배사</td><td>택배사에 배송 현황을 조회하고 결과를 화면에 표시</td><td>서버에 저장하지 않음 (요청 처리 중에만 사용, 최대 15분 메모리 캐시)</td></tr>
-    <tr><td>접속 기록</td><td>IP 주소, 브라우저 정보, 요청 시각</td><td>서비스 운영·보안·장애 대응</td><td>호스팅 사업자(Vercel Inc.)의 표준 접속 로그 정책에 따름</td></tr>
-    <tr><td>브라우저 저장소</td><td>언어 설정</td><td>화면 언어 유지</td><td>서비스는 자체 쿠키를 쓰지 않으며, 운송장 번호를 브라우저에 저장하지 않습니다</td></tr>
+    <tr><th>구분</th><th>항목</th><th>목적</th><th>보관 위치와 기간</th></tr>
+    <tr>
+      <td>이용자가 입력한 값</td>
+      <td>운송장 번호, 선택한 택배사</td>
+      <td>택배사에 배송 현황을 조회하고 결과를 화면에 표시</td>
+      <td><strong>영구 저장하지 않습니다.</strong> 조회 요청을 처리하는 동안 서버 메모리에만 있고, 같은 번호를 다시 조회할 때 택배사 호출을 줄이기 위해 <strong>최대 15분</strong>(택배사+번호 단위, 서버 인스턴스당 최대 400건) 보관한 뒤 자동 폐기됩니다.</td>
+    </tr>
+    <tr>
+      <td>임시 응답 캐시</td>
+      <td>조회 결과(JSON)</td>
+      <td>같은 조회의 반복 요청을 줄여 택배사 서버 부담과 응답 시간을 낮춤</td>
+      <td>호스팅 사업자(Vercel Inc.)의 CDN에서 <strong>최대 60초</strong>(그 뒤 최대 5분까지 이전 응답을 재사용할 수 있음) 캐시된 뒤 폐기됩니다.</td>
+    </tr>
+    <tr>
+      <td>좌표 변환 캐시</td>
+      <td>도시·허브 지명과 그 좌표</td>
+      <td>지구본에 경로를 그리기 위한 위치 변환 결과 재사용</td>
+      <td>서버 메모리에 <strong>최대 24시간</strong>. 운송장 번호는 포함되지 않습니다.</td>
+    </tr>
+    <tr>
+      <td>접속 기록</td>
+      <td>IP 주소, 브라우저 정보, 요청 시각</td>
+      <td>서비스 운영·보안·장애 대응</td>
+      <td>서비스가 별도로 쌓지 않으며, 호스팅 사업자(Vercel Inc.)의 표준 접속 로그 정책을 따릅니다.</td>
+    </tr>
+    <tr>
+      <td>브라우저 저장소</td>
+      <td><strong>없음</strong></td>
+      <td>—</td>
+      <td>서비스는 쿠키, 로컬 스토리지(localStorage·sessionStorage), IndexedDB를 <strong>사용하지 않습니다.</strong> 입력한 번호와 조회 결과, 선택한 언어는 페이지 메모리에만 있으며 새로고침하거나 창을 닫으면 사라집니다.</td>
+    </tr>
   </table>
-  <p>회원가입, 로그인, 결제 기능이 없으며 이름·전화번호·주소·이메일을 요구하지 않습니다.</p>
+  <p>서비스에는 회원가입·로그인·결제 기능이 없고, 이름·전화번호·주소·이메일을 요구하지 않습니다. 조회하려는 운송장 번호는 서비스에 계정으로 묶이지 않습니다.</p>
 
-  <h2>2. 제3자 제공 및 처리 위탁</h2>
-  <p>조회를 위해 입력한 운송장 번호가 해당 택배사의 조회 서버로 전송됩니다. 이는 조회 기능을 수행하기 위한 불가피한 전송이며, 그 외의 목적으로 제3자에게 제공하지 않습니다.</p>
+  <h2>2. 제3자 전송 범위</h2>
+  <p>배송 현황은 택배사가 공개한 조회 화면과 조회 API에서 가져옵니다. 이 과정에서 <strong>운송장 번호가 해당 조회처로 전송</strong>되며, 이는 조회 기능을 수행하기 위한 불가피한 전송입니다. 그 밖의 목적으로 운송장 번호를 제3자에게 제공하지 않습니다.</p>
   <table>
-    <tr><th>수신자</th><th>전송 항목</th><th>목적</th></tr>
-    <tr><td>CJ대한통운, 우체국(과학기술정보통신부 우정사업본부), 한진택배, 롯데글로벌로지스, DHL</td><td>운송장 번호</td><td>배송 현황 조회</td></tr>
-    <tr><td>OpenStreetMap Foundation (Nominatim)</td><td>지역·도시 이름</td><td>지도 좌표 보완 (개인을 식별하는 값은 전송하지 않음)</td></tr>
-    <tr><td>Vercel Inc.</td><td>접속 로그</td><td>웹사이트 호스팅</td></tr>
+    <tr><th>수신자</th><th>전송되는 값</th><th>목적</th></tr>
+    <tr><td>CJ대한통운, 우체국(과학기술정보통신부 우정사업본부), 한진택배, 롯데글로벌로지스</td><td>운송장 번호</td><td>국내 배송 현황 조회(택배사 공개 조회 페이지)</td></tr>
+    <tr><td>DHL (DHL Express Track API)</td><td>운송장 번호</td><td>DHL 배송 현황 조회</td></tr>
+    <tr><td>lastscanned.com</td><td>운송장 번호, 택배사 구분</td><td>로젠·일양·FedEx·UPS·USPS·Cainiao·EMS 등 전 세계 550여 개 택배사의 조회를 중계</td></tr>
+    <tr><td>OpenStreetMap Foundation (Nominatim)</td><td>도시·지역 이름만</td><td>스캔 지명을 지구본 좌표로 변환(운송장 번호·이용자 식별값은 전송하지 않음)</td></tr>
+    <tr><td>Vercel Inc.</td><td>접속 로그</td><td>웹사이트 호스팅 및 CDN 캐시</td></tr>
   </table>
+  <p>해외 사업자에게 전송되는 값은 운송장 번호(및 지명)뿐이며, 이는 이용자가 조회를 요청한 순간에만 발생합니다.</p>
 
   <h2>3. 쿠키 및 광고</h2>
-  <p>서비스 자체는 쿠키를 사용하지 않습니다. 다만 서비스에 Google AdSense 등 제3자 광고가 게재되는 경우, 광고 사업자가 쿠키 또는 유사 기술을 사용해 이용자의 관심에 기반한 광고를 표시할 수 있습니다.</p>
+  <p>서비스 자체는 쿠키를 만들지 않습니다. 다만 서비스에 Google AdSense 광고가 게재되는 경우, Google 및 그 파트너가 쿠키 또는 유사 기술을 사용해 이용자의 관심에 기반한 광고를 표시하거나 광고 빈도를 조절할 수 있습니다. 이 쿠키는 서비스가 아니라 광고 사업자가 설정하는 것입니다.</p>
   <ul>
-    <li>Google의 광고 쿠키 사용에 대한 설명: <a href="https://policies.google.com/technologies/ads?hl=ko" target="_blank" rel="noopener">policies.google.com/technologies/ads</a></li>
-    <li>맞춤 광고 해제: <a href="https://adssettings.google.com" target="_blank" rel="noopener">adssettings.google.com</a> 에서 설정할 수 있습니다.</li>
-    <li>제3자 광고 사업자의 쿠키 사용은 <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">aboutads.info/choices</a> 에서도 거부할 수 있습니다.</li>
+    <li>Google의 광고 쿠키 사용 안내: <a href="https://policies.google.com/technologies/ads?hl=ko" target="_blank" rel="noopener">policies.google.com/technologies/ads</a></li>
+    <li>맞춤 광고 해제: <a href="https://adssettings.google.com" target="_blank" rel="noopener">adssettings.google.com</a></li>
+    <li>제3자 광고 사업자 쿠키 거부: <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">aboutads.info/choices</a></li>
   </ul>
   <p>광고가 게재되지 않는 동안에는 제3자 광고 쿠키도 사용되지 않습니다.</p>
 
   <h2>4. 이용자의 권리</h2>
-  <p>서비스는 개인을 식별하는 정보를 보관하지 않으므로, 열람·정정·삭제를 요구할 대상 정보가 서버에 남아 있지 않습니다. 접속 로그에 대한 문의는 아래 연락처로 요청할 수 있으며, 확인 가능한 범위에서 안내합니다.</p>
+  <p>서비스는 개인을 식별하는 정보를 보관하지 않으므로, 서버에 열람·정정·삭제를 요구할 대상 정보가 남지 않습니다. 조회 기록은 서비스에 축적되지 않고, 브라우저에도 남지 않습니다. 접속 로그에 관한 문의는 아래 연락처로 보내 주시면 호스팅 사업자의 정책 범위 안에서 안내합니다.</p>
 
   <h2>5. 아동의 개인정보</h2>
   <p>서비스는 만 14세 미만 아동을 대상으로 하지 않으며, 아동의 개인정보를 의도적으로 수집하지 않습니다.</p>
 
   <h2>6. 안전성 확보 조치</h2>
-  <p>전 구간 HTTPS 통신을 사용하고, 운송장 번호는 검색엔진에 노출되지 않도록 응답 헤더(noindex)로 지정합니다. 서버는 조회 결과를 15분간 메모리에만 보관한 뒤 폐기합니다.</p>
+  <p>전 구간 HTTPS로 통신하고, 조회 API 응답에는 검색엔진 수집을 막는 헤더(noindex)와 리퍼러 차단 정책을 적용해 운송장 번호가 검색 결과나 외부 사이트에 흘러가지 않도록 합니다. 택배사 조회 키는 서버 환경변수에만 두고 브라우저로 전달하지 않습니다. 서버는 조회 결과를 메모리에만 두며, 데이터베이스나 파일로 기록하지 않습니다.</p>
 
   <h2>7. 방침의 변경</h2>
-  <p>내용이 바뀌면 이 페이지에 개정일과 함께 게시합니다. 중요한 변경이 있는 경우 첫 화면에 안내할 수 있습니다.</p>
+  <p>내용이 바뀌면 이 페이지에 개정일과 함께 게시합니다. 실제 동작이 달라지는 변경(예: 새로운 조회처 추가)은 문구에 먼저 반영합니다.</p>
 
   <h2>8. 문의</h2>
-  <p>개인정보 처리에 관한 문의는 <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub 저장소 이슈</a>로 남겨 주세요.</p>
+  <p>개인정보 처리에 관한 문의는 <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub 저장소 이슈</a>로 남겨 주세요. 서비스 이용 방법은 <a href="guide.html">이용 안내</a>에 정리되어 있습니다.</p>
 
   <hr style="border:0;border-top:1px solid #222b35;margin:44px 0 26px">
 
   <h1 style="font-size:19px">Privacy Policy (English summary)</h1>
-  <p>WIMP looks up parcel tracking numbers on the carrier's public tracking pages. <strong>We do not store your tracking number or the results on our server.</strong> The number is used only to perform the lookup and is held in memory for at most 15 minutes as a cache.</p>
-  <p>The tracking number is sent to the relevant carrier (CJ Logistics, Korea Post, Hanjin, Lotte Global Logistics, DHL) and, where needed, a place name is sent to OpenStreetMap Nominatim to resolve coordinates. Hosting logs (IP address, user agent, timestamp) are processed by Vercel Inc. under its standard log policy. The site sets no cookies of its own; if third-party advertising (e.g. Google AdSense) is displayed, the ad provider may set cookies — you can opt out at <a href="https://adssettings.google.com" target="_blank" rel="noopener">adssettings.google.com</a>.</p>
-  <p>Contact: <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub issues</a>.</p>
+  <p>WIMP looks up parcel tracking numbers on the carrier's public tracking pages and through the lastscanned.com aggregation API. <strong>We do not store your tracking number or the results on our server.</strong> The number is used only to perform the lookup, and a response is held in server memory for at most 15 minutes as a cache (up to 400 entries per instance) before it expires. Vercel's CDN may cache a response for up to 60 seconds.</p>
+  <p>The tracking number is sent to the relevant carrier (CJ Logistics, Korea Post, Hanjin, Lotte Global Logistics, DHL), and to lastscanned.com for the other 550+ carriers; city names alone are sent to OpenStreetMap Nominatim to resolve map coordinates. Hosting logs (IP address, user agent, timestamp) are processed by Vercel Inc. under its standard log policy.</p>
+  <p>The site sets no cookies of its own and uses no local storage: the number you type lives in page memory only and disappears when you reload or close the tab. If third-party advertising (Google AdSense) is displayed, the ad provider may set cookies — you can opt out at <a href="https://adssettings.google.com" target="_blank" rel="noopener">adssettings.google.com</a>.</p>
+  <p>Contact: <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub issues</a>. Usage guide (Korean): <a href="guide.html">guide.html</a>.</p>
 
-  <p class="meta" style="margin-top:36px"><a href="terms.html">이용약관</a> · <a href="./">WIMP 홈</a></p>
+  <p class="meta" style="margin-top:36px"><a href="terms.html">이용약관</a> · <a href="guide.html">이용 안내</a> · <a href="./">WIMP 홈</a></p>
 </main>
 </body>
 </html>
