@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d13">
+<title>WIMP — Where Is My Parcel? · 택배 배송조회</title>
+<meta name="description" content="운송장 번호 하나로 국내 택배(CJ대한통운·우체국·한진·롯데)와 DHL 배송을 3D 위성 지구본에서 확인하세요. 마지막 스캔 위치와 국가별 이동 경로를 한눈에 보여줍니다.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://wimp-parcel-radar.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WIMP — Where Is My Parcel?">
+<meta property="og:title" content="WIMP — 내 택배, 지금 어디쯤?">
+<meta property="og:description" content="운송장 번호로 국내 택배와 DHL 배송을 3D 지구본 위에서 추적하세요. 배송 이력, 진행 단계, 국가별 경로까지 한 번에.">
+<meta property="og:url" content="https://wimp-parcel-radar.vercel.app/">
+<meta property="og:image" content="https://wimp-parcel-radar.vercel.app/og-cover.png">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="WIMP — 내 택배, 지금 어디쯤?">
+<meta name="twitter:description" content="운송장 번호 하나로 국내 택배·DHL 배송을 3D 위성 지구본에서 확인하세요.">
+<meta name="twitter:image" content="https://wimp-parcel-radar.vercel.app/og-cover.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080d13'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23b7f373' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23b7f373'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="style.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"WIMP — Where Is My Parcel?","url":"https://wimp-parcel-radar.vercel.app/","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","inLanguage":["ko","en","ja"],"description":"운송장 번호로 국내 택배와 DHL 배송 현황을 3D 위성 지구본에서 확인하는 무료 배송조회 서비스.","offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"}}
+</script>
+<!--
+  Google AdSense: 심사 승인 뒤 아래 주석을 풀고 ca-pub-XXXXXXXXXXXXXXXX 를 발급받은 퍼블리셔 ID로 바꾸세요.
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+-->
+</head>
+<body>
+<header>
+  <a class="brand" href="./"><span class="logo">◉</span> WIMP<span class="brand-caption">/ parcel tracker</span></a>
+  <nav><button class="active" data-i="dashboard">배송 조회</button><button id="saved" data-i="shipments">이용 안내</button></nav>
+  <div class="header-right">
+    <span class="demo" id="mode-badge" data-i="demo">예시 데이터</span>
+    <label class="language">◎ <select id="language" aria-label="Language">
+      <option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option>
+    </select></label>
+    <button class="avatar" id="settings" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<main>
+  <section class="intro">
+    <div>
+      <div class="eyebrow">WHERE IS MY PARCEL?</div>
+      <h1 data-i="title">내 택배, 지금 어디쯤?</h1>
+      <p data-i="subtitle">송장번호 하나로 만나는, 내 배송의 여정.</p>
+    </div>
+    <div class="system"><span></span><span data-i="scan">물류 스캔 기반 추적</span></div>
+  </section>
+
+  <form id="search" autocomplete="off">
+    <span class="search-icon">⌕</span>
+    <input id="number" placeholder="송장번호를 입력하세요" aria-label="Tracking number" required maxlength="60" value="2746217154" inputmode="text" spellcheck="false">
+    <select id="carrier" aria-label="Carrier">
+      <option value="auto">배송사 자동 인식</option>
+      <option value="DHL">DHL</option>
+      <option value="CJ">CJ대한통운</option>
+      <option value="EPOST">우체국택배</option>
+      <option value="HANJIN">한진택배</option>
+      <option value="LOTTE">롯데택배</option>
+      <option value="FEDEX">FedEx</option>
+      <option value="UPS">UPS</option>
+    </select>
+    <button class="primary" type="submit" data-i="track">어디 있지?</button>
+  </form>
+
+  <div class="sectionline">
+    <div><b data-i="my">조회 결과</b> <span id="count" class="count">3</span></div>
+    <div class="sub"><span data-i="local">저장하지 않는 일회성 조회</span> · <button id="notify" data-i="notify">조회 안내</button></div>
+  </div>
+  <div id="parcels"></div>
+
+  <div class="workspace">
+    <section class="map-panel" id="map-panel" aria-busy="false">
+      <div class="map-top">
+        <div><span class="eyebrow">GLOBAL SHIPMENT MAP</span><h2 data-i="journey">배송 여정</h2></div>
+        <span class="chip">◉ <span data-i="satellite">3D 위성 지구본</span></span>
+      </div>
+      <div id="globe"></div>
+      <div id="loading" hidden><span class="spinner" aria-hidden="true"></span><span data-i="loading">배송 조회 중…</span></div>
+      <div class="map-status"><span class="pulse"></span><div><small data-i="last">마지막 확인 위치</small><b id="location">Leipzig, Germany</b></div><span class="code">LEJ</span></div>
+      <div class="map-controls"><button id="plus" aria-label="Zoom in">＋</button><button id="minus" aria-label="Zoom out">−</button><button id="reset" aria-label="Reset view">⌖</button></div>
+      <div id="marker-info" hidden></div>
+      <div class="legend"><span><i></i><span data-i="confirmed">확인된 경로</span></span><span id="legend-planned"><i class="dashed"></i><span data-i="planned">예정 경로</span></span></div>
+      <div class="map-foot"><span data-i="drag">드래그하여 회전 · 스크롤하여 확대</span><span>Earth imagery · NASA</span></div>
+    </section>
+
+    <aside class="history">
+      <div class="history-head"><h2 data-i="history">배송 이력</h2><span class="chip" data-i="newest">최신순</span></div>
+      <div class="history-summary"><span class="badge" data-i="transit">이동 중</span><p data-i="historyNote">제공된 경로 기반 예시 · 스캔 시각 미확인</p></div>
+      <div id="events"></div>
+      <div class="history-bottom"><span id="updated" data-i="notconnected">최종 갱신: API 미연결</span><button id="refresh" aria-label="Refresh">⟳</button></div>
+    </aside>
+  </div>
+
+  <section class="bottom">
+    <div class="progress-panel">
+      <div class="panel-title"><h2 data-i="progress">배송 진행 상황</h2><span class="accent" data-i="international">국제 운송 중</span></div>
+      <div class="steps" id="steps"></div>
+      <div class="notice" id="notice-box"><span>ⓘ</span><span data-i="notice">인천 사전 통관 정보는 실제 도착을 의미하지 않습니다.</span></div>
+    </div>
+    <div class="route-panel">
+      <span class="eyebrow">ACROSS BORDERS</span>
+      <h2 data-i="route">국가별 이동 경로</h2>
+      <div class="countries" id="countries"></div>
+    </div>
+  </section>
+
+  <section class="ad-slot" id="ad-slot" hidden>
+    <!-- AdSense 광고 단위를 넣을 자리입니다. 승인 뒤 <ins class="adsbygoogle" …> 를 채우세요. -->
+  </section>
+
+  <footer>
+    <span>WIMP <span class="muted">/</span> A little closer, every day.</span>
+    <span class="footer-right">
+      <span data-i="footer">GPS 실시간 위치가 아닌 배송사 스캔 위치입니다.</span>
+      <span class="footer-legal">
+        <a href="privacy.html" data-i="privacyLink">개인정보처리방침</a><span class="muted"> · </span>
+        <a href="terms.html" data-i="termsLink">이용약관</a><span class="muted"> · </span>
+        <a href="https://github.com/kgy7247/wimp-parcel-radar" target="_blank" rel="noopener">GitHub</a>
+      </span>
+    </span>
+  </footer>
+</main>
+
+<dialog id="modal">
+  <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+  <span class="eyebrow">GLOBAL SETTINGS</span>
+  <h2 data-i="settings">글로벌 설정</h2>
+  <p data-i="settingNote">일회성 조회입니다. 송장번호와 조회 결과를 저장하지 않습니다.</p>
+  <label><span data-i="auto">자동 갱신</span>
+    <select id="interval"><option value="0">OFF</option><option value="300">5 min</option><option value="900">15 min</option><option value="1800">30 min</option></select>
+  </label>
+  <p data-i="apiNote">실시간 조회는 택배사가 남긴 스캔 정보를 그대로 보여줍니다. 조회 결과는 15분 동안 캐시됩니다.</p>
+  <div class="notice" data-i="privacy">새로고침하거나 창을 닫으면 입력한 정보가 사라집니다.</div>
+</dialog>
+
+<div id="toast" role="status"></div>
+<noscript><p style="padding:24px;color:#edf2f6">배송 조회에는 JavaScript가 필요합니다.</p></noscript>
+<script src="globe.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
