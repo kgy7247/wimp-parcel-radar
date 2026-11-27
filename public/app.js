@@ -885,7 +885,17 @@ function initGlobe() {
       .arcStroke(0.5)
       .arcDashLength((d) => (d.planned ? 0.035 : 1))
       .arcDashGap((d) => (d.planned ? 0.022 : 0))
-      .arcAltitude((d) => (d.planned ? 0.24 : 0.045))
+      // A fixed height sinks long-haul arcs (LAX→ICN is ~95°) inside the globe,
+      // so the arc rises with the distance it covers.
+      .arcAltitude((d) => {
+        if (d.planned) return 0.24;
+        const rad = Math.PI / 180;
+        const cos =
+          Math.sin(d.startLat * rad) * Math.sin(d.endLat * rad) +
+          Math.cos(d.startLat * rad) * Math.cos(d.endLat * rad) * Math.cos((d.endLng - d.startLng) * rad);
+        const distance = Math.acos(Math.max(-1, Math.min(1, cos)));
+        return 0.06 + 0.28 * (distance / Math.PI);
+      })
       .htmlElementsData([])
       .htmlLat('lat')
       .htmlLng('lng')
