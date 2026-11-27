@@ -1,6 +1,9 @@
 /**
  * Live smoke test — hits the real carrier endpoints through the API handler.
- * Usage: node test/smoke.mjs
+ * Usage:
+ *   node test/smoke.mjs
+ *   LASTSCANNED_API_KEY=$(cat ../wimp911/lastscanned_key.txt) node test/smoke.mjs
+ * Never put a key into a fixture, a commit or a log line.
  */
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
@@ -38,6 +41,11 @@ const cases = [
   ['1234567895', 'auto'],
   ['12345', 'auto'],
   ['1Z999AA10123456784', 'auto'],
+  // lastscanned routes — need LASTSCANNED_API_KEY; the numbers below are real examples.
+  ['1Z000Y770414233027', 'UPS'],
+  ['1Z000Y770414233027', 'auto'],
+  ['1Z000Y770414233027', 'GLOBAL'],
+  ['123456789012', 'CJ'],
 ];
 
 for (const [number, carrier] of cases) {
@@ -46,7 +54,8 @@ for (const [number, carrier] of cases) {
   const body = out.body;
   const ms = Date.now() - t0;
   if (body && body.ok) {
-    console.log(`OK   ${carrier.padEnd(6)} ${number} -> ${body.carrier.code} ${body.status.code} events=${body.events.length} route=${body.route.length} countries=${body.countries.join('>')} (${ms}ms)`);
+    console.log(`OK   ${carrier.padEnd(6)} ${number} -> ${body.carrier.code} ${body.status.code} events=${body.events.length} route=${body.route.length} countries=${body.countries.join('>')} edd=${body.estimatedDelivery} (${ms}ms)`);
+    console.log(`     source: ${body.meta.source}${body.meta.upstream ? ' / ' + body.meta.upstream : ''}${body.meta.cached ? ' (cached)' : ''}`);
     console.log(`     latest: ${body.latest && body.latest.scan} @ ${body.latest && body.latest.location && body.latest.location.name}`);
     console.log(`     first:  ${body.events[0].time} ${body.events[0].scan} @ ${body.events[0].location && body.events[0].location.name}`);
   } else {

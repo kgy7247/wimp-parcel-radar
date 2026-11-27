@@ -58,6 +58,10 @@ const strings = {
     apiNote: '실시간 조회는 택배사가 남긴 스캔 정보를 그대로 보여줍니다. 조회 결과는 15분 동안 캐시됩니다.',
     privacy: '새로고침하거나 창을 닫으면 입력한 정보가 사라집니다.',
     placeholder: '송장번호를 입력하세요', detect: '배송사 자동 인식', waiting: '배송사 선택 대기',
+    edd: '도착 예정',
+    carrierAuto: '배송사 자동 인식', carrierCJ: 'CJ대한통운', carrierEPOST: '우체국택배', carrierHANJIN: '한진택배', carrierLOTTE: '롯데택배',
+    carrierLOGEN: '로젠택배', carrierILYANG: '일양택배', carrierDHL: 'DHL', carrierFEDEX: 'FedEx', carrierUPS: 'UPS', carrierUSPS: 'USPS',
+    carrierCAINIAO: '알리익스프레스 (Cainiao)', carrierEMS: '우체국 EMS / 국제', carrierGLOBAL: '기타 글로벌 (550+ 자동)',
     stages: ['접수', '집하', '국제 운송', '배송 출발', '배송 완료'],
     stagesDomestic: ['접수', '집하', '이동 중', '배송 출발', '배달 완료'],
     sampleEvents: [
@@ -65,18 +69,20 @@ const strings = {
       { title: '경유지 확인', note: '마지막 확인 위치', place: 'Leipzig, Germany' },
       { title: '사전 통관 정보 접수', note: '실제 도착 아님', place: 'Incheon, South Korea' }
     ],
-    status: { DELIVERED: '배달 완료', OUT_FOR_DELIVERY: '배송 출발', IN_TRANSIT: '이동 중', PICKED_UP: '집하', REGISTERED: '접수', EXCEPTION: '예외', UNKNOWN: '확인 중' },
+    status: { DELIVERED: '배달 완료', OUT_FOR_DELIVERY: '배송 출발', IN_TRANSIT: '이동 중', PICKED_UP: '집하', REGISTERED: '접수', EXCEPTION: '예외', RETURNED: '반송', UNKNOWN: '확인 중' },
     errors: {
-      NOT_FOUND: '조회된 배송 정보가 없습니다.', NEEDS_KEY: 'DHL_API_KEY 환경변수가 필요합니다.', UNSUPPORTED: '아직 지원하지 않는 택배사입니다.',
-      UPSTREAM: '택배사 조회 서버가 응답하지 않습니다.', BAD_REQUEST: '송장번호를 다시 확인해 주세요.', NETWORK: '네트워크에 연결하지 못했습니다.'
+      NOT_FOUND: '조회된 배송 정보가 없습니다.', NEEDS_KEY: '해외 택배사 조회 키(LASTSCANNED_API_KEY)가 필요합니다.', UNSUPPORTED: '아직 지원하지 않는 택배사입니다.',
+      UPSTREAM: '택배사 조회 서버가 응답하지 않습니다.', BAD_REQUEST: '송장번호를 다시 확인해 주세요.', NETWORK: '네트워크에 연결하지 못했습니다.',
+      RATE_LIMITED: '택배사 조회 한도에 잠시 도달했습니다.'
     },
     hints: {
       NOT_FOUND: '송장번호와 자릿수를 확인하거나, 택배사가 아직 상품을 인수하지 않았을 수 있습니다.',
-      NEEDS_KEY: 'developer.dhl.com 무료 키(250건/일)를 Vercel 환경변수 DHL_API_KEY에 넣으면 DHL 실시간 조회가 켜집니다.',
-      UNSUPPORTED: '현재 지원: CJ대한통운 · 우체국택배 · 한진택배 · 롯데택배 · DHL',
+      NEEDS_KEY: 'lastscanned.com 키를 Vercel의 LASTSCANNED_API_KEY에 넣으면 로젠·FedEx·UPS·USPS·Cainiao·EMS 등 551개 택배사가 켜집니다.',
+      UNSUPPORTED: '현재 지원: CJ대한통운 · 우체국택배 · 한진택배 · 롯데택배 · 로젠택배 · DHL · FedEx · UPS · USPS · Cainiao · EMS + 전 세계 550개 이상',
       UPSTREAM: '잠시 후 다시 시도하거나 택배사 사이트에서 직접 확인해 주세요.',
       BAD_REQUEST: '하이픈·공백·특수문자는 자동으로 정리됩니다.',
-      NETWORK: '연결 상태를 확인하고 다시 시도해 주세요.'
+      NETWORK: '연결 상태를 확인하고 다시 시도해 주세요.',
+      RATE_LIMITED: '1분 뒤 다시 시도해 주세요.'
     },
     openSite: '택배사 사이트에서 보기', again: '다시 조회', empty: '송장번호를 입력하면 배송 이력이 표시됩니다.',
     idle: '송장번호를 입력하면 배송 여정이 여기에 표시됩니다.', idleBadge: '대기',
@@ -98,6 +104,10 @@ const strings = {
     apiNote: 'Live results show the scans your carrier recorded. Each lookup is cached for 15 minutes.',
     privacy: 'Refreshing or closing this page clears your input.',
     placeholder: 'Enter your tracking number', detect: 'Detect carrier', waiting: 'Waiting for a carrier',
+    edd: 'Est. delivery',
+    carrierAuto: 'Detect carrier', carrierCJ: 'CJ Logistics', carrierEPOST: 'Korea Post', carrierHANJIN: 'Hanjin', carrierLOTTE: 'Lotte',
+    carrierLOGEN: 'Logen', carrierILYANG: 'Ilyang', carrierDHL: 'DHL', carrierFEDEX: 'FedEx', carrierUPS: 'UPS', carrierUSPS: 'USPS',
+    carrierCAINIAO: 'AliExpress (Cainiao)', carrierEMS: 'Korea Post EMS / Intl', carrierGLOBAL: 'Other global (550+ auto)',
     stages: ['Registered', 'Collected', 'In transit', 'Out for delivery', 'Delivered'],
     stagesDomestic: ['Registered', 'Collected', 'In transit', 'Out for delivery', 'Delivered'],
     sampleEvents: [
@@ -105,18 +115,20 @@ const strings = {
       { title: 'Transit location confirmed', note: 'Last confirmed location', place: 'Leipzig, Germany' },
       { title: 'Pre-clearance information received', note: 'Not an arrival scan', place: 'Incheon, South Korea' }
     ],
-    status: { DELIVERED: 'Delivered', OUT_FOR_DELIVERY: 'Out for delivery', IN_TRANSIT: 'In transit', PICKED_UP: 'Collected', REGISTERED: 'Registered', EXCEPTION: 'Exception', UNKNOWN: 'Checking' },
+    status: { DELIVERED: 'Delivered', OUT_FOR_DELIVERY: 'Out for delivery', IN_TRANSIT: 'In transit', PICKED_UP: 'Collected', REGISTERED: 'Registered', EXCEPTION: 'Exception', RETURNED: 'Returned', UNKNOWN: 'Checking' },
     errors: {
-      NOT_FOUND: 'No tracking information found.', NEEDS_KEY: 'A DHL_API_KEY environment variable is required.', UNSUPPORTED: 'This carrier is not supported yet.',
-      UPSTREAM: 'The carrier server did not respond.', BAD_REQUEST: 'Please check the tracking number.', NETWORK: 'Could not reach the server.'
+      NOT_FOUND: 'No tracking information found.', NEEDS_KEY: 'A LASTSCANNED_API_KEY is required for overseas carriers.', UNSUPPORTED: 'This carrier is not supported yet.',
+      UPSTREAM: 'The carrier server did not respond.', BAD_REQUEST: 'Please check the tracking number.', NETWORK: 'Could not reach the server.',
+      RATE_LIMITED: 'The carrier asked us to slow down for a moment.'
     },
     hints: {
       NOT_FOUND: 'Check the number and its length — the carrier may not have collected the parcel yet.',
-      NEEDS_KEY: 'Add a free key from developer.dhl.com (250 calls/day) as DHL_API_KEY on Vercel.',
-      UNSUPPORTED: 'Supported: CJ Logistics · Korea Post · Hanjin · Lotte · DHL',
+      NEEDS_KEY: 'Add a lastscanned.com key as LASTSCANNED_API_KEY on Vercel to unlock Logen, FedEx, UPS, USPS, Cainiao, EMS and 551 carriers.',
+      UNSUPPORTED: 'Supported: CJ Logistics · Korea Post · Hanjin · Lotte · Logen · DHL · FedEx · UPS · USPS · Cainiao · EMS + 550 more worldwide',
       UPSTREAM: 'Try again shortly, or check the carrier site directly.',
       BAD_REQUEST: 'Hyphens, spaces and symbols are removed automatically.',
-      NETWORK: 'Check your connection and try again.'
+      NETWORK: 'Check your connection and try again.',
+      RATE_LIMITED: 'Try again in a minute.'
     },
     openSite: 'Open the carrier site', again: 'Try again', empty: 'Enter a tracking number to see its journey.',
     idle: 'Enter a tracking number and its journey appears here.', idleBadge: 'Idle',
@@ -138,6 +150,10 @@ const strings = {
     apiNote: '実際の追跡結果は配送会社のスキャン情報です。結果は15分間キャッシュされます。',
     privacy: '再読み込みやタブを閉じると入力情報は消えます。',
     placeholder: '追跡番号を入力', detect: '配送会社を自動検出', waiting: '配送会社の選択待ち',
+    edd: '配達予定',
+    carrierAuto: '配送会社を自動検出', carrierCJ: 'CJ大韓通運', carrierEPOST: '韓国郵便', carrierHANJIN: 'ハンジン', carrierLOTTE: 'ロッテ',
+    carrierLOGEN: 'ロジェン', carrierILYANG: 'イリャン', carrierDHL: 'DHL', carrierFEDEX: 'FedEx', carrierUPS: 'UPS', carrierUSPS: 'USPS',
+    carrierCAINIAO: 'AliExpress (Cainiao)', carrierEMS: '韓国郵便 EMS / 国際', carrierGLOBAL: 'その他グローバル (550+ 自動)',
     stages: ['受付', '集荷', '国際輸送', '配達中', '配達完了'],
     stagesDomestic: ['受付', '集荷', '輸送中', '配達中', '配達完了'],
     sampleEvents: [
@@ -145,18 +161,20 @@ const strings = {
       { title: '経由地を確認', note: '最終確認位置', place: 'Leipzig, Germany' },
       { title: '事前通関情報を受信', note: '到着ではありません', place: 'Incheon, South Korea' }
     ],
-    status: { DELIVERED: '配達完了', OUT_FOR_DELIVERY: '配達中', IN_TRANSIT: '輸送中', PICKED_UP: '集荷', REGISTERED: '受付', EXCEPTION: '例外', UNKNOWN: '確認中' },
+    status: { DELIVERED: '配達完了', OUT_FOR_DELIVERY: '配達中', IN_TRANSIT: '輸送中', PICKED_UP: '集荷', REGISTERED: '受付', EXCEPTION: '例外', RETURNED: '返送', UNKNOWN: '確認中' },
     errors: {
-      NOT_FOUND: '追跡情報が見つかりません。', NEEDS_KEY: 'DHL_API_KEY 環境変数が必要です。', UNSUPPORTED: 'この配送会社はまだ未対応です。',
-      UPSTREAM: '配送会社のサーバーが応答しません。', BAD_REQUEST: '追跡番号を確認してください。', NETWORK: 'サーバーに接続できませんでした。'
+      NOT_FOUND: '追跡情報が見つかりません。', NEEDS_KEY: '海外配送会社には LASTSCANNED_API_KEY が必要です。', UNSUPPORTED: 'この配送会社はまだ未対応です。',
+      UPSTREAM: '配送会社のサーバーが応答しません。', BAD_REQUEST: '追跡番号を確認してください。', NETWORK: 'サーバーに接続できませんでした。',
+      RATE_LIMITED: '照会回数の上限に一時的に達しました。'
     },
     hints: {
       NOT_FOUND: '番号と桁数を確認してください。まだ集荷前の可能性もあります。',
-      NEEDS_KEY: 'developer.dhl.com の無料キー（1日250件）を Vercel の DHL_API_KEY に設定してください。',
-      UNSUPPORTED: '対応：CJ大韓通運・韓国郵便・ハンジン・ロッテ・DHL',
+      NEEDS_KEY: 'lastscanned.com のキーを Vercel の LASTSCANNED_API_KEY に設定すると、ロジェン・FedEx・UPS・USPS・Cainiao・EMS など551社が使えます。',
+      UNSUPPORTED: '対応：CJ大韓通運・韓国郵便・ハンジン・ロッテ・ロジェン・DHL・FedEx・UPS・USPS・Cainiao・EMS ＋ 世界550社以上',
       UPSTREAM: 'しばらくしてから再度お試しください。',
       BAD_REQUEST: 'ハイフン・空白・記号は自動で除去されます。',
-      NETWORK: '接続を確認して再度お試しください。'
+      NETWORK: '接続を確認して再度お試しください。',
+      RATE_LIMITED: '1分後に再度お試しください。'
     },
     openSite: '配送会社サイトを開く', again: '再検索', empty: '追跡番号を入力すると配送履歴が表示されます。',
     idle: '追跡番号を入力すると、配送の旅がここに表示されます。', idleBadge: '待機中',
@@ -200,6 +218,20 @@ function formatTime(iso) {
     }).format(date);
   } catch {
     return date.toISOString().slice(5, 16).replace('T', ' ');
+  }
+}
+
+/* Estimated delivery day: "2026-12-01" -> "12월 1일" / "Dec 1" / "12月1日" */
+function formatDay(dateText) {
+  if (!dateText) return '';
+  const date = new Date(`${String(dateText).slice(0, 10)}T00:00:00+09:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  const locale = state.lang === 'ko' ? 'ko-KR' : state.lang === 'ja' ? 'ja-JP' : 'en-US';
+  const month = state.lang === 'en' ? 'short' : 'long';
+  try {
+    return new Intl.DateTimeFormat(locale, { timeZone: 'Asia/Seoul', month, day: 'numeric' }).format(date);
+  } catch {
+    return String(dateText).slice(5).replace('-', '/');
   }
 }
 
@@ -307,6 +339,7 @@ function buildDataset(api, demo) {
     statusLabel: statusLabel(statusCode),
     stage: Number.isFinite(stage) ? stage : 0,
     delivered: Boolean(api.status && api.status.delivered),
+    estimatedDelivery: api.estimatedDelivery || null,
     events,
     points,
     arcs,
@@ -664,7 +697,11 @@ function renderParcels() {
   const icon = document.createElement('span');
   icon.className = 'carrier-logo';
   const code = state.view ? state.view.carrierCode : state.carrier;
-  icon.textContent = code === 'EPOST' ? '郵' : code === 'LOTTE' ? 'L' : code === 'HANJIN' ? 'H' : code === 'CJ' ? 'CJ' : code;
+  const mark = {
+    CJ: 'CJ', EPOST: '郵', HANJIN: 'H', LOTTE: 'L', LOGEN: '로', ILYANG: '일',
+    DHL: 'DHL', FEDEX: 'FX', UPS: 'UPS', USPS: 'US', CAINIAO: 'CA', EMS: 'EMS', YUNEXPRESS: 'YX'
+  };
+  icon.textContent = mark[code] || String(code || '?').slice(0, 3);
   icon.dataset.carrier = code;
 
   const body = document.createElement('div');
@@ -685,7 +722,7 @@ function renderParcels() {
 
   const status = document.createElement('span');
   status.className = 'state';
-  status.textContent = state.error ? '—' : state.view ? state.view.statusLabel : s.idleBadge;
+  status.textContent = state.error ? '—' : state.view ? statusLabel(state.view.statusCode) : s.idleBadge;
 
   row.append(icon, body, status);
   box.append(row);
@@ -779,9 +816,16 @@ function renderSteps() {
     .join('');
 
   const badge = $('.history-summary .badge');
-  badge.textContent = state.error ? '—' : view ? view.statusLabel : s.idleBadge;
+  badge.textContent = state.error ? '—' : view ? statusLabel(view.statusCode) : s.idleBadge;
   badge.classList.toggle('done', Boolean(view && view.delivered));
-  badge.classList.toggle('warn', Boolean(state.error || (view && view.statusCode === 'EXCEPTION')));
+  badge.classList.toggle('warn', Boolean(state.error || (view && (view.statusCode === 'EXCEPTION' || view.statusCode === 'RETURNED'))));
+
+  const edd = $('#edd');
+  if (edd) {
+    const show = Boolean(view && view.estimatedDelivery && !view.delivered);
+    edd.hidden = !show;
+    edd.textContent = show ? `${s.edd} · ${formatDay(view.estimatedDelivery)}` : '';
+  }
 
   const summary = $('.history-summary p');
   if (state.error) summary.textContent = state.error.title;

@@ -6,21 +6,32 @@
  *
  * GET /api/track?number=1234567890&carrier=auto
  *
- * Carriers
- *   CJ      CJ대한통운   (public JSON endpoint + csrf)
- *   EPOST   우체국택배   (public HTML trace page)
- *   HANJIN  한진택배     (public HTML waybill page)
- *   LOTTE   롯데택배     (public mobile HTML page)
- *   DHL     DHL Express  (needs DHL_API_KEY)
+ * Hybrid routing
+ *   1) Korean free direct parsers (no key, saves the pro quota)
+ *        CJ      CJ대한통운   (public JSON endpoint + csrf)
+ *        EPOST   우체국택배   (public HTML trace page)
+ *        HANJIN  한진택배     (public HTML waybill page)
+ *        LOTTE   롯데택배     (public mobile HTML page)
+ *      If one of these fails, is blocked, or does not know the number, the
+ *      same parcel is retried through lastscanned when a key is configured.
+ *   2) lastscanned API — 551 carriers worldwide (needs LASTSCANNED_API_KEY)
+ *        GET https://api.lastscanned.com/v1/track/{number}?carrier=...
+ *        LOGEN, ILYANG, DHL, FEDEX, UPS, USPS, CAINIAO, YUNEXPRESS, EMS,
+ *        or auto-detection for any of the 551 carriers.
+ *   3) DHL direct API — kept for older deployments that only have DHL_API_KEY.
  *
  * Nothing is stored. Responses are cached in memory for 15 minutes per carrier+number.
+ * The lastscanned key is read from the environment only and never leaves the server.
  */
 
 const CACHE_TTL_MS = 15 * 60 * 1000;
 const CACHE_MAX = 400;
-const cache = new Map(); // `${carrier}:${number}` -> { payload, expires }
+const cache = new Map(); // `${via}:${carrier}:${number}` -> { payload, expires }
 const UPSTREAM_TIMEOUT_MS = 7000;
-const TOTAL_BUDGET_MS = 8000;
+const TOTAL_BUDGET_MS = 8800;
+const LASTSCANNED_BASE = 'https://api.lastscanned.com/v1/track';
+const LASTSCANNED_TIMEOUT_MS = 7000;
+const LASTSCANNED_RETRY_MS = 450;
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -61,6 +72,20 @@ const CARRIERS = {
     site: 'https://www.lotteglogis.com/home/reservation/tracking/index',
     domestic: true,
   },
+  LOGEN: {
+    code: 'LOGEN',
+    name: '로젠택배',
+    nameEn: 'Logen',
+    site: 'https://www.ilogen.com/web/personal/trace',
+    domestic: true,
+  },
+  ILYANG: {
+    code: 'ILYANG',
+    name: '일양택배',
+    nameEn: 'Ilyang Logis',
+    site: 'https://www.ilyanglogis.com/waybill_search',
+    domestic: true,
+  },
   DHL: {
     code: 'DHL',
     name: 'DHL',
@@ -68,7 +93,110 @@ const CARRIERS = {
     site: 'https://www.dhl.com/kr-ko/home/tracking.html',
     domestic: false,
   },
+  FEDEX: {
+    code: 'FEDEX',
+    name: 'FedEx',
+    nameEn: 'FedEx',
+    site: 'https://www.fedex.com/fedextrack/',
+    domestic: false,
+  },
+  UPS: {
+    code: 'UPS',
+    name: 'UPS',
+    nameEn: 'UPS',
+    site: 'https://www.ups.com/track',
+    domestic: false,
+  },
+  USPS: {
+    code: 'USPS',
+    name: 'USPS',
+    nameEn: 'USPS',
+    site: 'https://tools.usps.com/go/TrackConfirmAction_input',
+    domestic: false,
+  },
+  CAINIAO: {
+    code: 'CAINIAO',
+    name: '알리익스프레스 (Cainiao)',
+    nameEn: 'AliExpress (Cainiao)',
+    site: 'https://global.cainiao.com/',
+    domestic: false,
+  },
+  EMS: {
+    code: 'EMS',
+    name: '우체국 EMS / 국제',
+    nameEn: 'Korea Post EMS',
+    site: 'https://service.epost.go.kr/trace.RetrieveEmsTraceList.comm',
+    domestic: false,
+  },
+  YUNEXPRESS: {
+    code: 'YUNEXPRESS',
+    name: '윈익스프레스',
+    nameEn: 'YunExpress',
+    site: 'https://www.yuntrack.com/',
+    domestic: false,
+  },
 };
+
+/* ------------------------------------------------------------------ *
+ * lastscanned — 551 carriers, one response shape
+ * ------------------------------------------------------------------ */
+
+/** WIMP carrier code -> lastscanned carrier id. */
+const LASTSCANNED_CARRIERS = {
+  CJ: 'cjlogistics',
+  EPOST: 'koreapost',
+  HANJIN: 'hanjin',
+  LOTTE: 'lotte',
+  LOGEN: 'logen',
+  ILYANG: 'ilyanglogis',
+  DHL: 'dhl',
+  FEDEX: 'fedex',
+  UPS: 'ups',
+  USPS: 'usps',
+  CAINIAO: 'cainiao',
+  EMS: 'epostglobal',
+  YUNEXPRESS: 'yunexpress',
+};
+
+const CODE_BY_LASTSCANNED = Object.fromEntries(
+  Object.entries(LASTSCANNED_CARRIERS).map(([code, id]) => [id, code])
+);
+
+/** The seven states lastscanned reports, mapped onto the WIMP status model. */
+const LASTSCANNED_STATUS = {
+  label_created: 'REGISTERED',
+  in_transit: 'IN_TRANSIT',
+  out_for_delivery: 'OUT_FOR_DELIVERY',
+  delivered: 'DELIVERED',
+  exception: 'EXCEPTION',
+  returned: 'RETURNED',
+  unknown: null,
+};
+
+function lastscannedStatus(raw) {
+  return LASTSCANNED_STATUS[String(raw || '').toLowerCase()] || null;
+}
+
+function lastscannedKey() {
+  const key = process.env.LASTSCANNED_API_KEY;
+  return key && String(key).trim() ? String(key).trim() : '';
+}
+
+function carrierForLastscanned(id) {
+  const key = String(id || '').toLowerCase();
+  if (!key) return null;
+  const code = CODE_BY_LASTSCANNED[key];
+  if (code && CARRIERS[code]) return CARRIERS[code];
+  const label = key.charAt(0).toUpperCase() + key.slice(1);
+  return {
+    code: key.toUpperCase(),
+    name: label,
+    nameEn: label,
+    site: 'https://www.lastscanned.com/',
+    domestic: false,
+    lastscanned: key,
+  };
+}
 
 /* ------------------------------------------------------------------ *
  * Errors
@@ -649,6 +777,52 @@ function isoToKst(iso) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Estimated delivery date
+ *   A carrier gives either a local calendar date ("2026-12-01") or an
+ *   instant ("2026-12-01T14:00:00Z"). We keep one normalised field,
+ *   estimatedDelivery: "YYYY-MM-DD" in Korean calendar days.
+ * ------------------------------------------------------------------ */
+
+function calendarDate(value) {
+  const m = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return `${m[1]}-${m[2]}-${m[3]}`;
+}
+
+function kstDateOf(value) {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) return null;
+  return new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Normalise whatever a carrier reports into one KST calendar date.
+ * localDate  — a date the carrier printed in the receiver's timezone.
+ * instants   — ISO timestamps (UTC/offset) that must first move to KST.
+ */
+function estimatedDate(localDate, instants) {
+  const plain = String(localDate || '').trim();
+  const looksLikeInstant = /T.*(Z|[+-]\d{2}:?\d{2})$/i.test(plain);
+  if (plain && !looksLikeInstant) {
+    const date = calendarDate(plain);
+    if (date) return date;
+  }
+  if (looksLikeInstant) {
+    const date = kstDateOf(plain);
+    if (date) return date;
+  }
+  for (const value of instants || []) {
+    const date = kstDateOf(value);
+    if (date) return date;
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ *
  * Status model
  * ------------------------------------------------------------------ */
 
@@ -659,6 +833,7 @@ const STAGE = {
   OUT_FOR_DELIVERY: 3,
   DELIVERED: 4,
   EXCEPTION: -1,
+  RETURNED: -1,
   UNKNOWN: -2,
 };
 
@@ -669,6 +844,7 @@ const STATUS_LABEL = {
   OUT_FOR_DELIVERY: '배송 출발',
   DELIVERED: '배달 완료',
   EXCEPTION: '예외',
+  RETURNED: '반송',
   UNKNOWN: '확인 중',
 };
 
@@ -1060,8 +1236,8 @@ async function trackDHL(number) {
   if (!key) {
     throw new TrackError(
       'NEEDS_KEY',
-      'DHL_API_KEY 환경변수가 필요합니다.',
-      'developer.dhl.com에서 무료 API 키(일 250건)를 발급받아 Vercel 환경변수 DHL_API_KEY에 넣으면 DHL 실시간 조회가 켜집니다.',
+      'DHL_API_KEY 또는 LASTSCANNED_API_KEY 환경변수가 필요합니다.',
+      'developer.dhl.com 무료 키(일 250건)를 Vercel의 DHL_API_KEY에 넣거나, lastscanned 키를 LASTSCANNED_API_KEY에 넣으면 DHL 실시간 조회가 켜집니다.',
       501
     );
   }
@@ -1094,7 +1270,167 @@ async function trackDHL(number) {
   });
 
   if (events.length === 0) throw notFound('DHL 배송 이력이 아직 없습니다.');
-  return { events, source: 'dhl' };
+  return {
+    events,
+    source: 'dhl',
+    carrier: CARRIERS.DHL,
+    estimatedDelivery: estimatedDate(null, [shipment.estimatedTimeOfDelivery, shipment.estimatedDeliveryDate]),
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * lastscanned adapter — one request, 551 carriers
+ * ------------------------------------------------------------------ */
+
+async function trackLastscanned(number, carrierId) {
+  const key = lastscannedKey();
+  if (!key) {
+    throw new TrackError(
+      'NEEDS_KEY',
+      'LASTSCANNED_API_KEY 환경변수가 필요합니다.',
+      'lastscanned.com API 키를 Vercel의 LASTSCANNED_API_KEY에 넣으면 로젠·일양·FedEx·UPS·USPS·Cainiao·EMS 등 전 세계 551개 택배사를 조회할 수 있습니다.',
+      501
+    );
+  }
+
+  const url = new URL(`${LASTSCANNED_BASE}/${encodeURIComponent(number)}`);
+  if (carrierId) url.searchParams.set('carrier', carrierId);
+  const endpoint = url.toString();
+
+  let status = 0;
+  let payload = null;
+  let failure = '';
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let res;
+    try {
+      res = await fetch(endpoint, {
+        headers: { authorization: `Bearer ${key}`, accept: 'application/json' },
+        signal: AbortSignal.timeout(LASTSCANNED_TIMEOUT_MS),
+        redirect: 'follow',
+      });
+    } catch {
+      throw new TrackError('TIMEOUT', '배송 조회 서버 응답이 너무 늦습니다.', '잠시 후 다시 시도해 주세요.', 504);
+    }
+    status = res.status;
+    const text = await res.text();
+    payload = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = null;
+    }
+    failure = payload && payload.error ? String(payload.error.code || '') : '';
+
+    // carrier_error / carrier_unavailable are the flaky ones (koreapost parse); one short retry.
+    if ((status === 502 || status === 503) && attempt === 0) {
+      await sleep(LASTSCANNED_RETRY_MS);
+      continue;
+    }
+    break;
+  }
+
+  const errorMessage = (payload && payload.error && payload.error.message) || '';
+
+  if (status === 404 || failure === 'not_found') {
+    throw notFound(
+      carrierId === 'koreapost'
+        ? '우체국에 등록되지 않았거나 아직 접수 전인 번호입니다.'
+        : '택배사에 등록된 배송 정보가 없습니다. 운송장 번호를 다시 확인해 주세요.'
+    );
+  }
+  if (status === 401 || failure === 'unauthorized') {
+    throw new TrackError(
+      'NEEDS_KEY',
+      'LASTSCANNED_API_KEY가 거부되었습니다.',
+      'Vercel의 LASTSCANNED_API_KEY 값을 다시 확인해 주세요.',
+      502
+    );
+  }
+  if (status === 429 || failure === 'rate_limited') {
+    throw new TrackError(
+      'RATE_LIMITED',
+      '택배사 조회 한도에 잠시 도달했습니다.',
+      '1분 뒤 또는 00:00 UTC 이후에 다시 시도해 주세요.',
+      429
+    );
+  }
+  if (status === 400 && (failure === 'unknown_carrier' || failure === 'bad_request' || failure === 'postcode_required')) {
+    throw new TrackError(
+      'BAD_REQUEST',
+      failure === 'postcode_required'
+        ? '이 택배사는 우편번호가 함께 필요합니다.'
+        : '이 번호 형식을 택배사가 인식하지 못했습니다.',
+      '운송장 번호를 다시 확인하거나 다른 택배사를 선택해 주세요.',
+      400
+    );
+  }
+  if (status === 502 || status === 503) {
+    throw upstreamError(
+      'lastscanned에서 택배사 응답을 받지 못했습니다' + (failure ? ` (${failure})` : '') + '.'
+    );
+  }
+  if (status < 200 || status >= 300) {
+    throw upstreamError('lastscanned 응답 ' + status + (errorMessage ? ' · ' + errorMessage.slice(0, 80) : ''));
+  }
+  if (!payload || typeof payload !== 'object') {
+    throw upstreamError('lastscanned 응답 형식을 읽을 수 없습니다.');
+  }
+
+  const declared = lastscannedStatus(payload.status);
+  const rawEvents = Array.isArray(payload.events) ? payload.events : [];
+
+  // lastscanned returns newest first; the rest of the server works oldest first.
+  const events = rawEvents
+    .slice()
+    .reverse()
+    .map((ev) => {
+      const place = cleanText(ev.location || '');
+      const ccMatch = place.match(/(?:,\s*|\s)([A-Z]{2})$/);
+      const statusCode = lastscannedStatus(ev.status) || 'UNKNOWN';
+      const local = ev.localTime ? String(ev.localTime) : '';
+      return {
+        time: isoToKst(ev.timestamp) || (local ? isoToKst(/[Zz]|[+-]\d{2}:?\d{2}$/.test(local) ? local : local + 'Z') : null),
+        status: statusOf(statusCode),
+        description: maskPersonal(ev.description || ''),
+        scan: cleanText(ev.description || '') || STATUS_LABEL[statusCode],
+        location: place ? makeLocation(place, { countryCode: ccMatch ? ccMatch[1] : undefined }) : null,
+      };
+    });
+
+  if (events.length === 0) {
+    if (!declared && !payload.statusDescription) {
+      throw notFound('택배사에 등록된 배송 정보가 없습니다.');
+    }
+    const code = declared || 'UNKNOWN';
+    events.push({
+      time: isoToKst(payload.deliveredAt) || null,
+      status: statusOf(code),
+      description: maskPersonal(payload.statusDescription || payload.message || ''),
+      scan: cleanText(payload.statusDescription || '') || STATUS_LABEL[code],
+      location: null,
+    });
+  }
+
+  return {
+    events,
+    source: 'lastscanned',
+    upstreamCarrier: payload.carrier || carrierId || null,
+    carrier: carrierForLastscanned(payload.carrier || carrierId),
+    declaredStatus: declared,
+    estimatedDelivery: estimatedDate(payload.estimatedDelivery, [payload.estimatedDeliveryAt]),
+    service: payload.service || null,
+    message: payload.message || null,
+  };
+}
+
+async function runStep(step, number) {
+  if (step.via === 'lastscanned') return trackLastscanned(number, step.ls);
+  if (step.via === 'dhl') return trackDHL(number);
+  const adapter = ADAPTERS[step.carrier];
+  if (!adapter) {
+    throw new TrackError('BAD_REQUEST', '알 수 없는 택배사입니다.', '택배사를 다시 선택해 주세요.', 400);
+  }
+  return adapter(number);
 }
 
 const ADAPTERS = {
@@ -1109,36 +1445,109 @@ const ADAPTERS = {
  * Carrier detection
  * ------------------------------------------------------------------ */
 
-function detectCandidates(number, requested) {
+/* ------------------------------------------------------------------ *
+ * Carrier routing
+ *   A plan is an ordered list of attempts. Domestic free parsers come
+ *   first (they cost nothing); lastscanned is the fallback and the only
+ *   route for the other 547 carriers.
+ * ------------------------------------------------------------------ */
+
+const FREE_DOMESTIC = ['CJ', 'EPOST', 'HANJIN', 'LOTTE'];
+
+const needsLastscannedKey = (carrierCode) => {
+  const name = carrierCode && CARRIERS[carrierCode] ? CARRIERS[carrierCode].name + '는 ' : '';
+  return new TrackError(
+    'NEEDS_KEY',
+    'LASTSCANNED_API_KEY 환경변수가 필요합니다.',
+    `${name}lastscanned.com 키를 Vercel의 LASTSCANNED_API_KEY에 넣으면 로젠·일양·FedEx·UPS·USPS·Cainiao·EMS 등 전 세계 551개 택배사를 조회할 수 있습니다.`,
+    501
+  );
+};
+
+function planRoute(number, requested) {
+  const hasLastscanned = Boolean(lastscannedKey());
+
   if (requested && requested !== 'AUTO') {
-    if (requested === 'FEDEX' || requested === 'UPS') {
-      throw new TrackError(
-        'UNSUPPORTED',
-        `${requested}는 아직 지원하지 않습니다.`,
-        '현재는 CJ대한통운·우체국·한진·롯데·DHL을 지원합니다.',
-        501
-      );
+    if (requested === 'GLOBAL') {
+      if (!hasLastscanned) throw needsLastscannedKey('');
+      return [{ carrier: null, via: 'lastscanned', ls: '', auto: true }];
     }
+
+    if (FREE_DOMESTIC.includes(requested)) {
+      const plan = [{ carrier: requested, via: 'free' }];
+      if (hasLastscanned) {
+        plan.push({ carrier: requested, via: 'lastscanned', ls: LASTSCANNED_CARRIERS[requested], fallback: true });
+      }
+      return plan;
+    }
+
+    if (requested === 'DHL') {
+      const plan = [];
+      if (hasLastscanned) plan.push({ carrier: 'DHL', via: 'lastscanned', ls: 'dhl' });
+      // Older deployments only have DHL_API_KEY — keep that path working.
+      if (process.env.DHL_API_KEY) plan.push({ carrier: 'DHL', via: 'dhl' });
+      if (plan.length === 0) plan.push({ carrier: 'DHL', via: 'dhl' });
+      return plan;
+    }
+
+    if (LASTSCANNED_CARRIERS[requested]) {
+      if (!hasLastscanned) throw needsLastscannedKey(requested);
+      return [{ carrier: requested, via: 'lastscanned', ls: LASTSCANNED_CARRIERS[requested] }];
+    }
+
     if (!ADAPTERS[requested]) {
       throw new TrackError('BAD_REQUEST', '알 수 없는 택배사입니다.', '택배사를 다시 선택해 주세요.', 400);
     }
-    return [requested];
+    return [{ carrier: requested, via: 'free' }];
   }
 
+  // AUTO: domestic by number length first, then lastscanned auto-detection.
   if (/^1Z[0-9A-Z]{16}$/i.test(number)) {
-    throw new TrackError('UNSUPPORTED', 'UPS는 아직 지원하지 않습니다.', 'UPS는 자체 사이트에서 조회해 주세요.', 501);
-  }
-  if (/^\d{20,}$/.test(number)) {
-    throw new TrackError('UNSUPPORTED', '이 번호 형식은 지원하지 않습니다.', '택배사를 직접 선택해 주세요.', 501);
+    if (!hasLastscanned) {
+      throw new TrackError(
+        'UNSUPPORTED',
+        'UPS는 아직 지원하지 않습니다.',
+        'Vercel에 LASTSCANNED_API_KEY를 추가하면 UPS·FedEx·USPS 등 551개 택배사를 바로 조회할 수 있습니다.',
+        501
+      );
+    }
+    return [{ carrier: 'UPS', via: 'lastscanned', ls: 'ups', auto: true }];
   }
 
-  const len = number.length;
-  if (len === 13) return ['EPOST'];
-  if (len === 14) return ['HANJIN'];
-  if (len === 10) return ['CJ', 'DHL'];
-  if (len === 12) return ['CJ', 'LOTTE', 'HANJIN'];
-  if (len === 11) return ['LOTTE'];
-  return ['CJ', 'EPOST', 'LOTTE', 'HANJIN', 'DHL'];
+  const plan = [];
+  if (/^\d+$/.test(number)) {
+    const len = number.length;
+    if (len === 13) plan.push({ carrier: 'EPOST', via: 'free' });
+    else if (len === 14) plan.push({ carrier: 'HANJIN', via: 'free' });
+    else if (len === 10) plan.push({ carrier: 'CJ', via: 'free' });
+    else if (len === 12) {
+      plan.push({ carrier: 'CJ', via: 'free' });
+      plan.push({ carrier: 'LOTTE', via: 'free' });
+      plan.push({ carrier: 'HANJIN', via: 'free' });
+    } else if (len === 11) plan.push({ carrier: 'LOTTE', via: 'free' });
+    else if (len >= 9) FREE_DOMESTIC.forEach((carrier) => plan.push({ carrier, via: 'free' }));
+  }
+
+  if (hasLastscanned) {
+    // A 12-digit domestic number can be mistaken for FedEx, so this stays last.
+    plan.push({ carrier: null, via: 'lastscanned', ls: '', auto: true, fallback: true });
+  }
+
+  if (plan.length === 0) {
+    throw new TrackError(
+      'UNSUPPORTED',
+      '이 번호 형식은 지금은 자동 인식할 수 없습니다.',
+      hasLastscanned
+        ? '택배사를 직접 선택해 주세요.'
+        : 'Vercel에 LASTSCANNED_API_KEY를 추가하면 해외 551개 택배사까지 자동 인식됩니다.',
+      501
+    );
+  }
+  return plan;
+}
+
+function detectCandidates(number, requested) {
+  return planRoute(number, requested).map((step) => step.carrier || 'LASTSCANNED');
 }
 
 /* ------------------------------------------------------------------ *
@@ -1196,18 +1605,31 @@ function buildRoute(events) {
   return points;
 }
 
-function summarise(carrierCode, number, events, meta) {
+function summarise(carrierCode, number, events, meta, extra) {
+  const opts = extra || {};
   const ordered = sortEvents(dedupeEvents(events));
   const withTime = ordered.filter((e) => e.time);
   const latest = withTime[withTime.length - 1] || ordered[ordered.length - 1] || null;
 
-  const highest = ordered.reduce((acc, ev) => {
-    if (ev.status.code === 'EXCEPTION') return acc;
-    return Math.max(acc, ev.status.stage);
-  }, 0);
-  const delivered = ordered.some((ev) => ev.status.code === 'DELIVERED');
-  const exception = latest && latest.status.code === 'EXCEPTION';
-  const stage = delivered ? STAGE.DELIVERED : exception ? highest : highest;
+  // The newest scan wins. A delivered scan from yesterday must not hide a
+  // "out for delivery" scan from today (re-delivery, correction, return).
+  const declared = opts.declaredStatus && STAGE[opts.declaredStatus] !== undefined ? opts.declaredStatus : null;
+  const code = declared || (latest ? latest.status.code : 'UNKNOWN');
+
+  const highest = ordered.reduce(
+    (acc, ev) => (ev.status.stage >= 0 ? Math.max(acc, ev.status.stage) : acc),
+    0
+  );
+  const stage =
+    code === 'DELIVERED'
+      ? STAGE.DELIVERED
+      : STAGE[code] !== undefined && STAGE[code] < 0
+        ? STAGE[code]
+        : latest && latest.status.stage >= 0
+          ? latest.status.stage
+          : highest;
+
+  const delivered = code === 'DELIVERED';
 
   const route = buildRoute(ordered);
   const countries = [];
@@ -1217,14 +1639,15 @@ function summarise(carrierCode, number, events, meta) {
 
   return {
     ok: true,
-    carrier: CARRIERS[carrierCode],
+    carrier: opts.carrier || CARRIERS[carrierCode] || carrierForLastscanned(carrierCode),
     number,
     status: {
-      code: delivered ? 'DELIVERED' : exception ? 'EXCEPTION' : latest ? latest.status.code : 'UNKNOWN',
-      label: delivered ? STATUS_LABEL.DELIVERED : exception ? STATUS_LABEL.EXCEPTION : latest ? latest.status.label : STATUS_LABEL.UNKNOWN,
+      code,
+      label: STATUS_LABEL[code] || STATUS_LABEL.UNKNOWN,
       stage,
-      delivered: Boolean(delivered),
+      delivered,
     },
+    estimatedDelivery: opts.estimatedDelivery || null,
     latest: latest
       ? {
           time: latest.time,
@@ -1378,9 +1801,9 @@ async function handler(req, res) {
     return;
   }
 
-  let candidates;
+  let plan;
   try {
-    candidates = detectCandidates(number, requested);
+    plan = planRoute(number, requested);
   } catch (err) {
     respond(res, err.status || 400, {
       ok: false,
@@ -1391,8 +1814,9 @@ async function handler(req, res) {
 
   const attempts = [];
 
-  for (const carrierCode of candidates) {
-    const cacheKey = `${carrierCode}:${number}`;
+  for (const step of plan) {
+    const attemptLabel = step.carrier || (step.ls ? String(step.ls).toUpperCase() : 'LASTSCANNED');
+    const cacheKey = `${step.via}:${step.ls || step.carrier || 'auto'}:${number}`;
     const cached = cacheGet(cacheKey);
     if (cached) {
       respond(res, 200, {
@@ -1403,7 +1827,7 @@ async function handler(req, res) {
     }
 
     try {
-      const result = await ADAPTERS[carrierCode](number);
+      const result = await runStep(step, number);
 
       // Fill in coordinates for locations the built-in hub table did not know.
       const stillTime = Date.now() - startedAt < 5000;
@@ -1426,23 +1850,37 @@ async function handler(req, res) {
 
       const meta = {
         source: result.source,
+        via: step.via,
+        upstream: result.upstreamCarrier || null,
         cached: false,
         demo: Boolean(result.demo),
         fetchedAt: new Date().toISOString(),
         elapsedMs: Date.now() - startedAt,
         attempts,
       };
-      const payload = summarise(carrierCode, number, result.events, meta);
+      if (result.service) meta.service = result.service;
+      if (result.message) meta.message = result.message;
+
+      const payload = summarise(step.carrier, number, result.events, meta, {
+        carrier: result.carrier,
+        declaredStatus: result.declaredStatus,
+        estimatedDelivery: result.estimatedDelivery,
+      });
       cacheSet(cacheKey, payload);
       respond(res, 200, payload);
       return;
     } catch (err) {
-      attempts.push({ carrier: carrierCode, code: err.code, message: err.message });
+      attempts.push({ carrier: attemptLabel, via: step.via, code: err.code, message: err.message });
 
       if (err instanceof TrackError && err.code === 'BAD_REQUEST' && requested !== 'AUTO') {
         respond(res, err.status, {
           ok: false,
-          error: { code: err.code, message: err.message, hint: err.hint, carrier: CARRIERS[carrierCode] },
+          error: {
+            code: err.code,
+            message: err.message,
+            hint: err.hint,
+            carrier: step.carrier ? CARRIERS[step.carrier] : null,
+          },
         });
         return;
       }
@@ -1457,8 +1895,8 @@ async function handler(req, res) {
       ok: false,
       error: {
         code: 'NEEDS_KEY',
-        message: 'DHL_API_KEY 환경변수가 필요합니다 (developer.dhl.com 무료 250건/일).',
-        hint: 'Vercel → Settings → Environment Variables 에 DHL_API_KEY 를 추가하면 DHL 실시간 조회가 켜집니다.',
+        message: 'DHL_API_KEY 또는 LASTSCANNED_API_KEY 환경변수가 필요합니다.',
+        hint: 'Vercel → Settings → Environment Variables 에 LASTSCANNED_API_KEY(lastscanned.com, 551개 택배사)를 넣으면 해외 택배사까지 조회됩니다. DHL만 쓰려면 DHL_API_KEY를 넣어도 됩니다.',
         carrier: CARRIERS.DHL,
       },
       attempts,
@@ -1476,6 +1914,28 @@ async function handler(req, res) {
     return;
   }
 
+  const single = attempts.length === 1 ? attempts[0] : null;
+  if (single) {
+    const statusMap = { BAD_REQUEST: 400, RATE_LIMITED: 429, UPSTREAM: 502, TIMEOUT: 504, NOT_FOUND: 404 };
+    const status = statusMap[single.code] || 0;
+    if (status && status !== 404) {
+      respond(res, status, {
+        ok: false,
+        error: {
+          code: single.code,
+          message: single.message,
+          hint:
+            single.code === 'RATE_LIMITED'
+              ? '잠시(1분) 뒤 또는 00:00 UTC 이후에 다시 시도해 주세요.'
+              : '잠시 후 다시 시도하거나, 택배사 사이트에서 직접 확인해 주세요.',
+          carrier: single.carrier && CARRIERS[single.carrier] ? CARRIERS[single.carrier] : null,
+        },
+        attempts,
+      });
+      return;
+    }
+  }
+
   const upstream = attempts.find((a) => a.code === 'UPSTREAM' || a.code === 'TIMEOUT');
   if (upstream && attempts.every((a) => a.code !== 'NOT_FOUND')) {
     respond(res, 502, {
@@ -1490,7 +1950,7 @@ async function handler(req, res) {
     return;
   }
 
-  const specific = attempts.length === 1 ? attempts[0] : null;
+  const specific = single;
   respond(res, 404, {
     ok: false,
     error: {
@@ -1500,7 +1960,7 @@ async function handler(req, res) {
         number.length === 12 && !specific
           ? '12자리 번호는 CJ대한통운·롯데택배·한진택배가 함께 씁니다. 택배사를 직접 선택하면 더 정확합니다.'
           : '운송장 번호를 확인하거나, 택배사가 아직 상품을 인수하지 않았을 수 있습니다.',
-      carrier: specific ? CARRIERS[specific.carrier] : null,
+      carrier: specific && CARRIERS[specific.carrier] ? CARRIERS[specific.carrier] : null,
     },
     attempts,
   });
@@ -1511,6 +1971,7 @@ module.exports.handler = handler;
 module.exports._internal = {
   normalizeNumber,
   detectCandidates,
+  planRoute,
   summarise,
   buildRoute,
   makeLocation,
@@ -1526,6 +1987,11 @@ module.exports._internal = {
   hanjinStatus,
   lotteStatus,
   dhlStatus,
+  lastscannedStatus,
+  estimatedDate,
+  carrierForLastscanned,
+  LASTSCANNED_CARRIERS,
+  trackLastscanned,
   CARRIERS,
   cache,
 };

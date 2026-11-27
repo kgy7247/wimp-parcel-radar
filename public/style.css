@@ -64,3 +64,17 @@
 .map-status[hidden]{display:none}
 .demo[hidden]{display:none}
 #number::placeholder{color:#68788b}
+
+/* ---- Estimated delivery badge + logos for the 551-carrier routes ---- */
+.summary-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.edd{font-size:12px;padding:5px 10px;border-radius:4px;background:#1b2634;border:1px solid #2f3d4d;color:#d7e6f4;white-space:nowrap}
+.edd::before{content:'▸';margin-right:6px;color:var(--accent)}
+.edd[hidden]{display:none}
+.carrier-logo[data-carrier="LOGEN"]{background:#0f6f4a;color:#fff}
+.carrier-logo[data-carrier="ILYANG"]{background:#1b4e8c;color:#fff}
+.carrier-logo[data-carrier="DHL"]{background:#ffcc00;color:#d40511}
+.carrier-logo[data-carrier="USPS"]{background:#004b87;color:#fff}
+.carrier-logo[data-carrier="CAINIAO"]{background:#ff6a00;color:#fff}
+.carrier-logo[data-carrier="EMS"]{background:#e8452c;color:#fff}
+.carrier-logo[data-carrier="YUNEXPRESS"]{background:#0b5cab;color:#fff}
+@media(max-width:760px){.edd{font-size:11px}}

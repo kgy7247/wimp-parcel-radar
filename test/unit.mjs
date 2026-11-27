@@ -80,6 +80,42 @@ async function test(name, fn) {
 const CJ_MAIN = '<html><form><input type="hidden" name="_csrf" value="0f0e0d0c-1111-2222-3333-444455556666"></form></html>';
 const cjJson = fixture('cj-1234567890.json');
 
+/* lastscanned response shape (documented at work/wimp911/lastscanned_api.md). */
+function lastscannedJson(overrides = {}) {
+  return {
+    carrier: 'ups',
+    trackingNumber: '1Z000Y770414233027',
+    status: 'delivered',
+    statusDescription: 'Delivered',
+    service: 'UPS Express Saver®',
+    deliveredAt: '2026-07-31T12:55:04Z',
+    deliveredAtLocal: '2026-07-31T14:55:00',
+    signedBy: 'EMSO',
+    destination: { city: 'Ditzingen', state: '', country: 'DE' },
+    estimatedDelivery: '2026-08-07',
+    estimatedDeliveryAt: null,
+    message: null,
+    events: [
+      { timestamp: '2026-07-31T12:55:04Z', localTime: '2026-07-31T14:55:00', status: 'delivered', description: 'DELIVERED', location: 'DITZINGEN, DE', code: 'KB' },
+      { timestamp: '2026-07-31T08:10:00Z', localTime: '2026-07-31T10:10:00', status: 'out_for_delivery', description: 'OUT FOR DELIVERY', location: 'STUTTGART, DE', code: 'OT' },
+      { timestamp: '2026-07-30T21:40:00Z', localTime: '2026-07-30T23:40:00', status: 'in_transit', description: 'ARRIVAL SCAN', location: 'KOELN, DE', code: 'AR' },
+      { timestamp: '2026-07-29T09:00:00Z', localTime: '2026-07-29T11:00:00', status: 'label_created', description: 'LABEL CREATED', location: 'KOELN, DE', code: 'MP' },
+    ],
+    ...overrides,
+  };
+}
+
+function withLastscannedKey(fn) {
+  const previous = process.env.LASTSCANNED_API_KEY;
+  process.env.LASTSCANNED_API_KEY = 'lsk_test_key';
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => {
+      if (previous === undefined) delete process.env.LASTSCANNED_API_KEY;
+      else process.env.LASTSCANNED_API_KEY = previous;
+    });
+}
+
 function dhlJson() {
   return {
     shipments: [
@@ -114,7 +150,7 @@ function dhlJson() {
 
 console.log('\nWIMP api/track.js — unit tests\n');
 
-await test('CJ: csrf handshake then JSON history, phones masked, delivered', async () => {
+await test('CJ: csrf handshake then JSON history, phones masked, newest scan wins', async () => {
   stub({
     'cjlogistics.com/ko/tool/parcel/tracking-detail': cjJson,
     'cjlogistics.com/ko/tool/parcel/tracking': CJ_MAIN,
@@ -124,13 +160,15 @@ await test('CJ: csrf handshake then JSON history, phones masked, delivered', asy
   assert.equal(out.body.ok, true);
   assert.equal(out.body.carrier.code, 'CJ');
   assert.equal(out.body.events.length, 6);
-  assert.equal(out.body.status.code, 'DELIVERED');
-  assert.equal(out.body.status.delivered, true);
-  assert.equal(out.body.status.stage, 4);
+  // 2026-11-21 12:42 배송출발 is newer than the 10:25 배송완료 scan before it.
+  assert.equal(out.body.status.code, 'OUT_FOR_DELIVERY');
+  assert.equal(out.body.status.delivered, false);
+  assert.equal(out.body.status.stage, 3);
+  assert.equal(out.body.latest.scan, '배송출발');
   assert.ok(out.body.route.length >= 4, 'route points');
   assert.deepEqual(out.body.countries, ['KR']);
   const blob = JSON.stringify(out.body);
-  assert.ok(!/010-3178-4370/.test(blob), 'driver phone number must be masked');
+  assert.ok(!/010-1234-5678/.test(blob), 'driver phone number must be masked');
   assert.ok(blob.includes('010-****-****'), 'masked phone marker present');
   assert.equal(calls[0].method, 'GET');
   assert.ok(calls[1].url.includes('_csrf='), 'csrf forwarded to the detail call');
@@ -222,6 +260,210 @@ await test('DHL: API key path normalises events and stages', async () => {
   assert.equal(out.body.status.code, 'OUT_FOR_DELIVERY');
   assert.deepEqual(out.body.countries, ['BG', 'DE']);
   assert.ok(calls[0].url.includes('trackingNumber=1234567896'));
+});
+
+await test('lastscanned: UPS delivered, EDD normalised, events oldest-first', async () => {
+  await withLastscannedKey(async () => {
+    stub({ 'api.lastscanned.com/v1/track/1Z000Y770414233027': lastscannedJson() });
+    const out = await call('1Z000Y770414233027', 'UPS');
+    assert.equal(out.status, 200);
+    assert.equal(out.body.carrier.code, 'UPS');
+    assert.equal(out.body.status.code, 'DELIVERED');
+    assert.equal(out.body.status.delivered, true);
+    assert.equal(out.body.status.stage, 4);
+    assert.equal(out.body.estimatedDelivery, '2026-08-07');
+    assert.equal(out.body.meta.source, 'lastscanned');
+    assert.equal(out.body.meta.upstream, 'ups');
+    assert.equal(out.body.events.length, 4);
+    assert.equal(out.body.events[0].status.code, 'REGISTERED');
+    assert.equal(out.body.events.at(-1).status.code, 'DELIVERED');
+    assert.equal(out.body.events.at(-1).location.countryCode, 'DE');
+    assert.ok(calls[0].url.includes('carrier=ups'), calls[0].url);
+  });
+});
+
+await test('lastscanned: koreapost 502 carrier_error is retried once', async () => {
+  await withLastscannedKey(async () => {
+    let tries = 0;
+    stub({
+      'trace.RetrieveDomRigiTraceList.comm': { __status: 404, body: 'not found' },
+      'api.lastscanned.com/v1/track/1234567890125': () => {
+        tries += 1;
+        if (tries === 1) {
+          return { __status: 502, body: JSON.stringify({ error: { code: 'carrier_error', message: 'parse' } }) };
+        }
+        return lastscannedJson({
+          carrier: 'koreapost',
+          status: 'in_transit',
+          statusDescription: '배송중',
+          estimatedDelivery: '2026-12-01',
+          events: [
+            { timestamp: '2026-11-27T02:00:00Z', localTime: null, status: 'in_transit', description: '간선하차', location: '대전, KR', code: null },
+          ],
+        });
+      },
+    });
+    const out = await call('1234567890125', 'EPOST');
+    assert.equal(out.status, 200);
+    assert.equal(tries, 2, 'one retry after 502');
+    assert.equal(out.body.carrier.code, 'EPOST');
+    assert.equal(out.body.status.code, 'IN_TRANSIT');
+    assert.equal(out.body.estimatedDelivery, '2026-12-01');
+    assert.equal(out.body.meta.attempts[0].carrier, 'EPOST');
+    assert.equal(out.body.meta.attempts.length, 1);
+  });
+});
+
+await test('lastscanned: all seven statuses map, returned is not delivered', async () => {
+  const { lastscannedStatus } = handler._internal;
+  assert.equal(lastscannedStatus('label_created'), 'REGISTERED');
+  assert.equal(lastscannedStatus('in_transit'), 'IN_TRANSIT');
+  assert.equal(lastscannedStatus('out_for_delivery'), 'OUT_FOR_DELIVERY');
+  assert.equal(lastscannedStatus('delivered'), 'DELIVERED');
+  assert.equal(lastscannedStatus('exception'), 'EXCEPTION');
+  assert.equal(lastscannedStatus('returned'), 'RETURNED');
+  assert.equal(lastscannedStatus('unknown'), null);
+  assert.equal(lastscannedStatus('something_new'), null);
+
+  await withLastscannedKey(async () => {
+    stub({
+      'api.lastscanned.com/v1/track/1Z000Y770414230001': lastscannedJson({
+        trackingNumber: '1Z000Y770414230001',
+        status: 'returned',
+        statusDescription: 'Returned to sender',
+        estimatedDelivery: null,
+        events: [
+          { timestamp: '2026-07-31T12:55:04Z', status: 'delivered', description: 'DELIVERED', location: 'DITZINGEN, DE' },
+          { timestamp: '2026-08-02T09:00:00Z', status: 'returned', description: 'RETURN TO SENDER', location: 'KOELN, DE' },
+        ],
+      }),
+    });
+    const out = await call('1Z000Y770414230001', 'UPS');
+    assert.equal(out.status, 200);
+    assert.equal(out.body.status.code, 'RETURNED');
+    assert.equal(out.body.status.delivered, false);
+    assert.equal(out.body.estimatedDelivery, null);
+  });
+});
+
+await test('lastscanned: EDD instant moves to the Korean calendar day', async () => {
+  const { estimatedDate } = handler._internal;
+  assert.equal(estimatedDate('2026-12-01', []), '2026-12-01');
+  assert.equal(estimatedDate(null, ['2026-11-30T16:30:00Z']), '2026-12-01');
+  assert.equal(estimatedDate('2026-11-30T16:30:00Z', []), '2026-12-01');
+  assert.equal(estimatedDate('2026-13-01', []), null);
+  assert.equal(estimatedDate(null, [null, 'nonsense']), null);
+});
+
+await test('CJ: free parser miss falls back to lastscanned cjlogistics', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'cjlogistics.com/ko/tool/parcel/tracking-detail': JSON.stringify({ parcelDetailResultMap: { resultList: [] } }),
+      'cjlogistics.com/ko/tool/parcel/tracking': CJ_MAIN,
+      'api.lastscanned.com/v1/track/1234567802': lastscannedJson({
+        carrier: 'cjlogistics',
+        trackingNumber: '1234567802',
+        status: 'in_transit',
+        statusDescription: '배송중',
+        estimatedDelivery: '2026-12-01',
+        events: [
+          { timestamp: '2026-11-27T01:00:00Z', localTime: null, status: 'in_transit', description: '간선하차', location: '수원, KR' },
+        ],
+      }),
+    });
+    const out = await call('1234567802', 'CJ');
+    assert.equal(out.status, 200);
+    assert.equal(out.body.carrier.code, 'CJ');
+    assert.equal(out.body.status.code, 'IN_TRANSIT');
+    assert.equal(out.body.estimatedDelivery, '2026-12-01');
+    assert.equal(out.body.meta.source, 'lastscanned');
+    assert.ok(calls.some((c) => c.url.includes('api.lastscanned.com') && c.url.includes('carrier=cjlogistics')));
+  });
+});
+
+await test('auto: 12-digit domestic number reaches lastscanned only after the free carriers', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'cjlogistics.com/ko/tool/parcel/tracking-detail': JSON.stringify({ parcelDetailResultMap: { resultList: [] } }),
+      'cjlogistics.com/ko/tool/parcel/tracking': CJ_MAIN,
+      'lotteglogis.com/mobile/reservation/tracking/linkView': fixture('lotte-123456789013.html'),
+      'hanjin.com/kor/CMS/DeliveryMgr/WaybillResult.do': fixture('hanjin-notfound.html'),
+      'api.lastscanned.com/v1/track/123456780312': lastscannedJson({
+        carrier: 'cjlogistics',
+        trackingNumber: '123456780312',
+        status: 'in_transit',
+        statusDescription: '배송중',
+        estimatedDelivery: null,
+        events: [
+          { timestamp: '2026-11-27T01:00:00Z', localTime: null, status: 'in_transit', description: '간선하차', location: '수원, KR' },
+        ],
+      }),
+    });
+    const out = await call('123456780312');
+    assert.equal(out.status, 200);
+    assert.equal(out.body.status.code, 'IN_TRANSIT');
+    assert.equal(out.body.meta.attempts.length, 3, 'three free domestic attempts first');
+    const lastscannedCall = calls.find((c) => c.url.includes('api.lastscanned.com'));
+    assert.ok(lastscannedCall, 'lastscanned consulted');
+    assert.ok(!lastscannedCall.url.includes('carrier='), 'no carrier pinned in auto mode');
+  });
+});
+
+await test('auto: 1Z number goes straight to lastscanned UPS', async () => {
+  await withLastscannedKey(async () => {
+    stub({ 'api.lastscanned.com/v1/track/1Z000Y770414230002': lastscannedJson({ trackingNumber: '1Z000Y770414230002' }) });
+    const out = await call('1Z000Y770414230002');
+    assert.equal(out.status, 200);
+    assert.equal(out.body.carrier.code, 'UPS');
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.includes('carrier=ups'));
+  });
+});
+
+await test('GLOBAL: any of the 551 carriers is auto-detected', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'api.lastscanned.com/v1/track/YT2501234567890': lastscannedJson({
+        carrier: 'yunexpress',
+        trackingNumber: 'YT2501234567890',
+        status: 'in_transit',
+        statusDescription: 'In transit',
+        estimatedDelivery: '2026-12-05',
+        events: [
+          { timestamp: '2026-11-26T03:00:00Z', status: 'in_transit', description: 'Departed origin', location: 'SHENZHEN, CN' },
+        ],
+      }),
+    });
+    const out = await call('YT2501234567890', 'GLOBAL');
+    assert.equal(out.status, 200);
+    assert.equal(out.body.carrier.code, 'YUNEXPRESS');
+    assert.equal(out.body.estimatedDelivery, '2026-12-05');
+    assert.equal(out.body.carrier.site, 'https://www.yuntrack.com/');
+  });
+});
+
+await test('lastscanned: unknown carrier on an explicit pick returns BAD_REQUEST', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'api.lastscanned.com/v1/track/9999999999999': {
+        __status: 400,
+        body: JSON.stringify({ error: { code: 'unknown_carrier', message: 'no such number' } }),
+      },
+    });
+    const out = await call('9999999999999', 'USPS');
+    assert.equal(out.status, 400);
+    assert.equal(out.body.error.code, 'BAD_REQUEST');
+  });
+});
+
+await test('overseas carriers without any key explain LASTSCANNED_API_KEY', async () => {
+  delete process.env.LASTSCANNED_API_KEY;
+  delete process.env.DHL_API_KEY;
+  stub({});
+  const out = await call('1Z999AA10123456784', 'UPS');
+  assert.equal(out.status, 501);
+  assert.equal(out.body.error.code, 'NEEDS_KEY');
+  assert.ok(out.body.error.message.includes('LASTSCANNED_API_KEY'));
 });
 
 await test('auto: 13-digit number goes straight to Korea Post', async () => {

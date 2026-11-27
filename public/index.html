@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#080d13">
 <title>WIMP — Where Is My Parcel? · 택배 배송조회</title>
-<meta name="description" content="운송장 번호 하나로 국내 택배(CJ대한통운·우체국·한진·롯데)와 DHL 배송을 3D 위성 지구본에서 확인하세요. 마지막 스캔 위치와 국가별 이동 경로를 한눈에 보여줍니다.">
+<meta name="description" content="운송장 번호 하나로 국내 택배(CJ대한통운·우체국·한진·롯데·로젠)와 전 세계 550개 이상 택배사(DHL·FedEx·UPS·USPS·Cainiao·EMS) 배송을 3D 위성 지구본에서 확인하세요. 마지막 스캔 위치, 도착 예정일, 국가별 이동 경로를 한눈에 보여줍니다.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.wimp911.com/">
 <meta property="og:type" content="website">
@@ -60,14 +60,20 @@
     <span class="search-icon">⌕</span>
     <input id="number" placeholder="송장번호를 입력하세요" aria-label="Tracking number" required maxlength="60" value="" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false">
     <select id="carrier" aria-label="Carrier">
-      <option value="auto">배송사 자동 인식</option>
-      <option value="DHL">DHL</option>
-      <option value="CJ">CJ대한통운</option>
-      <option value="EPOST">우체국택배</option>
-      <option value="HANJIN">한진택배</option>
-      <option value="LOTTE">롯데택배</option>
-      <option value="FEDEX">FedEx</option>
-      <option value="UPS">UPS</option>
+      <option value="auto" data-i="carrierAuto">배송사 자동 인식</option>
+      <option value="CJ" data-i="carrierCJ">CJ대한통운</option>
+      <option value="EPOST" data-i="carrierEPOST">우체국택배</option>
+      <option value="HANJIN" data-i="carrierHANJIN">한진택배</option>
+      <option value="LOTTE" data-i="carrierLOTTE">롯데택배</option>
+      <option value="LOGEN" data-i="carrierLOGEN">로젠택배</option>
+      <option value="ILYANG" data-i="carrierILYANG">일양택배</option>
+      <option value="DHL" data-i="carrierDHL">DHL</option>
+      <option value="FEDEX" data-i="carrierFEDEX">FedEx</option>
+      <option value="UPS" data-i="carrierUPS">UPS</option>
+      <option value="USPS" data-i="carrierUSPS">USPS</option>
+      <option value="CAINIAO" data-i="carrierCAINIAO">알리익스프레스 (Cainiao)</option>
+      <option value="EMS" data-i="carrierEMS">우체국 EMS / 국제</option>
+      <option value="GLOBAL" data-i="carrierGLOBAL">기타 글로벌 (550+ 자동)</option>
     </select>
     <button class="primary" type="submit" data-i="track">어디 있지?</button>
   </form>
@@ -96,7 +102,7 @@
 
     <aside class="history">
       <div class="history-head"><h2 data-i="history">배송 이력</h2><span class="chip" data-i="newest">최신순</span></div>
-      <div class="history-summary"><span class="badge" data-i="transit">이동 중</span><p data-i="historyNote">제공된 경로 기반 예시 · 스캔 시각 미확인</p></div>
+      <div class="history-summary"><div class="summary-row"><span class="badge" data-i="transit">이동 중</span><span class="edd" id="edd" hidden></span></div><p data-i="historyNote">제공된 경로 기반 예시 · 스캔 시각 미확인</p></div>
       <div id="events"></div>
       <div class="history-bottom"><span id="updated" data-i="notconnected">최종 갱신: API 미연결</span><button id="refresh" aria-label="Refresh">⟳</button></div>
     </aside>
