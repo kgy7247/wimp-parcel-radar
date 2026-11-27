@@ -143,7 +143,8 @@ nav a:hover{color:var(--accent)}
 @media(max-width:760px){
   .globe-plane .plane-tag{display:none}
   .radar{padding:11px 13px}
-  .radar-src{display:none}
+  /* ODbL attribution stays visible on every screen size — it wraps to its own line. */
+  .radar-src{flex-basis:100%;margin-left:0;font-size:9.5px}
   .radar-sub{font-size:11px}
 }
 /* air-cargo result card: AWB / flight rows */
