@@ -1541,7 +1541,8 @@ function renderMapStatus() {
   const plannedLegend = $('#legend-planned');
   plannedLegend.style.display = view && view.arcs.some((a) => a.planned) ? 'flex' : 'none';
   const legend = $('.legend');
-  if (legend) legend.style.display = view ? 'flex' : 'none';
+  // A flight has no parcel route, so the route legend would be noise there.
+  if (legend) legend.style.display = view && view.kind !== 'flight' ? 'flex' : 'none';
   $('#map-panel').setAttribute('aria-busy', state.loading ? 'true' : 'false');
   $('#loading').hidden = !state.loading;
   $('#search').classList.toggle('is-loading', state.loading);

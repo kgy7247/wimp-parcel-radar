@@ -158,3 +158,7 @@ nav a:hover{color:var(--accent)}
 .parcel .state.air{color:#9fc8ff}
 
 @media(max-width:760px){.brand-caption{display:none}}
+
+@media(max-width:760px){
+  #marker-info{font-size:11px;line-height:1.6;max-width:calc(100% - 96px);padding:9px 12px;top:76px;left:16px}
+}
