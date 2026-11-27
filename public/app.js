@@ -949,6 +949,48 @@ function renderGlobe(view) {
   globe.arcsData(view.arcs);
 }
 
+/* Air cargo: fit the whole airport-to-airport leg in view instead of the last scan. */
+function sphericalMid(a, b) {
+  const rad = Math.PI / 180;
+  const va = [Math.cos(a.lat * rad) * Math.cos(a.lng * rad), Math.sin(a.lat * rad), Math.cos(a.lat * rad) * Math.sin(a.lng * rad)];
+  const vb = [Math.cos(b.lat * rad) * Math.cos(b.lng * rad), Math.sin(b.lat * rad), Math.cos(b.lat * rad) * Math.sin(b.lng * rad)];
+  const mid = [va[0] + vb[0], va[1] + vb[1], va[2] + vb[2]];
+  const len = Math.hypot(mid[0], mid[1], mid[2]) || 1;
+  const y = mid[1] / len;
+  const x = mid[0] / len;
+  const z = mid[2] / len;
+  return { lat: Math.asin(Math.max(-1, Math.min(1, y))) / rad, lng: Math.atan2(z, x) / rad };
+}
+
+function angularDistance(a, b) {
+  const rad = Math.PI / 180;
+  const cos = Math.sin(a.lat * rad) * Math.sin(b.lat * rad) + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((b.lng - a.lng) * rad);
+  return Math.acos(Math.max(-1, Math.min(1, cos))) / rad;
+}
+
+function frameRoute() {
+  const view = state.view;
+  if (!view) return;
+  const usable = view.points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  const last = usable[usable.length - 1];
+  if (!last) return;
+  const info = $('#marker-info');
+  if (info) {
+    info.hidden = false;
+    info.textContent = pair(last);
+  }
+  if (!globe) return;
+  if (usable.length < 2) {
+    globe.pointOfView({ lat: last.lat, lng: last.lng, altitude: 1.1 }, 800);
+    return;
+  }
+  const first = usable[0];
+  const mid = sphericalMid(first, last);
+  const distance = angularDistance(first, last);
+  const altitude = Math.min(2.3, Math.max(1.25, 0.6 + distance / 90));
+  globe.pointOfView({ lat: mid.lat, lng: mid.lng, altitude }, 900);
+}
+
 function focusPoint(index) {
   const view = state.view;
   if (!view || !view.points[index]) return;
@@ -1611,7 +1653,7 @@ async function lookupAwb(value) {
     state.view = buildAwbDataset(payload);
     state.error = null;
     render();
-    if (state.view.points.length) focusPoint(state.view.points.length - 1);
+    frameRoute();
     const callsigns = (awb.liveCallsigns || []).filter(Boolean);
     if (callsigns.length) {
       const query = { cs: callsigns.join(',') };
