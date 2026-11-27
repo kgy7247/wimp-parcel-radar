@@ -997,7 +997,7 @@ function frameRoute() {
   const first = usable[0];
   const mid = sphericalMid(first, last);
   const distance = angularDistance(first, last);
-  const altitude = Math.min(2.3, Math.max(1.25, 0.6 + distance / 90));
+  const altitude = Math.min(2.4, Math.max(1.35, 1.1 + distance / 120));
   globe.pointOfView({ lat: mid.lat, lng: mid.lng, altitude }, 900);
 }
 
