@@ -11,7 +11,7 @@
  *   EPOST   우체국택배   (public HTML trace page)
  *   HANJIN  한진택배     (public HTML waybill page)
  *   LOTTE   롯데택배     (public mobile HTML page)
- *   DHL     DHL Express  (needs DHL_API_KEY; a built-in sample is served for the demo number)
+ *   DHL     DHL Express  (needs DHL_API_KEY)
  *
  * Nothing is stored. Responses are cached in memory for 15 minutes per carrier+number.
  */
@@ -27,8 +27,6 @@ const DESKTOP_UA =
 const MOBILE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 const NOMINATIM_UA = 'WIMP-ParcelRadar/1.0 (+https://github.com/kgy7247/wimp-parcel-radar)';
-
-const DEMO_NUMBER = '2746217154';
 
 /* ------------------------------------------------------------------ *
  * Carriers
@@ -1058,8 +1056,6 @@ async function trackLOTTE(number) {
 }
 
 async function trackDHL(number) {
-  if (number === DEMO_NUMBER) return { events: demoEvents(), source: 'demo', demo: true };
-
   const key = process.env.DHL_API_KEY;
   if (!key) {
     throw new TrackError(
@@ -1101,32 +1097,6 @@ async function trackDHL(number) {
   return { events, source: 'dhl' };
 }
 
-function demoEvents() {
-  return [
-    {
-      time: '2026-11-24T18:20:00+09:00',
-      status: statusOf('REGISTERED'),
-      description: '출발지 확인',
-      scan: '출발지 확인',
-      location: makeLocation('Sofia', { countryCode: 'BG' }),
-    },
-    {
-      time: '2026-11-25T09:05:00+09:00',
-      status: statusOf('IN_TRANSIT'),
-      description: '경유지 확인',
-      scan: '경유지 확인',
-      location: makeLocation('Leipzig', { countryCode: 'DE' }),
-    },
-    {
-      time: '2026-11-27T07:40:00+09:00',
-      status: statusOf('IN_TRANSIT'),
-      description: '사전 통관 정보 접수',
-      scan: '사전 통관 정보 접수',
-      location: makeLocation('Incheon', { countryCode: 'KR' }),
-    },
-  ];
-}
-
 const ADAPTERS = {
   CJ: trackCJ,
   EPOST: trackEPOST,
@@ -1165,7 +1135,6 @@ function detectCandidates(number, requested) {
   const len = number.length;
   if (len === 13) return ['EPOST'];
   if (len === 14) return ['HANJIN'];
-  if (number === DEMO_NUMBER) return ['DHL'];
   if (len === 10) return ['CJ', 'DHL'];
   if (len === 12) return ['CJ', 'LOTTE', 'HANJIN'];
   if (len === 11) return ['LOTTE'];
@@ -1489,7 +1458,7 @@ async function handler(req, res) {
       error: {
         code: 'NEEDS_KEY',
         message: 'DHL_API_KEY 환경변수가 필요합니다 (developer.dhl.com 무료 250건/일).',
-        hint: 'Vercel → Settings → Environment Variables 에 DHL_API_KEY 를 추가하면 DHL 실시간 조회가 켜집니다. 샘플 번호 2746217154 는 키 없이 예시 데이터로 확인할 수 있습니다.',
+        hint: 'Vercel → Settings → Environment Variables 에 DHL_API_KEY 를 추가하면 DHL 실시간 조회가 켜집니다.',
         carrier: CARRIERS.DHL,
       },
       attempts,
@@ -1558,7 +1527,5 @@ module.exports._internal = {
   lotteStatus,
   dhlStatus,
   CARRIERS,
-  DEMO_NUMBER,
   cache,
-  demoEvents,
 };

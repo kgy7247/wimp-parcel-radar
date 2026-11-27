@@ -18,7 +18,7 @@ Vercel 무료 플랜에서 바로 배포되며, 서버리스 함수(`api/track.j
 | 우체국택배 | `EPOST` | `trace.RetrieveDomRigiTraceList.comm` HTML 표 파싱 | ✅ 실제 번호로 동작 검증 |
 | 롯데택배 | `LOTTE` | 모바일 조회 페이지(`/mobile/reservation/tracking/linkView`) 표 파싱 | ✅ 엔드포인트·응답 구조 검증 (이동 중인 실제 번호로는 미확인) |
 | 한진택배 | `HANJIN` | `WaybillResult.do` HTML 표 파싱 | ⚠️ 엔드포인트·미등록 안내 경로 검증, 실제 이력 파싱 미확인 |
-| DHL | `DHL` | `api-eu.dhl.com/track/shipments` (API 키 필요) | ✅ 키 연동 코드·데모 데이터 검증 |
+| DHL | `DHL` | `api-eu.dhl.com/track/shipments` (API 키 필요) | ✅ 키 연동 코드 검증 (키가 없으면 안내) |
 | FedEx / UPS | — | 미지원 (안내 메시지 반환) | — |
 
 키 없이 동작하는 국내 4개 택배사 중 **CJ·우체국은 실제 운송장으로 이력 파싱까지 검증**했습니다.
@@ -73,7 +73,7 @@ Vercel 무료 플랜에서 바로 배포되며, 서버리스 함수(`api/track.j
   "message": "DHL_API_KEY 환경변수가 필요합니다 (developer.dhl.com 무료 250건/일)." } }
 ```
 
-샘플 번호 `2746217154` 는 **키 없이도** 내장 예시 데이터(소피아 → 라이프치히 → 인천)로 화면을 확인할 수 있습니다. 다만 **처음 접속했을 때 자동으로 조회되지 않습니다** — 초기 화면은 지구본과 안내 문구만 있는 대기 상태(조회 결과 0건, 배지 `대기`)입니다.
+예시(데모) 데이터는 넣지 않았습니다. 키 없이 DHL 번호를 조회하면 위 `NEEDS_KEY` 안내가 나오고, 초기 화면은 지구본과 안내 문구만 있는 대기 상태(조회 결과 0건, 배지 `대기`)입니다.
 
 ### 애드센스 (Google AdSense)
 

@@ -84,7 +84,7 @@ function dhlJson() {
   return {
     shipments: [
       {
-        id: '2746217154',
+        id: '1234567896',
         service: 'express',
         status: { timestamp: '2026-11-27T08:00:00+09:00', location: { address: { addressLocality: 'Leipzig', countryCode: 'DE' } }, statusCode: 'transit', status: 'Processed at LEIPZIG' },
         events: [
@@ -201,15 +201,6 @@ await test('HANJIN: two-table layout parsed (synthetic fixture)', async () => {
   assert.equal(out.body.events.length, 4);
   assert.equal(out.body.events.at(-1).scan, '배송완료');
   assert.equal(out.body.status.code, 'DELIVERED');
-});
-
-await test('DHL: demo number is served without any upstream call', async () => {
-  stub({});
-  const out = await call('2746217154', 'DHL');
-  assert.equal(out.status, 200);
-  assert.equal(out.body.meta.demo, true);
-  assert.deepEqual(out.body.countries, ['BG', 'DE', 'KR']);
-  assert.equal(calls.length, 0);
 });
 
 await test('DHL: without DHL_API_KEY the key requirement is explained', async () => {

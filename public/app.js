@@ -5,7 +5,6 @@
    everything that used to be fixed sample data is now driven by /api/track. */
 
 const $ = (s) => document.querySelector(s);
-const SAMPLE_NUMBER = '2746217154';
 const API = 'api/track';
 const MAX_LENGTH = 60;
 
@@ -177,7 +176,6 @@ const state = {
   view: null,
   loading: false,
   error: null,
-  demo: false,
   selected: -1,
   autoRefresh: 0,
   timer: null
@@ -332,60 +330,6 @@ function pair(point) {
 function flagOf(code) {
   if (!code || code.length !== 2) return '◉';
   return String.fromCodePoint(...code.toUpperCase().split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
-}
-
-function sampleDataset() {
-  const s = t();
-  const coords = [
-    { lat: 42.6977, lng: 23.3219, name: 'Sofia', code: 'SOF', countryCode: 'BG', country: '불가리아', countryEn: 'Bulgaria' },
-    { lat: 51.3397, lng: 12.3731, name: 'Leipzig', code: 'LEJ', countryCode: 'DE', country: '독일', countryEn: 'Germany' },
-    { lat: 37.4563, lng: 126.7052, name: 'Incheon', code: 'ICN', countryCode: 'KR', country: '대한민국', countryEn: 'South Korea' }
-  ];
-  const codes = ['REGISTERED', 'IN_TRANSIT', 'IN_TRANSIT'];
-  const times = ['2026-11-24T09:20:00+09:00', '2026-11-25T18:05:00+09:00', '2026-11-27T07:40:00+09:00'];
-
-  const events = coords.map((c, i) => ({
-    time: times[i],
-    title: s.sampleEvents[i].title,
-    note: s.sampleEvents[i].note,
-    statusCode: codes[i],
-    point: i,
-    location: { ...c, name: c.name, city: c.name, detail: c.name }
-  }));
-  const points = coords.map((c, i) => ({
-    ...c, detail: c.name, country: c.country, countryEn: c.countryEn,
-    active: i === coords.length - 1, firstEvent: events[i], lastEvent: events[i]
-  }));
-
-  return {
-    demo: true,
-    carrierCode: 'DHL',
-    carrierName: 'DHL',
-    carrierSite: 'https://www.dhl.com/kr-ko/home/tracking.html',
-    number: SAMPLE_NUMBER,
-    statusCode: 'IN_TRANSIT',
-    statusLabel: statusLabel('IN_TRANSIT'),
-    stage: 2,
-    delivered: false,
-    events,
-    points,
-    arcs: [
-      { startLat: coords[0].lat, startLng: coords[0].lng, endLat: coords[1].lat, endLng: coords[1].lng, planned: false },
-      { startLat: coords[1].lat, startLng: coords[1].lng, endLat: coords[2].lat, endLng: coords[2].lng, planned: true }
-    ],
-    countries: [
-      { code: 'BG', flag: '🇧🇬', city: 'Sofia', planned: false },
-      { code: 'DE', flag: '🇩🇪', city: 'Leipzig', planned: false },
-      { code: 'KR', flag: '🇰🇷', city: 'Incheon', planned: true }
-    ],
-    international: true,
-    latestLocation: 'Leipzig, Germany',
-    latestCode: 'LEJ',
-    latestDetail: 'Leipzig',
-    fetchedAt: new Date().toISOString(),
-    cached: false,
-    samplePlaces: s.sampleEvents.map((e) => e.place)
-  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -979,11 +923,10 @@ async function lookup(number, carrier) {
 
     state.number = payload.number || number;
     state.carrier = payload.carrier ? payload.carrier.code : carrier;
-    state.view = payload.meta && payload.meta.demo ? sampleDataset() : buildDataset(payload, false);
+    state.view = buildDataset(payload, Boolean(payload.meta && payload.meta.demo));
     state.error = null;
     render();
     focusPoint(state.view.points.length - 1);
-    if (payload.meta && payload.meta.demo) toast(t().noKey);
   } catch (err) {
     state.error = errorFor({ code: 'NETWORK' });
     state.view = null;
@@ -1015,7 +958,6 @@ function submitSearch(event) {
 
 $('#language').onchange = (e) => {
   state.lang = e.target.value;
-  if (state.view && state.view.demo) state.view = sampleDataset();
   render();
   if (state.view) focusPoint(state.view.points.length - 1);
 };
