@@ -152,3 +152,6 @@ nav a:hover{color:var(--accent)}
 .air-facts span{font-size:10.5px;color:#a9b8c8;border:1px solid #2c3a48;border-radius:4px;padding:3px 7px;background:#0f1822}
 .air-facts b{color:#e4eef9;font-weight:500}
 .bottom.is-hidden{display:none}
+
+.carrier-logo[data-carrier="AIR"]{background:#16334d;color:#bfe3ff;font-size:16px;font-style:normal}
+.parcel .state.air{color:#9fc8ff}

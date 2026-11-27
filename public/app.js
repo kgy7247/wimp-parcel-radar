@@ -885,12 +885,7 @@ function initGlobe() {
       .htmlElementsData([])
       .htmlLat('lat')
       .htmlLng('lng')
-      .htmlAltitude((d) => {
-        if (d.kind !== 'plane') return 0.015;
-        // Cruise-height aircraft float above the airports they connect.
-        const alt = Math.min(0.09, Math.max(0, Number(d.altFt) || 0) / 45000 * 0.09);
-        return d.onGround ? 0.008 : 0.012 + alt;
-      })
+      .htmlAltitude(0.015)
       .htmlElement((d) => {
         if (d.kind === 'plane') {
           const plane = document.createElement('button');
@@ -1319,7 +1314,7 @@ function renderEvents() {
   if (!state.view || !state.view.events.length) {
     const note = document.createElement('div');
     note.className = 'empty-note';
-    note.textContent = s.empty;
+    note.textContent = state.view && state.view.kind === 'awb' ? s.airNoEvents : s.empty;
     box.append(note);
     return;
   }
