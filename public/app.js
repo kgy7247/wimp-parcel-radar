@@ -50,7 +50,7 @@ const strings = {
     },
     openSite: '택배사 사이트에서 보기', again: '다시 조회', empty: '송장번호를 입력하면 배송 이력이 표시됩니다.',
     updated: '최종 갱신', events: '건', sampleNote: '예시 데이터 · 실제 조회가 아닙니다', liveNote: '택배사 스캔 기준',
-    privacyLink: '개인정보처리방침', termsLink: '이용약관', noKey: 'DHL 키 없이 예시로 보기'
+    privacyLink: '개인정보처리방침', termsLink: '이용약관', noKey: 'DHL 키 없이 예시로 보기', routeDomestic: '국내 이동 경로'
   },
   en: {
     dashboard: 'Track a parcel', shipments: 'How it works', demo: 'SAMPLE DATA', live: 'LIVE',
@@ -89,7 +89,7 @@ const strings = {
     },
     openSite: 'Open the carrier site', again: 'Try again', empty: 'Enter a tracking number to see its journey.',
     updated: 'Updated', events: 'events', sampleNote: 'Sample data · not a live lookup', liveNote: 'Based on carrier scans',
-    privacyLink: 'Privacy', termsLink: 'Terms', noKey: 'See the sample without a DHL key'
+    privacyLink: 'Privacy', termsLink: 'Terms', noKey: 'See the sample without a DHL key', routeDomestic: 'Domestic route'
   },
   ja: {
     dashboard: '荷物追跡', shipments: '使い方', demo: 'サンプル', live: 'リアルタイム',
@@ -128,7 +128,7 @@ const strings = {
     },
     openSite: '配送会社サイトを開く', again: '再検索', empty: '追跡番号を入力すると配送履歴が表示されます。',
     updated: '最終更新', events: '件', sampleNote: 'サンプルデータ・実際の照会ではありません', liveNote: '配送会社スキャン基準',
-    privacyLink: 'プライバシー', termsLink: '利用規約', noKey: 'DHLキーなしでサンプルを見る'
+    privacyLink: 'プライバシー', termsLink: '利用規約', noKey: 'DHLキーなしでサンプルを見る', routeDomestic: '国内の経路'
   }
 };
 
@@ -226,6 +226,14 @@ function buildDataset(api, demo) {
   }
 
   points.forEach((p, i) => { p.active = i === points.length - 1; });
+  // Labels: first stop, last stop, and every country change. Points crowded together become dots.
+  points.forEach((p, i) => {
+    const isFirst = i === 0;
+    const isLast = i === points.length - 1;
+    const sameCountryAsPrev = i > 0 && points[i - 1].countryCode === p.countryCode;
+    const crowded = points.some((q, j) => j > i && Math.abs(q.lat - p.lat) < 0.35 && Math.abs(q.lng - p.lng) < 0.35);
+    p.hideLabel = !isFirst && !isLast && (sameCountryAsPrev || crowded);
+  });
 
   const arcs = [];
   for (let i = 1; i < points.length; i += 1) {
@@ -378,8 +386,8 @@ function initGlobe() {
       .htmlAltitude(0.015)
       .htmlElement((d) => {
         const el = document.createElement('button');
-        el.className = 'globe-label' + (d.active ? ' active' : '') + (d.pending ? ' pending' : '');
-        el.textContent = '• ' + d.name + (d.pending ? ' ○' : '');
+        el.className = 'globe-label' + (d.active ? ' active' : '') + (d.pending ? ' pending' : '') + (d.hideLabel ? ' dot' : '');
+        el.textContent = d.hideLabel ? '' : '• ' + d.name + (d.pending ? ' ○' : '');
         el.onclick = () => focusPoint(d.index);
         return el;
       });
@@ -401,7 +409,12 @@ function initGlobe() {
 }
 
 function renderGlobe(view) {
-  if (!globe || !view) return;
+  if (!globe) return;
+  if (!view) {
+    globe.htmlElementsData([]);
+    globe.arcsData([]);
+    return;
+  }
   const data = view.points.map((p, i) => ({
     ...p, index: i, pending: Boolean(view.demo && i === view.points.length - 1 && view.points.length > 1)
   }));
@@ -415,7 +428,13 @@ function focusPoint(index) {
   state.selected = index;
   const point = view.points[index];
   if (globe && globe.pointOfView) {
-    globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.35 }, 900);
+    // Zoom by how much of the world the route covers: a domestic parcel gets a country-level view.
+    let spread = 0;
+    for (const p of view.points) {
+      spread = Math.max(spread, Math.abs(p.lat - point.lat), Math.abs(p.lng - point.lng));
+    }
+    const altitude = spread < 6 ? 0.75 : spread < 25 ? 1.1 : 1.35;
+    globe.pointOfView({ lat: point.lat, lng: point.lng, altitude }, 900);
   }
   const info = $('#marker-info');
   const event = point.lastEvent || point.firstEvent;
@@ -539,6 +558,7 @@ function softwareGlobe(host) {
       ctx.arc(p[0], p[1], 4, 0, 7);
       ctx.fill();
       ctx.shadowBlur = 0;
+      if (c.hideLabel) return;
       ctx.font = '12px sans-serif';
       const label = c.name + (c.pending ? ' ○' : '');
       const px = p[0] + 10;
@@ -661,10 +681,13 @@ function renderParcels() {
   const strong = document.createElement('strong');
   strong.textContent = state.number;
   const small = document.createElement('small');
-  if (state.view) {
+  if (state.error) {
+    small.textContent = state.error.title;
+  } else if (state.view) {
+    const count = `${state.view.events.length}${isKo() || state.lang === 'ja' ? s.events : ' ' + s.events}`;
     small.textContent = state.view.demo
       ? (isKo() ? 'Sofia · Leipzig · Incheon' : state.view.points.map((p) => p.name).join(' · '))
-      : `${state.view.latestDetail || state.view.latestLocation} · ${state.view.events.length}${s.events}`;
+      : `${state.view.latestDetail || state.view.latestLocation} · ${count}`;
   } else {
     small.textContent = s.waiting;
   }
@@ -672,7 +695,7 @@ function renderParcels() {
 
   const status = document.createElement('span');
   status.className = 'state';
-  status.textContent = state.view ? state.view.statusLabel : s.waiting;
+  status.textContent = state.error ? '—' : state.view ? state.view.statusLabel : s.waiting;
 
   row.append(icon, body, status);
   box.append(row);
@@ -766,12 +789,13 @@ function renderSteps() {
     .join('');
 
   const badge = $('.history-summary .badge');
-  badge.textContent = view ? view.statusLabel : s.waiting;
+  badge.textContent = state.error ? '—' : view ? view.statusLabel : s.waiting;
   badge.classList.toggle('done', Boolean(view && view.delivered));
-  badge.classList.toggle('warn', Boolean(view && view.statusCode === 'EXCEPTION'));
+  badge.classList.toggle('warn', Boolean(state.error || (view && view.statusCode === 'EXCEPTION')));
 
   const summary = $('.history-summary p');
-  if (view && view.demo) summary.textContent = s.historyNote;
+  if (state.error) summary.textContent = state.error.title;
+  else if (view && view.demo) summary.textContent = s.historyNote;
   else if (view) summary.textContent = `${view.carrierName} · ${s.liveNote}`;
   else summary.textContent = s.empty;
 
@@ -784,6 +808,11 @@ function renderSteps() {
 
 function renderCountries() {
   const s = t();
+  const title = document.querySelector('.route-panel h2');
+  const eyebrow = document.querySelector('#route-eyebrow');
+  const domestic = Boolean(state.view && !state.view.international);
+  if (title) title.textContent = domestic ? s.routeDomestic : s.route;
+  if (eyebrow) eyebrow.textContent = domestic ? 'DOMESTIC ROUTE' : 'ACROSS BORDERS';
   const wrap = $('#countries');
   wrap.replaceChildren();
   const view = state.view;
@@ -830,7 +859,9 @@ function renderMapStatus() {
   $('.map-status').classList.toggle('is-error', Boolean(state.error));
 
   const updated = $('#updated');
-  if (view) {
+  if (state.error) {
+    updated.textContent = '—';
+  } else if (view) {
     updated.textContent = `${s.updated} ${clockNow()}${view.cached ? ' · cache' : ''}`;
   } else {
     updated.textContent = s.notconnected;
