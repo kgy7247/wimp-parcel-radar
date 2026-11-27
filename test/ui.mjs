@@ -414,6 +414,7 @@ await test('awb: 988-12345675 renders the shipment, its flights and live aircraf
   assert.equal(document.querySelectorAll('#steps .step').length, 5);
   assert.equal($('#steps .step.current').textContent.includes('통관·통지'), true);
   assert.ok(fetched.some((u) => u.includes('api/awb?no=98812345675')), 'AWB endpoint called');
+
   assert.ok(fetched.some((u) => u.includes('api/plane?cs=OZ201')), 'aircraft for the AWB flight requested');
 });
 

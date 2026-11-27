@@ -698,6 +698,8 @@ await test('awb: Asiana 988 normalises the shipment and drops shipper/consignee 
   assert.ok(awb.events[2].place.lat > 37 && awb.events[2].place.lat < 38);
   assert.deepEqual(awb.liveCallsigns, ['OZ201']);
   assert.deepEqual(awb.route.map((r) => r.iata), ['LAX', 'ICN']);
+  assert.ok(awb.route.every((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng)), 'route stops keep both coordinates');
+  assert.ok(awb.events.every((e) => e.place && Number.isFinite(e.place.lat) && Number.isFinite(e.place.lng)), 'event places keep both coordinates');
   assert.equal(out.body.meta.checkDigitOk, true);
 
   const text = JSON.stringify(out.body);

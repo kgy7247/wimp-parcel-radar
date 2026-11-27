@@ -535,13 +535,17 @@ function buildAwbDataset(payload) {
   const byIata = new Map();
 
   const addPoint = (stop) => {
-    if (!stop || !Number.isFinite(stop.lat)) return null;
+    if (!stop) return null;
+    const lat = Number(stop.lat);
+    const lng = Number.isFinite(Number(stop.lng)) ? Number(stop.lng) : Number(stop.lon);
+    // Without both coordinates a point would put the camera at NaN and blank the globe.
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     const iata = stop.iata || '';
     if (iata && byIata.has(iata)) return points[byIata.get(iata)];
     const last = points[points.length - 1];
-    if (last && Math.abs(last.lat - stop.lat) < 0.01 && Math.abs(last.lng - stop.lon) < 0.01) return last;
+    if (last && Math.abs(last.lat - lat) < 0.01 && Math.abs(last.lng - lng) < 0.01) return last;
     const point = {
-      lat: stop.lat, lng: stop.lon,
+      lat, lng,
       name: stop.city || iata, detail: iata,
       code: iata, country: stop.country || '', countryEn: stop.countryEn || '', countryCode: stop.countryCode || '',
       firstEvent: null, lastEvent: null
@@ -937,9 +941,10 @@ function renderGlobe(view) {
     globe.arcsData([]);
     return;
   }
-  const labels = view.points.map((p, i) => ({
-    ...p, index: i, pending: Boolean(view.demo && i === view.points.length - 1 && view.points.length > 1)
-  }));
+  const labels = view.points
+    .map((p, i) => ({ ...p, index: i, pending: Boolean(view.demo && i === view.points.length - 1 && view.points.length > 1) }))
+    // A point without both coordinates would put the camera at NaN; skip it instead.
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
   globe.htmlElementsData(labels.concat(planes));
   globe.arcsData(view.arcs);
 }
@@ -947,6 +952,7 @@ function renderGlobe(view) {
 function focusPoint(index) {
   const view = state.view;
   if (!view || !view.points[index]) return;
+  if (!Number.isFinite(view.points[index].lat) || !Number.isFinite(view.points[index].lng)) return;
   state.selected = index;
   const point = view.points[index];
   if (globe && globe.pointOfView) {
@@ -1595,6 +1601,7 @@ async function lookupAwb(value) {
     if (!payload || payload.ok !== true) {
       state.error = errorFor(payload && payload.error);
       state.number = value;
+      state.carrier = 'AIR';
       toast(state.error.title);
       return;
     }
@@ -1629,12 +1636,14 @@ async function lookupFlight(value, carrier) {
     if (!payload || payload.ok !== true) {
       state.error = errorFor(payload && payload.error);
       state.number = value;
+      state.carrier = 'AIR';
       toast(state.error.title);
       return;
     }
     if (!payload.planes || !payload.planes.length) {
       state.error = errorFor({ code: 'FLIGHT_NONE', hint: payload.message });
       state.number = value;
+      state.carrier = 'AIR';
       return;
     }
     state.number = value;
