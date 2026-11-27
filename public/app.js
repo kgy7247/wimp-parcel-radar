@@ -1331,7 +1331,8 @@ function renderParcels() {
 
   row.append(icon, body, status);
   box.append(row);
-  $('#count').textContent = state.view ? String(state.view.events.length) : '0';
+  const events = state.view ? state.view.events.length : 0;
+  $('#count').textContent = state.view && state.view.kind !== 'parcel' && !events ? '—' : String(events);
 }
 
 function renderEvents() {
