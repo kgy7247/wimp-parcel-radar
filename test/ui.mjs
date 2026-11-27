@@ -68,6 +68,77 @@ const NOT_FOUND_RESPONSE = {
   }
 };
 
+const DHL_RESPONSE = {
+  ok: true,
+  carrier: { code: 'DHL', name: 'DHL', site: 'https://www.dhl.com/kr-ko/home/tracking.html' },
+  number: '1234567895',
+  status: { code: 'IN_TRANSIT', label: '이동 중', stage: 2, delivered: false },
+  estimatedDelivery: '2026-12-02',
+  latest: { time: '2026-11-27T22:10:00+09:00', scan: 'Processed at LEIPZIG', location: { name: 'Leipzig' } },
+  events: [
+    { time: '2026-11-25T08:10:00+01:00', scan: 'Shipment picked up', description: 'DHL 화물이 접수되었습니다', status: { code: 'PICKED_UP' }, location: { name: 'Leipzig', city: 'Leipzig', code: 'LEJ', country: '독일', countryEn: 'Germany', countryCode: 'DE', lat: 51.4239, lng: 12.2364 } },
+    { time: '2026-11-27T22:10:00+09:00', scan: 'Processed at INCHEON', description: '인천 허브에 도착했습니다', status: { code: 'IN_TRANSIT' }, location: { name: 'Incheon', city: '인천', code: 'ICN', country: '대한민국', countryEn: 'South Korea', countryCode: 'KR', lat: 37.4602, lng: 126.4407 } }
+  ],
+  route: [],
+  countries: ['DE', 'KR'],
+  meta: { source: 'lastscanned', cached: false, demo: false, fetchedAt: '2026-11-28T01:00:00.000Z' }
+};
+
+const PLANE_RESPONSE = {
+  ok: true,
+  kind: 'planes',
+  query: { type: 'point', carrier: 'DHL', callsigns: [], center: { lat: 37.46, lon: 126.44, distNM: 250 } },
+  planes: [
+    { hex: '400a1b', callsign: 'BCS123', iata: null, aircraftType: 'B763', registration: 'G-DHLX', lat: 51.42, lon: 12.23, altFt: 33000, speedKts: 421, heading: 178, onGround: false, seenSec: 4, operator: { code: 'DHL', label: 'DHL' }, matched: true }
+  ],
+  counts: { shown: 1, matched: 1, total: 4 },
+  missing: [],
+  message: null,
+  source: 'adsb.lol',
+  attribution: { text: '© adsb.lol (ODbL 1.0)', url: 'https://adsb.lol' },
+  meta: { fetchedAt: '2026-11-28T01:00:05.000Z', elapsedMs: 120, cached: false }
+};
+
+const AWB_RESPONSE = {
+  ok: true,
+  kind: 'awb',
+  awb: {
+    number: '98812345675',
+    prefix: '988',
+    airline: { code: 'OZ', name: '아시아나항공', site: 'https://www.asianacargo.com/tracking/viewTraceAirWaybill.do' },
+    origin: { iata: 'LAX', name: 'LOS ANGELES', city: '로스앤젤레스', country: '미국', countryEn: 'United States', countryCode: 'US', lat: 33.9416, lng: -118.4085 },
+    destination: { iata: 'ICN', name: 'INCHEON', city: '인천', country: '대한민국', countryEn: 'South Korea', countryCode: 'KR', lat: 37.4602, lng: 126.4407 },
+    pieces: 3,
+    weight: 128.5,
+    weightUnit: 'KG',
+    status: { code: 'CUSTOMS', label: '통관·수령 통지', stage: 3, delivered: false },
+    events: [
+      { code: 'RCS', label: '화물 접수', detail: 'Received from shipper', at: null, atLabel: '2026-11-25 09:12', status: 'PICKED_UP', place: { iata: 'LAX', name: 'LOS ANGELES', city: '로스앤젤레스', countryCode: 'US', lat: 33.9416, lng: -118.4085 } },
+      { code: 'DEP', label: '출발', detail: 'Departed', at: null, atLabel: '2026-11-26 02:25', status: 'IN_TRANSIT', flight: 'OZ201', place: { iata: 'LAX', name: 'LOS ANGELES', city: '로스앤젤레스', countryCode: 'US', lat: 33.9416, lng: -118.4085 } },
+      { code: 'ARR', label: '항공편 도착', detail: 'Arrived', at: null, atLabel: '2026-11-26 17:48', status: 'ARRIVED', flight: 'OZ201', place: { iata: 'ICN', name: 'INCHEON', city: '인천', countryCode: 'KR', lat: 37.4602, lng: 126.4407 } },
+      { code: 'NFD', label: '도착 통지', detail: 'Notified', at: null, atLabel: '2026-11-27 08:40', status: 'CUSTOMS', place: { iata: 'ICN', name: 'INCHEON', city: '인천', countryCode: 'KR', lat: 37.4602, lng: 126.4407 } }
+    ],
+    flights: [{ no: 'OZ201', from: 'LAX', to: 'ICN', date: '26 Nov 2026', live: true }],
+    route: [
+      { iata: 'LAX', name: 'LOS ANGELES', city: '로스앤젤레스', country: '미국', countryEn: 'United States', countryCode: 'US', lat: 33.9416, lng: -118.4085 },
+      { iata: 'ICN', name: 'INCHEON', city: '인천', country: '대한민국', countryEn: 'South Korea', countryCode: 'KR', lat: 37.4602, lng: 126.4407 }
+    ],
+    liveCallsigns: ['OZ201'],
+    source: 'asiana'
+  },
+  meta: { source: 'asiana', prefix: '988', cached: false, checkDigitOk: true, fetchedAt: '2026-11-28T01:00:00.000Z', piiRemoved: true }
+};
+
+const AWB_MISSING = {
+  ok: false,
+  error: {
+    code: 'AWB_NOT_FOUND',
+    message: '아시아나항공에서 이 AWB의 운송 정보를 찾지 못했습니다.',
+    hint: 'AWB 번호를 다시 확인해 주세요. 택배 송장이라면 배송사를 직접 선택하면 택배로 조회됩니다.',
+    airline: { code: 'OZ', name: '아시아나항공', site: 'https://www.asianacargo.com/tracking/viewTraceAirWaybill.do' }
+  }
+};
+
 const domErrors = [];
 const virtualConsole = new VirtualConsole();
 virtualConsole.on('jsdomError', (err) => {
@@ -100,8 +171,14 @@ function buildDom() {
       window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
       window.HTMLDialogElement.prototype.close = function () { this.open = false; };
       window.fetch = async (url) => {
-        fetched.push(String(url));
-        const payload = mode === 'cj' ? CJ_RESPONSE : NOT_FOUND_RESPONSE;
+        const target = String(url);
+        fetched.push(target);
+        let payload;
+        if (target.includes('api/plane')) payload = PLANE_RESPONSE;
+        else if (target.includes('api/awb')) payload = mode === 'awb-missing' ? AWB_MISSING : AWB_RESPONSE;
+        else if (mode === 'cj') payload = CJ_RESPONSE;
+        else if (mode === 'dhl') payload = DHL_RESPONSE;
+        else payload = NOT_FOUND_RESPONSE;
         return { ok: true, status: 200, json: async () => payload, text: async () => JSON.stringify(payload) };
       };
     }
@@ -309,6 +386,120 @@ await test('no key, mailbox or tracking number leaks into the public files', asy
     assert.ok(!/LASTSCANNED_API_KEY\s*=\s*['"][^'"]+/.test(html), 'no inline key in ' + page);
   }
   assert.ok(!/lsk_[A-Za-z0-9]/.test(JSON.stringify([read('guide.html'), read('app.js')])), 'no lastscanned key');
+});
+
+/* ------------------------------------------------------------------ *
+ * Air cargo: dropdown, AWB result, flight result, freighter radar
+ * ------------------------------------------------------------------ */
+
+await test('search: the carrier list offers air cargo / flight lookup', async () => {
+  const option = [...document.querySelectorAll('#carrier option')].find((o) => o.value === 'AIR');
+  assert.ok(option, 'AIR option exists');
+  assert.ok(option.textContent.includes('AWB'));
+  assert.ok(option.textContent.includes('Flight'));
+});
+
+await test('awb: 988-12345675 renders the shipment, its flights and live aircraft', async () => {
+  mode = 'cj';
+  $('#number').value = '988-12345675';
+  $('#carrier').value = 'AIR';
+  submit();
+  await tick(120);
+
+  assert.equal($('#parcels .parcel strong').textContent, '988-12345675');
+  assert.equal($('.history-summary .badge').textContent, '통관·수령 통지');
+  assert.equal($('#events').querySelectorAll('.event').length, 4);
+  assert.equal($('#events .event small').textContent, '2026-11-27 08:40 · INCHEON');
+  assert.ok($('#location').textContent.includes('인천'));
+  assert.equal(document.querySelectorAll('#steps .step').length, 5);
+  assert.equal($('#steps .step.current').textContent.includes('통관·통지'), true);
+  assert.ok(fetched.some((u) => u.includes('api/awb?no=98812345675')), 'AWB endpoint called');
+  assert.ok(fetched.some((u) => u.includes('api/plane?cs=OZ201')), 'aircraft for the AWB flight requested');
+});
+
+await test('awb: the radar strip names the live aircraft and credits adsb.lol', async () => {
+  assert.equal($('#radar').hidden, false);
+  assert.equal($('#radar-title').textContent, '실시간 운항 화물기 레이더');
+  assert.ok($('#radar-sub').textContent.includes('OZ201'));
+  assert.ok($('#radar-list').textContent.includes('BCS123'));
+  assert.ok($('#radar-list').textContent.includes('33,000 ft'));
+  assert.ok($('#radar').querySelector('.radar-src').textContent.includes('adsb.lol'));
+});
+
+await test('awb: a number the airline does not know explains itself', async () => {
+  mode = 'awb-missing';
+  $('#number').value = '98812345675';
+  submit();
+  await tick(120);
+  assert.ok($('#events .error-box'));
+  assert.equal($('.history-summary .badge').textContent, '—');
+  assert.equal($('#radar').hidden, true, 'no radar without a shipment');
+  mode = 'cj';
+});
+
+await test('flight: KE082 shows the aircraft position in flight', async () => {
+  $('#number').value = 'KE082';
+  $('#carrier').value = 'AIR';
+  submit();
+  await tick(120);
+
+  assert.equal($('#parcels .parcel strong').textContent, 'KE082');
+  assert.equal($('.history-summary .badge').textContent, '운항 중');
+  assert.equal($('#radar-title').textContent, '실시간 항공기 위치');
+  assert.ok($('#location').textContent.includes('°N'));
+  assert.equal($('.bottom').classList.contains('is-hidden'), true, 'parcel-only panels are hidden');
+  assert.ok(fetched.at(-1).includes('api/plane?cs=KE082') || fetched.some((u) => u.includes('api/plane?cs=KE082')));
+});
+
+await test('parcel: an overseas parcel on the move gets the freighter radar', async () => {
+  mode = 'dhl';
+  $('#number').value = '1234567895';
+  $('#carrier').value = 'auto';
+  const before = fetched.length;
+  submit();
+  await tick(150);
+
+  const planeCall = fetched.slice(before).find((u) => u.includes('api/plane'));
+  assert.ok(planeCall, 'radar requested for an undelivered overseas parcel');
+  assert.ok(planeCall.includes('carrier=DHL'));
+  assert.equal($('#radar').hidden, false);
+  assert.equal($('#radar-title').textContent, '실시간 운항 화물기 레이더');
+  assert.equal($('.bottom').classList.contains('is-hidden'), false);
+});
+
+await test('parcel: a domestic parcel never asks for aircraft', async () => {
+  mode = 'cj';
+  $('#number').value = '1234567890';
+  $('#carrier').value = 'auto';
+  const before = fetched.length;
+  submit();
+  await tick(120);
+  assert.equal(fetched.slice(before).filter((u) => u.includes('api/plane')).length, 0);
+  assert.equal($('#radar').hidden, true);
+  assert.equal($('.bottom').classList.contains('is-hidden'), false);
+});
+
+await test('privacy.html discloses the airline and adsb.lol recipients', async () => {
+  const privacy = read('privacy.html');
+  assert.ok(privacy.includes('adsb.lol'), 'adsb.lol row');
+  assert.ok(privacy.includes('asianacargo.com') && privacy.includes('cargo.koreanair.com'), 'airline rows');
+  assert.ok(privacy.includes('ODbL'), 'licence named');
+  assert.ok(/화주·수하인/.test(privacy), 'shipper/consignee handling stated');
+});
+
+await test('guide.html explains the radar and AWB lookup', async () => {
+  const guide = read('guide.html');
+  assert.ok(guide.includes('id="aircargo"'), 'air cargo section');
+  assert.ok(guide.includes('href="#aircargo"'), 'section is in the table of contents');
+  const text = guide.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  for (const phrase of ['항공 화물운송장(AWB)', 'adsb.lol', 'ODbL 1.0', '250NM', '체크디지트']) {
+    assert.ok(text.includes(phrase), 'guide mentions ' + phrase);
+  }
+});
+
+await test('index links the air cargo section from the guide teaser', async () => {
+  const links = [...document.querySelectorAll('a[href^="guide.html"]')].map((a) => a.getAttribute('href'));
+  assert.ok(links.includes('guide.html#aircargo'));
 });
 
 await test('no runtime jsdom errors', async () => {

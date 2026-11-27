@@ -120,7 +120,8 @@ lastscanned가 DHL을 포함하므로 보통은 필요하지 않습니다. DHL �
 
 - 헤더의 **이용 안내**는 `guide.html` 로 이동하는 링크이고, 설정 모달은 **⚙ 버튼만** 엽니다.
 - 조회 결과는 **현재 상태·도착 예정 → 마지막 확인 위치·마지막 스캔 → 3D 지구본 → 상세 이력** 순서로 배치됩니다(`#result-head` 가 `.workspace` 앞).
-- `guide.html` 은 배송 상태 뜻, 조회가 안 될 때의 5가지 이유, 해외배송 경유지, 도착 예정일 계산, FAQ 를 담은 독립 콘텐츠 페이지이며 `FAQPage` 구조화 데이터를 포함합니다.
+- `guide.html` 은 배송 상태 뜻, 조회가 안 될 때의 5가지 이유, 해외배송 경유지, 도착 예정일 계산, **항공 화물·실시간 레이더**, FAQ 를 담은 독립 콘텐츠 페이지이며 `FAQPage` 구조화 데이터를 포함합니다.
+- 해외 배송이 아직 이동 중이면 지구본 아래 **실시간 운항 화물기 레이더** 스트립이 열리고, 지구본에는 ✈ 마커(고도·속도·편명 툴팁)가 함께 뜹니다. 탭이 백그라운드면 1분 폴링이 멈춥니다.
 
 ---
 
@@ -172,6 +173,37 @@ GET /api/track?number=<운송장번호>&carrier=<auto|CJ|EPOST|HANJIN|LOTTE|LOGE
 `meta.source` 는 `cjlogistics`·`epost`·`hanjin`·`lotte`·`dhl`·`lastscanned` 중 하나이고, `meta.upstream` 은 lastscanned가 실제로 사용한 택배사 id입니다.
 `events[].location.precision` 은 `hub`(내장 허브 표), `geocoded`(Nominatim), `country`(국가 중심점 근사) 중 하나입니다.
 
+### 실시간 항공기 — `GET /api/plane`
+
+```
+GET /api/plane?cs=KE082,KAL249          # 편명(IATA·ICAO·여러 개)으로 조회
+GET /api/plane?carrier=DHL&lat=37.46&lon=126.44&dist=250
+                                        # 좌표 반경 250NM 안의 화물기, 해당 택배사 우선
+GET /api/plane?hex=71c285               # ICAO24 트랜스폰더 주소
+```
+
+- 데이터: **adsb.lol** (ODbL 1.0). `ADSB_LOL_API_KEY` 가 있으면 `x-api-key` 로 전송하고, 없으면 익명 한도(500회/일/IP)로 동작합니다.
+- adsb.lol이 `429`/`5xx`일 때만 **adsb.fi**(`source: "adsb.fi"`)로 폴백합니다. 응답의 `source`·`meta.fallbackReason` 에 근거가 남습니다.
+- 응답은 `Cache-Control: public, s-maxage=45, stale-while-revalidate=120` 이라 방문자가 늘어도 업스트림 호출은 45초에 한 번입니다. 서버리스 메모리 캐시는 쓰지 않습니다.
+- `planes[]` 는 `{ callsign, iata, aircraftType, registration, lat, lon, altFt, speedKts, heading, onGround, seenSec, operator, matched }` 이고 최대 8대입니다. `matched` 는 요청한 택배사(`carrier`)의 화물기인지를 뜻합니다.
+- 반경은 250NM을 넘길 수 없습니다(제공자 제약). 전 지구 실시간 레이더가 아니라 **추적형** 조회입니다.
+
+### 항공 화물 AWB — `GET /api/awb`
+
+```
+GET /api/awb?no=988-12345675    # 아시아나 카고
+GET /api/awb?no=180-12345675    # 대한항공 카고
+```
+
+- 11자리(항공사 3 + 일련 8, 마지막 자리는 일련번호 mod 7 체크디지트)만 받습니다. 하이픈·공백은 무시합니다.
+- 지금 연동된 곳은 **아시아나(988)·대한항공(180)** 뿐이고, 다른 prefix는 `501 AWB_UNSUPPORTED` 입니다.
+- 응답은 `awb.{number, airline, origin, destination, pieces, weight, status, events[], flights[], route[], liveCallsigns[]}` 로 정규화됩니다. **화주·수하인 이름·주소·연락처는 허용목록 방식으로 아예 복사하지 않습니다.**
+- `meta.checkDigitOk` 로 체크디지트 일치 여부를 알려주고, 데이터가 없으면 `404 AWB_NOT_FOUND` 로 체크디지트를 안내합니다.
+- 대한항공은 게스트 세션 핸드셰이크(`ESC401` → 1회 재시도)가 필요하고, 세션이 열리지 않으면 `503 AIRLINE_BLOCKED` 와 함께 `cargo.koreanair.com` 직접 조회를 안내합니다. **성공 응답은 실존 AWB로 아직 검증하지 못했습니다.**
+- 항공사 응답은 서버 메모리에 5분, CDN에 `s-maxage=300` 으로 캐시합니다.
+
+`/api/track?carrier=AIR` 은 위 두 함수로 위임합니다(11자리 → AWB, 편명 → 항공기).
+
 ---
 
 ## 4. 로컬 실행·테스트
@@ -199,7 +231,11 @@ npx vercel dev
 ```
 .
 ├── api/
-│   └── track.js            # Vercel serverless function (의존성 0)
+│   ├── track.js            # 택배 조회 (의존성 0)
+│   ├── plane.js            # 실시간 항공기 (adsb.lol, ODbL 1.0)
+│   └── awb.js              # 항공 화물 AWB (아시아나·대한항공)
+├── lib/
+│   └── air-cargo.js        # 항공사·공항·콜사인 공용 표
 ├── public/
 │   ├── index.html          # 화면 + SEO/OG/JSON-LD 메타
 │   ├── app.js              # UI·3D 지구본·API 연동 (ko/en/ja)
@@ -213,7 +249,7 @@ npx vercel dev
 │   └── sitemap.xml
 ├── test/
 │   ├── unit.mjs            # 픽스처 기반 단위 테스트
-│   ├── ui.mjs              # jsdom UI 테스트 (링크·화면 순서·콘텐츠 페이지)
+│   ├── ui.mjs              # jsdom UI 테스트 (링크·화면 순서·AWB/레이더·콘텐츠 페이지)
 │   ├── smoke.mjs           # 실서버 스모크 테스트
 │   └── fixtures/           # 실제 응답 캡처 + 구조 기반 합성 픽스처
 ├── vercel.json
@@ -231,6 +267,9 @@ npx vercel dev
 - 실시간 추적·웹훅은 넣지 않았습니다(조회 시점 스냅샷). 필요하면 lastscanned Watches/Webhook 또는 cron으로 확장할 수 있습니다.
 - Vercel 함수는 인스턴스마다 캐시가 따로 있어, 트래픽이 분산되면 캐시 적중률이 떨어집니다.
 - Nominatim은 공용 서비스라 초당 1회·캐시 정책을 지킵니다. 트래픽이 커지면 자체 좌표 테이블 확장을 권장합니다.
+- 실시간 항공기는 **추적형**입니다. adsb.lol은 250NM 반경 제한과 익명 500회/일 한도가 있어 "전 세계 비행기 전부" 화면은 무료로 불가능합니다. 레이더의 항공기는 **내 물건이 실린 바로 그 기**가 아니라 그 구간을 운항 중인 실제 화물기입니다.
+- 대한항공 카고 AWB는 세션 확인(Akamai 봇 쿠키) 때문에 서버 자동 조회가 막힐 수 있습니다. 그때는 화면 안내대로 직접 조회해야 하며, 아시아나(988) AWB와 편명 조회는 정상 동작합니다.
+- 에어인천·티웨이·제주항공은 공개 AWB 조회가 없어 지원하지 않습니다.
 
 ## 7. 라이선스·출처
 

@@ -548,6 +548,253 @@ await test('unknown location falls back to Nominatim once and is cached', async 
   assert.ok(geoCalls[0].url.includes('countrycodes=kr'));
 });
 
+/* ------------------------------------------------------------------ *
+ * Air cargo: /api/plane (adsb.lol) and /api/awb (Asiana / Korean Air)
+ * ------------------------------------------------------------------ */
+
+const planeHandler = require('../api/plane.js');
+const awbHandler = require('../api/awb.js');
+const awbInternal = awbHandler._internal;
+
+function callAny(handler, url) {
+  return new Promise((resolve) => {
+    const res = {
+      statusCode: 0,
+      headers: {},
+      setHeader(k, v) {
+        this.headers[k] = v;
+      },
+      end(body) {
+        let parsed;
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          parsed = body;
+        }
+        resolve({ status: this.statusCode, body: parsed, headers: this.headers });
+      },
+    };
+    handler({ method: 'GET', url }, res);
+  });
+}
+
+const callPlane = (qs) => callAny(planeHandler, `/api/plane?${qs}`);
+const callAwb = (qs) => callAny(awbHandler, `/api/awb?${qs}`);
+
+const AC = (over) => ({
+  hex: '71c285', flight: 'KAL249  ', r: 'HL8285', t: 'B77L',
+  alt_baro: 32000, gs: 384.8, track: 196.46, lat: 35.19, lon: 126.15, seen_pos: 0.8,
+  ...over
+});
+
+await test('plane: KE082 becomes the KAL082 callsign and is shaped for the globe', async () => {
+  stub({
+    'api.adsb.lol/v2/callsign/KAL082': { ac: [AC({ flight: 'KAL082  ', t: 'A388', alt_baro: 38000, gs: 480.4, lat: 40.6, lon: -73.7 })], total: 1 },
+  });
+  const out = await callPlane('cs=KE082');
+  assert.equal(out.status, 200);
+  assert.equal(calls[0].url, 'https://api.adsb.lol/v2/callsign/KAL082');
+  assert.equal(out.headers['cache-control'], 'public, s-maxage=45, stale-while-revalidate=120');
+  assert.equal(out.body.source, 'adsb.lol');
+  const plane = out.body.planes[0];
+  assert.equal(plane.callsign, 'KAL082');
+  assert.equal(plane.iata, 'KE082');
+  assert.equal(plane.aircraftType, 'A388');
+  assert.equal(plane.altFt, 38000);
+  assert.equal(plane.speedKts, 480);
+  assert.equal(plane.heading, 196);
+  assert.equal(plane.onGround, false);
+  assert.equal(plane.operator.code, 'KAL');
+  assert.equal(out.body.attribution.text, '© adsb.lol (ODbL 1.0)');
+});
+
+await test('plane: several flight numbers cost one upstream request', async () => {
+  stub({
+    'api.adsb.lol/v2/callsign/': { ac: [AC(), AC({ hex: '71c286', flight: 'KAL213  ' })], total: 2 },
+  });
+  const out = await callPlane('cs=KAL249,KE213');
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].url.includes('KAL249'));
+  assert.ok(calls[0].url.includes('KAL213'));
+  assert.equal(out.body.planes.length, 2);
+  assert.deepEqual(out.body.query.callsigns.map((c) => c.input), ['KAL249', 'KE213']);
+});
+
+await test('plane: a carrier query puts that carrier’s freighters first', async () => {
+  stub({
+    'api.adsb.lol/v2/lat/': {
+      ac: [
+        AC({ hex: '1', flight: 'KAL249  ' }),
+        AC({ hex: '2', flight: 'BCS123  ', t: 'B763' }),
+        AC({ hex: '3', flight: 'FDX99   ', t: 'B77F' }),
+      ],
+      total: 3,
+    },
+  });
+  const out = await callPlane('carrier=DHL&lat=37.46&lon=126.44');
+  assert.equal(out.status, 200);
+  assert.ok(calls[0].url.includes('/lat/37.4600/lon/126.4400/dist/250'));
+  assert.equal(out.body.planes[0].callsign, 'BCS123');
+  assert.equal(out.body.planes[0].matched, true);
+  assert.equal(out.body.planes[0].operator.code, 'DHL');
+  assert.equal(out.body.counts.matched, 1);
+  assert.equal(out.body.counts.total, 3);
+});
+
+await test('plane: adsb.lol 429 falls back to adsb.fi and says so', async () => {
+  stub({
+    'api.adsb.lol/v2/callsign/': { __status: 429, body: '{"msg":"rate limited"}' },
+    'opendata.adsb.fi/api/v2/callsign/': { aircraft: [AC()] },
+  });
+  const out = await callPlane('cs=KAL249');
+  assert.equal(out.status, 200);
+  assert.equal(out.body.source, 'adsb.fi');
+  assert.equal(out.body.planes.length, 1);
+  assert.equal(out.body.meta.fallbackReason, 'rate-limited');
+  assert.equal(calls.length, 2);
+});
+
+await test('plane: no aircraft for a flight number is a 200 with a clear message', async () => {
+  stub({ 'api.adsb.lol/v2/callsign/': { ac: [], total: 0 } });
+  const out = await callPlane('cs=KAL999');
+  assert.equal(out.status, 200);
+  assert.deepEqual(out.body.planes, []);
+  assert.ok(out.body.message.includes('관측되지 않습니다'));
+  assert.deepEqual(out.body.missing, ['KAL999']);
+});
+
+await test('plane: bad coordinates, radius and callsigns are rejected', async () => {
+  stub({});
+  assert.equal((await callPlane('lat=200')).status, 400);
+  assert.equal((await callPlane('lat=37&lon=126&dist=400')).status, 400);
+  assert.equal((await callPlane('cs=XX')).status, 400);
+  assert.equal((await callPlane('hex=zzz')).status, 400);
+  assert.equal(calls.length, 0);
+});
+
+const ASIANA_PAGE = '<html><form><input type="hidden" name="_csrf" value="csrf-token-123"></form></html>';
+const ASIANA_OK = fixture('awb-asiana-98812345675.json');
+
+await test('awb: Asiana 988 normalises the shipment and drops shipper/consignee data', async () => {
+  stub({
+    'asianacargo.com/tracking/viewTraceAirWaybill.do': ASIANA_PAGE,
+    'asianacargo.com/tracking/searchTraceAirWaybillResult.do': ASIANA_OK,
+  });
+  const out = await callAwb('no=988-12345675');
+  assert.equal(out.status, 200);
+  assert.equal(out.headers['cache-control'], 'public, s-maxage=300, stale-while-revalidate=600');
+  const awb = out.body.awb;
+  assert.equal(awb.number, '98812345675');
+  assert.equal(awb.airline.code, 'OZ');
+  assert.equal(awb.origin.iata, 'LAX');
+  assert.equal(awb.destination.iata, 'ICN');
+  assert.equal(awb.pieces, 3);
+  assert.equal(awb.weight, 128.5);
+  assert.equal(awb.status.code, 'CUSTOMS');
+  assert.equal(awb.status.stage, 3);
+  assert.deepEqual(awb.events.map((e) => e.code), ['RCS', 'DEP', 'ARR', 'NFD']);
+  assert.equal(awb.events[0].atLabel, '2026-11-25 09:12');
+  assert.equal(awb.events[1].flight, 'OZ201');
+  assert.ok(awb.events[2].place.lat > 37 && awb.events[2].place.lat < 38);
+  assert.deepEqual(awb.liveCallsigns, ['OZ201']);
+  assert.deepEqual(awb.route.map((r) => r.iata), ['LAX', 'ICN']);
+  assert.equal(out.body.meta.checkDigitOk, true);
+
+  const text = JSON.stringify(out.body);
+  for (const secret of ['HONG GILDONG', 'ACME INDUSTRIAL', '1234 WAREHOUSE', '101 DONG SEOUL', 'SHIP001', 'CONS999', 'FORWARDER LTD']) {
+    assert.ok(!text.includes(secret), 'personal field must not leave the server: ' + secret);
+  }
+  assert.ok(!/"(shipper|consignee)/i.test(text), 'no shipper/consignee keys in the response');
+});
+
+await test('awb: unknown Asiana AWB is a 404 with the check-digit explained', async () => {
+  stub({
+    'asianacargo.com/tracking/viewTraceAirWaybill.do': ASIANA_PAGE,
+    'asianacargo.com/tracking/searchTraceAirWaybillResult.do': { success: true, data: [] },
+  });
+  const out = await callAwb('no=98812345670');
+  assert.equal(out.status, 404);
+  assert.equal(out.body.error.code, 'AWB_NOT_FOUND');
+  assert.ok(out.body.error.hint.includes('체크디지트'));
+  assert.equal(out.body.meta.checkDigitOk, false);
+});
+
+await test('awb: unsupported airline prefixes and flight numbers get their own answers', async () => {
+  stub({});
+  const unsupported = await callAwb('no=99912345675');
+  assert.equal(unsupported.status, 501);
+  assert.equal(unsupported.body.error.code, 'AWB_UNSUPPORTED');
+
+  const flight = await callAwb('no=KE082');
+  assert.equal(flight.status, 400);
+  assert.equal(flight.body.error.code, 'IS_FLIGHT');
+  assert.ok(flight.body.error.hint.includes('/api/plane'));
+
+  const short = await callAwb('no=988123');
+  assert.equal(short.status, 400);
+  assert.equal(short.body.error.code, 'BAD_REQUEST');
+});
+
+await test('awb: Korean Air session rejection is reported, not faked', async () => {
+  stub({
+    'cargo.koreanair.com/en/tracking': '<html><script>{"session_id":"abc123","region":"Asia"}</script></html>',
+    'cargo.koreanair.com/cargoportal/services/trackawb': {
+      generalInfo: { sessionId: 'next456', time: '28 Nov 2026 02:45' },
+      messages: [{ type: 'ERROR', code: 'ESC401', text: 'Session Expired. Please reload the page and proceed.' }],
+    },
+  });
+  const out = await callAwb('no=180-12345675');
+  assert.equal(out.status, 503);
+  assert.equal(out.body.error.code, 'AIRLINE_BLOCKED');
+  assert.ok(out.body.error.hint.includes('cargo.koreanair.com'));
+  assert.equal(calls.filter((c) => c.url.includes('trackawb')).length, 2, 'one retry with the new session id');
+});
+
+await test('awb: Korean Air success payload is normalised from an allowlist', async () => {
+  const normalised = awbInternal.normaliseKoreanAir(
+    {
+      awbPrefix: '180',
+      awbDocNo: '12345675',
+      routes: ['ICN', 'LAX'],
+      scc: 'XX',
+      shipperName: 'DO NOT COPY',
+      consigneeAddress: 'DO NOT COPY',
+      eventDetails: [
+        { eventCode: 'RCS', eventDate: '2026-11-27 09:00', airportCode: 'ICN', pieces: 2, weight: 40 },
+        { eventCode: 'DEP', eventDate: '2026-11-27 13:30', airportCode: 'ICN', flightNo: 'KE011' },
+      ],
+      fltDetails: [{ fltNo: 'KE011', carType: 'B77F', depStn: 'ICN', arrStn: 'LAX', fltDate: '27 Nov 2026' }],
+    },
+    { prefix: '180', docNo: '12345675' }
+  );
+  assert.equal(normalised.number, '18012345675');
+  assert.equal(normalised.status.code, 'IN_TRANSIT');
+  assert.deepEqual(normalised.events.map((e) => e.code), ['RCS', 'DEP']);
+  assert.deepEqual(normalised.liveCallsigns, ['KE011']);
+  assert.deepEqual(normalised.route.map((r) => r.iata), ['ICN', 'LAX']);
+  assert.ok(!JSON.stringify(normalised).includes('DO NOT COPY'));
+});
+
+await test('track: carrier=AIR forwards AWB and flight lookups to the right function', async () => {
+  stub({
+    'asianacargo.com/tracking/viewTraceAirWaybill.do': ASIANA_PAGE,
+    'asianacargo.com/tracking/searchTraceAirWaybillResult.do': ASIANA_OK,
+    'api.adsb.lol/v2/callsign/KAL249': { ac: [AC()], total: 1 },
+  });
+  const awbOut = await call('98812345675', 'AIR');
+  assert.equal(awbOut.status, 200);
+  assert.equal(awbOut.body.kind, 'awb');
+
+  const flightOut = await call('KE249', 'AIR');
+  assert.equal(flightOut.status, 200);
+  assert.equal(flightOut.body.kind, 'planes');
+  assert.equal(flightOut.body.planes[0].callsign, 'KAL249');
+
+  const bad = await call('12345', 'AIR');
+  assert.equal(bad.status, 400);
+  assert.ok(bad.body.error.hint.includes('988-12345675'));
+});
+
 globalThis.fetch = realFetch;
 
 const failed = results.filter((r) => !r[0]);

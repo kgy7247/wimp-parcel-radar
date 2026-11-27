@@ -1801,6 +1801,38 @@ async function handler(req, res) {
     return;
   }
 
+  // Air cargo and flight numbers are handled by their own functions; the
+  // dropdown value "AIR" simply forwards to them so one endpoint covers both.
+  if (requested === 'AIR' || requested === 'AWB' || requested === 'FLIGHT') {
+    try {
+      if (/^[A-Z]{2,3}\d{1,4}$/.test(number)) {
+        const planeHandler = require('./plane.js');
+        await planeHandler({ method: 'GET', query: { cs: number }, url: `/api/plane?cs=${encodeURIComponent(number)}` }, res);
+        return;
+      }
+      if (/^\d{11}$/.test(number)) {
+        const awbHandler = require('./awb.js');
+        await awbHandler({ method: 'GET', query: { no: number }, url: `/api/awb?no=${encodeURIComponent(number)}` }, res);
+        return;
+      }
+    } catch (err) {
+      respond(res, 502, {
+        ok: false,
+        error: { code: 'UPSTREAM', message: '항공 화물 조회 중 문제가 생겼습니다.', hint: '잠시 후 다시 시도해 주세요.' },
+      });
+      return;
+    }
+    respond(res, 400, {
+      ok: false,
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'AWB(11자리) 또는 편명(KE082)을 입력해 주세요.',
+        hint: '예) 988-12345675 · 180-12345675 · KE082 / KAL249',
+      },
+    });
+    return;
+  }
+
   let plan;
   try {
     plan = planRoute(number, requested);

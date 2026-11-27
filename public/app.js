@@ -6,6 +6,8 @@
 
 const $ = (s) => document.querySelector(s);
 const API = 'api/track';
+const API_PLANE = 'api/plane';
+const API_AWB = 'api/awb';
 const MAX_LENGTH = 60;
 
 /* ------------------------------------------------------------------ *
@@ -69,11 +71,14 @@ const strings = {
       { title: '경유지 확인', note: '마지막 확인 위치', place: 'Leipzig, Germany' },
       { title: '사전 통관 정보 접수', note: '실제 도착 아님', place: 'Incheon, South Korea' }
     ],
-    status: { DELIVERED: '배달 완료', OUT_FOR_DELIVERY: '배송 출발', IN_TRANSIT: '이동 중', PICKED_UP: '집하', REGISTERED: '접수', EXCEPTION: '예외', RETURNED: '반송', UNKNOWN: '확인 중' },
+    status: { DELIVERED: '배달 완료', OUT_FOR_DELIVERY: '배송 출발', IN_TRANSIT: '이동 중', PICKED_UP: '집하', REGISTERED: '접수', EXCEPTION: '예외', RETURNED: '반송', UNKNOWN: '확인 중', ARRIVED: '도착', CUSTOMS: '통관·수령 통지', IN_FLIGHT: '운항 중', GROUND: '지상' },
     errors: {
       NOT_FOUND: '조회된 배송 정보가 없습니다.', NEEDS_KEY: '해외 택배사 조회 키(LASTSCANNED_API_KEY)가 필요합니다.', UNSUPPORTED: '아직 지원하지 않는 택배사입니다.',
       UPSTREAM: '택배사 조회 서버가 응답하지 않습니다.', BAD_REQUEST: '송장번호를 다시 확인해 주세요.', NETWORK: '네트워크에 연결하지 못했습니다.',
-      RATE_LIMITED: '택배사 조회 한도에 잠시 도달했습니다.'
+      RATE_LIMITED: '택배사 조회 한도에 잠시 도달했습니다.',
+      AWB_NOT_FOUND: '항공 화물 조회 결과가 없습니다.', AIRLINE_BLOCKED: '항공사가 자동 조회를 잠시 막고 있습니다.',
+      AWB_UNSUPPORTED: '아직 지원하지 않는 항공사 AWB입니다.', IS_FLIGHT: 'AWB가 아니라 편명입니다.',
+      AIR_BAD_INPUT: 'AWB(11자리) 또는 편명(KE082)을 입력해 주세요.', FLIGHT_NONE: '이 편명의 항공기가 관측되지 않습니다.'
     },
     hints: {
       NOT_FOUND: '송장번호와 자릿수를 확인하거나, 택배사가 아직 상품을 인수하지 않았을 수 있습니다.',
@@ -82,7 +87,13 @@ const strings = {
       UPSTREAM: '잠시 후 다시 시도하거나 택배사 사이트에서 직접 확인해 주세요.',
       BAD_REQUEST: '하이픈·공백·특수문자는 자동으로 정리됩니다.',
       NETWORK: '연결 상태를 확인하고 다시 시도해 주세요.',
-      RATE_LIMITED: '1분 뒤 다시 시도해 주세요.'
+      RATE_LIMITED: '1분 뒤 다시 시도해 주세요.',
+      AWB_NOT_FOUND: 'AWB 번호를 다시 확인해 주세요. 택배 송장이라면 배송사를 직접 선택하면 택배로 조회됩니다.',
+      AIRLINE_BLOCKED: '대한항공은 서버 자동 조회에 세션 확인을 요구합니다. 아래 링크에서 AWB를 직접 조회하거나 아시아나(988) · 편명 조회를 이용해 주세요.',
+      AWB_UNSUPPORTED: '지금은 아시아나(988)와 대한항공(180) 화물 AWB만 조회됩니다.',
+      IS_FLIGHT: '편명은 검색창에 그대로 입력하면 지구본에 항공기 위치가 표시됩니다.',
+      AIR_BAD_INPUT: '예) 988-12345675 (아시아나) · 180-12345675 (대한항공) · KE082',
+      FLIGHT_NONE: '지상에 있거나 레이더 범위 밖일 수 있습니다. 편명을 확인하거나 잠시 후 다시 시도해 주세요.'
     },
     openSite: '택배사 사이트에서 보기', again: '다시 조회', empty: '송장번호를 입력하면 배송 이력이 표시됩니다.',
     idle: '송장번호를 입력하면 배송 여정이 여기에 표시됩니다.', idleBadge: '대기',
@@ -94,7 +105,20 @@ const strings = {
     guideLead: '“통관 중”이 멈췄는지, 송장번호가 왜 조회되지 않는지 — 해외배송 스캔 문구의 뜻과 해결법을 한 페이지에 정리했습니다.',
     guideAll: '이용 안내 전체 보기 →', guideStatus: 'DHL·FedEx·UPS·알리 배송 상태 뜻',
     guideNotFound: '송장번호가 조회되지 않는 5가지 이유', guideRoute: '해외배송 경유지 이해하기',
-    guideEdd: '도착 예정일은 어떻게 계산되나', guideFaq: '자주 묻는 질문'
+    guideEdd: '도착 예정일은 어떻게 계산되나', guideFaq: '자주 묻는 질문',
+    guideAir: '화물기 레이더·항공 AWB 조회',
+    carrierAIR: '항공 화물 / 편명 (AWB · Flight)',
+    radarTitle: '실시간 운항 화물기 레이더', radarSub: '해당 구간 운항 중인 실제 항공기',
+    radarFlight: '실시간 항공기 위치', radarFlightSub: '입력한 편명의 실제 항공기',
+    radarNone: '지금 이 구간에서 관측된 화물기가 없습니다.',
+    radarNoCarrier: '해당 택배사 화물기는 관측되지 않아 인근 화물기를 표시합니다.',
+    radarUpdated: '갱신', radarError: '항공기 위치를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+    radarGround: '지상', radarAlt: '고도', radarSpeed: '속도', radarSeen: '초 전', radarNow: '방금',
+    airAwb: '항공 화물 AWB', airFlight: '편명', airFlights: '운항 편명', airRoute: '구간',
+    airPieces: '조각', airWeight: '중량', airNoEvents: '아직 화물 스캔 기록이 없습니다. 예약만 접수된 상태일 수 있습니다.',
+    airNote: 'AWB로 조회한 항공 화물입니다. 택배 송장이라면 배송사를 직접 선택해 주세요.',
+    airStages: ['접수', '출발', '도착', '통관·통지', '배송 완료'],
+    flightLive: '실시간 항공기 위치', flightCoord: '관측 좌표', flightNoPlane: '지금 이 편명의 항공기가 관측되지 않습니다.'
   },
   en: {
     dashboard: 'Track a parcel', shipments: 'How it works', demo: 'SAMPLE DATA', live: 'LIVE',
@@ -122,11 +146,14 @@ const strings = {
       { title: 'Transit location confirmed', note: 'Last confirmed location', place: 'Leipzig, Germany' },
       { title: 'Pre-clearance information received', note: 'Not an arrival scan', place: 'Incheon, South Korea' }
     ],
-    status: { DELIVERED: 'Delivered', OUT_FOR_DELIVERY: 'Out for delivery', IN_TRANSIT: 'In transit', PICKED_UP: 'Collected', REGISTERED: 'Registered', EXCEPTION: 'Exception', RETURNED: 'Returned', UNKNOWN: 'Checking' },
+    status: { DELIVERED: 'Delivered', OUT_FOR_DELIVERY: 'Out for delivery', IN_TRANSIT: 'In transit', PICKED_UP: 'Collected', REGISTERED: 'Registered', EXCEPTION: 'Exception', RETURNED: 'Returned', UNKNOWN: 'Checking', ARRIVED: 'Arrived', CUSTOMS: 'Customs / notice', IN_FLIGHT: 'In flight', GROUND: 'On ground' },
     errors: {
       NOT_FOUND: 'No tracking information found.', NEEDS_KEY: 'A LASTSCANNED_API_KEY is required for overseas carriers.', UNSUPPORTED: 'This carrier is not supported yet.',
       UPSTREAM: 'The carrier server did not respond.', BAD_REQUEST: 'Please check the tracking number.', NETWORK: 'Could not reach the server.',
-      RATE_LIMITED: 'The carrier asked us to slow down for a moment.'
+      RATE_LIMITED: 'The carrier asked us to slow down for a moment.',
+      AWB_NOT_FOUND: 'No air cargo record found for this AWB.', AIRLINE_BLOCKED: 'The airline is temporarily blocking automated lookups.',
+      AWB_UNSUPPORTED: 'This airline AWB is not supported yet.', IS_FLIGHT: 'That is a flight number, not an AWB.',
+      AIR_BAD_INPUT: 'Enter an AWB (11 digits) or a flight number (KE082).', FLIGHT_NONE: 'No aircraft with this flight number is being observed.'
     },
     hints: {
       NOT_FOUND: 'Check the number and its length — the carrier may not have collected the parcel yet.',
@@ -135,7 +162,13 @@ const strings = {
       UPSTREAM: 'Try again shortly, or check the carrier site directly.',
       BAD_REQUEST: 'Hyphens, spaces and symbols are removed automatically.',
       NETWORK: 'Check your connection and try again.',
-      RATE_LIMITED: 'Try again in a minute.'
+      RATE_LIMITED: 'Try again in a minute.',
+      AWB_NOT_FOUND: 'Check the AWB number. If this was a parcel number, pick its carrier and it will be looked up as a parcel.',
+      AIRLINE_BLOCKED: 'Korean Air requires a browser session for its cargo lookup. Open the airline link below, or try Asiana (988) or a flight number.',
+      AWB_UNSUPPORTED: 'Only Asiana (988) and Korean Air (180) cargo AWBs are looked up for now.',
+      IS_FLIGHT: 'Type the flight number in the search box and its aircraft appears on the globe.',
+      AIR_BAD_INPUT: 'e.g. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082',
+      FLIGHT_NONE: 'It may be on the ground or outside radar coverage. Check the flight number or try again shortly.'
     },
     openSite: 'Open the carrier site', again: 'Try again', empty: 'Enter a tracking number to see its journey.',
     idle: 'Enter a tracking number and its journey appears here.', idleBadge: 'Idle',
@@ -147,7 +180,20 @@ const strings = {
     guideLead: 'Whether “customs clearance” is stuck, or why a tracking number returns nothing — what each overseas scan line means and what to do, on one page.',
     guideAll: 'Read the full guide →', guideStatus: 'DHL · FedEx · UPS · AliExpress status meanings',
     guideNotFound: 'Five reasons a tracking number returns nothing', guideRoute: 'How an overseas route is structured',
-    guideEdd: 'How the estimated delivery date is worked out', guideFaq: 'Frequently asked questions'
+    guideEdd: 'How the estimated delivery date is worked out', guideFaq: 'Frequently asked questions',
+    guideAir: 'Freighter radar & air cargo AWB lookup',
+    carrierAIR: 'Air cargo / flight (AWB · Flight)',
+    radarTitle: 'Live freighter radar', radarSub: 'Real aircraft flying this leg',
+    radarFlight: 'Live aircraft position', radarFlightSub: 'The aircraft on the flight number you entered',
+    radarNone: 'No freighters observed on this leg right now.',
+    radarNoCarrier: 'No aircraft of this carrier was observed, so nearby freighters are shown.',
+    radarUpdated: 'updated', radarError: 'Could not load live aircraft positions. Try again shortly.',
+    radarGround: 'on ground', radarAlt: 'alt', radarSpeed: 'speed', radarSeen: 's ago', radarNow: 'just now',
+    airAwb: 'Air cargo AWB', airFlight: 'Flight', airFlights: 'Flights', airRoute: 'Route',
+    airPieces: 'pieces', airWeight: 'weight', airNoEvents: 'No cargo scan records yet — the shipment may only be booked.',
+    airNote: 'This is an air cargo AWB result. If you meant a parcel, pick its carrier instead.',
+    airStages: ['Booked', 'Departed', 'Arrived', 'Customs / notice', 'Delivered'],
+    flightLive: 'Live aircraft position', flightCoord: 'Observed position', flightNoPlane: 'No aircraft with this flight number is being observed right now.'
   },
   ja: {
     dashboard: '荷物追跡', shipments: '使い方', demo: 'サンプル', live: 'リアルタイム',
@@ -175,11 +221,14 @@ const strings = {
       { title: '経由地を確認', note: '最終確認位置', place: 'Leipzig, Germany' },
       { title: '事前通関情報を受信', note: '到着ではありません', place: 'Incheon, South Korea' }
     ],
-    status: { DELIVERED: '配達完了', OUT_FOR_DELIVERY: '配達中', IN_TRANSIT: '輸送中', PICKED_UP: '集荷', REGISTERED: '受付', EXCEPTION: '例外', RETURNED: '返送', UNKNOWN: '確認中' },
+    status: { DELIVERED: '配達完了', OUT_FOR_DELIVERY: '配達中', IN_TRANSIT: '輸送中', PICKED_UP: '集荷', REGISTERED: '受付', EXCEPTION: '例外', RETURNED: '返送', UNKNOWN: '確認中', ARRIVED: '到着', CUSTOMS: '通関・通知', IN_FLIGHT: '飛行中', GROUND: '地上' },
     errors: {
       NOT_FOUND: '追跡情報が見つかりません。', NEEDS_KEY: '海外配送会社には LASTSCANNED_API_KEY が必要です。', UNSUPPORTED: 'この配送会社はまだ未対応です。',
       UPSTREAM: '配送会社のサーバーが応答しません。', BAD_REQUEST: '追跡番号を確認してください。', NETWORK: 'サーバーに接続できませんでした。',
-      RATE_LIMITED: '照会回数の上限に一時的に達しました。'
+      RATE_LIMITED: '照会回数の上限に一時的に達しました。',
+      AWB_NOT_FOUND: '航空貨物の照会結果がありません。', AIRLINE_BLOCKED: '航空会社が自動照会を一時的に遮断しています。',
+      AWB_UNSUPPORTED: 'この航空会社のAWBはまだ未対応です。', IS_FLIGHT: 'AWBではなく便名です。',
+      AIR_BAD_INPUT: 'AWB（11桁）または便名（KE082）を入力してください。', FLIGHT_NONE: 'この便名の航空機は観測されていません。'
     },
     hints: {
       NOT_FOUND: '番号と桁数を確認してください。まだ集荷前の可能性もあります。',
@@ -188,7 +237,13 @@ const strings = {
       UPSTREAM: 'しばらくしてから再度お試しください。',
       BAD_REQUEST: 'ハイフン・空白・記号は自動で除去されます。',
       NETWORK: '接続を確認して再度お試しください。',
-      RATE_LIMITED: '1分後に再度お試しください。'
+      RATE_LIMITED: '1分後に再度お試しください。',
+      AWB_NOT_FOUND: 'AWB番号を確認してください。宅配便の番号なら配送会社を選択すると宅配便として照会されます。',
+      AIRLINE_BLOCKED: '大韓航空はサーバー自動照会にセッション確認を求めます。下のリンクで直接照会するか、アシアナ(988)・便名照会をご利用ください。',
+      AWB_UNSUPPORTED: '現在はアシアナ(988)と大韓航空(180)の貨物AWBのみ照会できます。',
+      IS_FLIGHT: '便名は検索欄にそのまま入力すると地球儀に航空機が表示されます。',
+      AIR_BAD_INPUT: '例）988-12345675（アシアナ）・180-12345675（大韓航空）・KE082',
+      FLIGHT_NONE: '地上にあるか、レーダー範囲外の可能性があります。便名を確認するか、しばらくしてから再度お試しください。'
     },
     openSite: '配送会社サイトを開く', again: '再検索', empty: '追跡番号を入力すると配送履歴が表示されます。',
     idle: '追跡番号を入力すると、配送の旅がここに表示されます。', idleBadge: '待機中',
@@ -200,7 +255,20 @@ const strings = {
     guideLead: '「通関中」が止まっているのか、追跡番号がなぜ照会できないのか — 海外配送のスキャン文言の意味と対処法を1ページにまとめました。',
     guideAll: 'ガイドをすべて見る →', guideStatus: 'DHL・FedEx・UPS・AliExpressの状況の意味',
     guideNotFound: '追跡番号が照会できない5つの理由', guideRoute: '海外配送の経由地を理解する',
-    guideEdd: '配達予定日の計算方法', guideFaq: 'よくある質問'
+    guideEdd: '配達予定日の計算方法', guideFaq: 'よくある質問',
+    guideAir: '貨物機レーダー・航空AWB照会',
+    carrierAIR: '航空貨物 / 便名 (AWB · Flight)',
+    radarTitle: 'リアルタイム貨物機レーダー', radarSub: 'この区間を飛行中の実際の航空機',
+    radarFlight: 'リアルタイム航空機位置', radarFlightSub: '入力した便名の実際の航空機',
+    radarNone: '現在この区間で観測された貨物機はありません。',
+    radarNoCarrier: 'この配送会社の貨物機は観測されず、近くの貨物機を表示しています。',
+    radarUpdated: '更新', radarError: '航空機の位置を取得できませんでした。しばらくしてから再度お試しください。',
+    radarGround: '地上', radarAlt: '高度', radarSpeed: '速度', radarSeen: '秒前', radarNow: 'たった今',
+    airAwb: '航空貨物AWB', airFlight: '便名', airFlights: '運航便名', airRoute: '区間',
+    airPieces: '個数', airWeight: '重量', airNoEvents: '貨物スキャン記録はまだありません。予約のみの可能性があります。',
+    airNote: 'AWBで照会した航空貨物です。宅配便の場合は配送会社を選択してください。',
+    airStages: ['受付', '出発', '到着', '通関・通知', '配達完了'],
+    flightLive: 'リアルタイム航空機位置', flightCoord: '観測座標', flightNoPlane: 'この便名の航空機は現在観測されていません。'
   }
 };
 
@@ -217,7 +285,11 @@ const state = {
   error: null,
   selected: -1,
   autoRefresh: 0,
-  timer: null
+  timer: null,
+  planes: [],
+  radar: null,
+  planeTimer: null,
+  planeToken: 0
 };
 
 const t = () => strings[state.lang];
@@ -362,6 +434,7 @@ function buildDataset(api, demo) {
   if (points.length && countries.length) countries[countries.length - 1].city = points[points.length - 1].name;
 
   return {
+    kind: 'parcel',
     demo,
     carrierCode: api.carrier ? api.carrier.code : state.carrier,
     carrierName: api.carrier ? api.carrier.name : state.carrier,
@@ -398,6 +471,392 @@ function flagOf(code) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Air cargo: AWB + live aircraft
+ *   · an 11-digit AWB with prefix 180/988 goes to /api/awb
+ *   · a flight number (KE082, KAL249) goes to /api/plane
+ *   · an overseas parcel that is still moving asks /api/plane for the
+ *     cargo aircraft flying its leg, and draws them on the same globe
+ * ------------------------------------------------------------------ */
+
+function altText(p) {
+  if (!p) return '';
+  if (p.onGround) return t().radarGround;
+  if (p.altFt == null) return '';
+  return `${Math.round(p.altFt).toLocaleString('en-US')} ft`;
+}
+
+function speedText(p) {
+  if (!p || p.speedKts == null) return '';
+  return `${p.speedKts} kt`;
+}
+
+function seenText(sec) {
+  if (sec == null) return '';
+  if (sec < 3) return t().radarNow;
+  const lang = state.lang;
+  if (lang === 'ko') return `${Math.round(sec)}초 전`;
+  if (lang === 'ja') return `${Math.round(sec)}秒前`;
+  return `${Math.round(sec)}s ago`;
+}
+
+function coordText(p) {
+  if (!p || !Number.isFinite(p.lat)) return '';
+  const ns = p.lat >= 0 ? 'N' : 'S';
+  const ew = p.lon >= 0 ? 'E' : 'W';
+  return `${Math.abs(p.lat).toFixed(2)}°${ns} ${Math.abs(p.lon).toFixed(2)}°${ew}`;
+}
+
+function detectAir(raw, carrier) {
+  const compact = String(raw || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (!compact) return null;
+  const isFlight = /^[A-Z]{2,3}\d{1,4}$/.test(compact);
+  const isAwb = /^\d{11}$/.test(compact);
+  if (carrier === 'AIR') {
+    if (isFlight) return { kind: 'flight', value: compact };
+    if (isAwb) return { kind: 'awb', value: compact };
+    return { kind: 'invalid', value: compact };
+  }
+  if (carrier !== 'auto') return null;
+  if (isFlight) return { kind: 'flight', value: compact };
+  // 180/988 + 8 digits is an airline AWB; every parcel carrier keeps its own prefix.
+  if (/^(180|988)\d{8}$/.test(compact)) return { kind: 'awb', value: compact };
+  return null;
+}
+
+function awbNumberText(awb) {
+  const digits = String((awb && awb.number) || '').replace(/\D/g, '');
+  if (digits.length === 11) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return String((awb && awb.number) || '');
+}
+
+function buildAwbDataset(payload) {
+  const awb = payload.awb || {};
+  const points = [];
+  const byIata = new Map();
+
+  const addPoint = (stop) => {
+    if (!stop || !Number.isFinite(stop.lat)) return null;
+    const iata = stop.iata || '';
+    if (iata && byIata.has(iata)) return points[byIata.get(iata)];
+    const last = points[points.length - 1];
+    if (last && Math.abs(last.lat - stop.lat) < 0.01 && Math.abs(last.lng - stop.lon) < 0.01) return last;
+    const point = {
+      lat: stop.lat, lng: stop.lon,
+      name: stop.city || iata, detail: iata,
+      code: iata, country: stop.country || '', countryEn: stop.countryEn || '', countryCode: stop.countryCode || '',
+      firstEvent: null, lastEvent: null
+    };
+    points.push(point);
+    if (iata) byIata.set(iata, points.length - 1);
+    return point;
+  };
+
+  for (const stop of awb.route || []) addPoint(stop);
+
+  const events = (awb.events || []).map((ev) => {
+    const point = ev.place ? addPoint(ev.place) : null;
+    const view = {
+      time: ev.at,
+      timeLabel: ev.atLabel || '',
+      title: ev.label,
+      note: [ev.code, ev.flight, ev.place && ev.place.iata].filter(Boolean).join(' · '),
+      statusCode: ev.status || 'IN_TRANSIT',
+      location: ev.place
+        ? {
+            name: ev.place.name || ev.place.iata, city: ev.place.city || '', code: ev.place.iata || '',
+            country: ev.place.country || '', countryEn: ev.place.countryEn || '', countryCode: ev.place.countryCode || '',
+            lat: ev.place.lat, lng: ev.place.lng
+          }
+        : null,
+      point: point ? points.indexOf(point) : -1
+    };
+    const pointIndex = view.point;
+    if (pointIndex >= 0) {
+      if (!points[pointIndex].firstEvent) points[pointIndex].firstEvent = view;
+      points[pointIndex].lastEvent = view;
+    }
+    return view;
+  });
+
+  points.forEach((p, i) => { p.active = i === points.length - 1; });
+  points.forEach((p, i) => {
+    p.hideLabel = i > 0 && i < points.length - 1 && points.length > 3;
+  });
+
+  const arcs = [];
+  for (let i = 1; i < points.length; i += 1) {
+    arcs.push({ startLat: points[i - 1].lat, startLng: points[i - 1].lng, endLat: points[i].lat, endLng: points[i].lng, planned: false });
+  }
+
+  const countries = [];
+  for (const p of points) {
+    const last = countries[countries.length - 1];
+    if (!last || last.code !== p.countryCode) {
+      countries.push({ code: p.countryCode, flag: flagOf(p.countryCode), city: p.name, planned: false });
+    }
+  }
+
+  const statusCode = (awb.status && awb.status.code) || 'UNKNOWN';
+  const latestPoint = points[points.length - 1] || null;
+  const facts = [];
+  if (awb.pieces != null) facts.push(`${t().airPieces} ${awb.pieces}`);
+  if (awb.weight != null) facts.push(`${t().airWeight} ${awb.weight}${awb.weightUnit || 'kg'}`);
+
+  return {
+    kind: 'awb',
+    demo: false,
+    number: awbNumberText(awb),
+    carrierCode: 'AIR',
+    carrierName: awb.airline ? awb.airline.name : t().airAwb,
+    carrierSite: awb.airline ? awb.airline.site : '',
+    statusCode,
+    statusLabel: statusLabel(statusCode),
+    stage: Number.isFinite(awb.status && awb.status.stage) ? awb.status.stage : 0,
+    delivered: Boolean(awb.status && awb.status.delivered),
+    estimatedDelivery: null,
+    events,
+    points,
+    arcs,
+    countries,
+    international: true,
+    latestLocation: latestPoint ? pair(latestPoint) : '',
+    latestCode: latestPoint ? latestPoint.code : '',
+    latestDetail: facts.join(' · '),
+    fetchedAt: (payload.meta && payload.meta.fetchedAt) || new Date().toISOString(),
+    cached: Boolean(payload.meta && payload.meta.cached),
+    awb
+  };
+}
+
+function buildFlightDataset(payload, requested) {
+  const planes = (payload.planes || []).filter((p) => Number.isFinite(p.lat));
+  const first = planes[0] || null;
+  const looked = ((payload.query && payload.query.callsigns) || []).map((c) => c.iata || c.icao || c.input);
+  const label = (looked.length ? looked : [requested]).filter(Boolean).join(', ');
+
+  const events = planes.map((p) => ({
+    time: null,
+    timeLabel: seenText(p.seenSec),
+    title: `${p.callsign || p.hex}${p.operator ? ' · ' + p.operator.label : ''}`,
+    note: [p.aircraftType, altText(p), speedText(p)].filter(Boolean).join(' · '),
+    statusCode: p.onGround ? 'GROUND' : 'IN_FLIGHT',
+    location: { name: coordText(p), city: '', code: p.callsign || '', country: '', countryEn: '', countryCode: '', lat: p.lat, lng: p.lon },
+    point: -1,
+    plane: p
+  }));
+
+  return {
+    kind: 'flight',
+    demo: false,
+    number: label,
+    carrierCode: 'AIR',
+    carrierName: first && first.operator ? first.operator.label : t().flightLive,
+    carrierSite: '',
+    statusCode: first ? (first.onGround ? 'GROUND' : 'IN_FLIGHT') : 'UNKNOWN',
+    statusLabel: statusLabel(first ? (first.onGround ? 'GROUND' : 'IN_FLIGHT') : 'UNKNOWN'),
+    stage: 0,
+    delivered: false,
+    estimatedDelivery: null,
+    events,
+    points: [],
+    arcs: [],
+    countries: [],
+    international: true,
+    latestLocation: first ? coordText(first) : '',
+    latestCode: first ? first.callsign || '' : '',
+    latestDetail: first ? [altText(first), speedText(first)].filter(Boolean).join(' · ') : '',
+    fetchedAt: (payload.meta && payload.meta.fetchedAt) || new Date().toISOString(),
+    cached: Boolean(payload.meta && payload.meta.cached),
+    plane: first
+  };
+}
+
+function planeMarkers() {
+  return (state.planes || [])
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon))
+    .map((p) => ({
+      kind: 'plane', lat: p.lat, lng: p.lon, altFt: p.altFt, callsign: p.callsign, hex: p.hex,
+      aircraftType: p.aircraftType, speedKts: p.speedKts, heading: p.heading, onGround: p.onGround,
+      seenSec: p.seenSec, operator: p.operator, matched: Boolean(p.matched), active: false
+    }));
+}
+
+function planeTooltip(p) {
+  return [p.callsign || p.hex, p.operator && p.operator.label, p.aircraftType, altText(p), speedText(p), seenText(p.seenSec)]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function focusPlane(p) {
+  if (!p) return;
+  if (globe && globe.pointOfView) globe.pointOfView({ lat: p.lat, lng: p.lon, altitude: 0.55 }, 800);
+  const info = $('#marker-info');
+  if (info) {
+    info.hidden = false;
+    info.textContent = `${p.callsign || p.hex}${p.operator ? ' · ' + p.operator.label : ''} — ${[p.aircraftType, altText(p), speedText(p)].filter(Boolean).join(' · ')}`;
+  }
+}
+
+function planeChip(p) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'radar-chip' + (p.matched ? ' matched' : '');
+  btn.title = planeTooltip(p);
+
+  const icon = document.createElement('span');
+  icon.textContent = '✈';
+  const cs = document.createElement('span');
+  cs.className = 'rc-cs';
+  cs.textContent = p.callsign || p.hex || '—';
+  btn.append(icon, cs);
+
+  if (p.operator) {
+    const op = document.createElement('span');
+    op.className = 'rc-op';
+    op.textContent = p.operator.code;
+    btn.append(op);
+  }
+
+  const meta = document.createElement('span');
+  meta.className = 'rc-meta';
+  meta.textContent = [p.aircraftType, altText(p), speedText(p)].filter(Boolean).join(' · ');
+  btn.append(meta);
+
+  btn.onclick = () => focusPlane(p);
+  return btn;
+}
+
+function renderRadar() {
+  const box = $('#radar');
+  if (!box) return;
+  const s = t();
+  const radar = state.radar;
+  const list = $('#radar-list');
+  if (!radar || !state.view) {
+    box.hidden = true;
+    if (list) list.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  const title = $('#radar-title');
+  const sub = $('#radar-sub');
+  if (title) {
+    title.textContent = radar.mode === 'flight' ? s.radarFlight : s.radarTitle;
+  }
+  if (sub) {
+    if (radar.mode === 'flight') sub.textContent = s.radarFlightSub;
+    else if (radar.mode === 'awb') sub.textContent = `${s.radarSub} · ${state.view.awb && state.view.awb.liveCallsigns ? state.view.awb.liveCallsigns.join(' · ') : ''}`;
+    else sub.textContent = `${s.radarSub}${radar.carrierName ? ' · ' + radar.carrierName : ''}`;
+  }
+  if (!list) return;
+  list.replaceChildren();
+
+  if (radar.error) {
+    const note = document.createElement('span');
+    note.className = 'radar-note';
+    note.textContent = s.radarError;
+    list.append(note);
+    return;
+  }
+
+  const planes = state.planes || [];
+  if (!planes.length) {
+    const note = document.createElement('span');
+    note.className = 'radar-note';
+    note.textContent = radar.loading ? s.loading : s.radarNone;
+    list.append(note);
+  } else {
+    if (radar.mode === 'carrier' && radar.counts && radar.counts.matched === 0) {
+      const note = document.createElement('span');
+      note.className = 'radar-note';
+      note.textContent = s.radarNoCarrier;
+      list.append(note);
+    }
+    for (const p of planes) list.append(planeChip(p));
+  }
+
+  const updated = document.createElement('span');
+  updated.className = 'radar-updated';
+  updated.textContent = `${s.radarUpdated} ${clockNow()}`;
+  list.append(updated);
+}
+
+async function loadPlanes(params) {
+  if (!params) {
+    stopPlanePolling();
+    state.planes = [];
+    state.radar = null;
+    renderPlanes();
+    return;
+  }
+  const token = state.planeToken + 1;
+  state.planeToken = token;
+  state.radar = { mode: params.mode || (params.cs ? 'flight' : 'carrier'), query: params.query || params, counts: null, loading: true, error: false };
+  renderRadar();
+
+  const search = new URLSearchParams(params.query || params);
+  if (params.mode) search.delete('mode');
+  try {
+    const res = await fetch(`${API_PLANE}?${search.toString()}`, { headers: { accept: 'application/json' } });
+    const payload = await res.json();
+    if (token !== state.planeToken) return;
+    if (!payload || payload.ok !== true) throw new Error((payload && payload.error && payload.error.code) || 'PLANE');
+    state.planes = payload.planes || [];
+    state.radar = {
+      mode: params.mode || 'flight',
+      query: params.query || params,
+      counts: payload.counts || null,
+      carrier: params.carrier || null,
+      carrierName: params.carrierName || null,
+      loading: false,
+      error: false
+    };
+    renderPlanes();
+    startPlanePolling();
+  } catch (err) {
+    if (token !== state.planeToken) return;
+    state.planes = [];
+    state.radar = { ...(state.radar || { mode: 'carrier', query: params }), loading: false, error: true };
+    renderPlanes();
+  }
+}
+
+function renderPlanes() {
+  renderGlobe(state.view);
+  renderRadar();
+}
+
+function startPlanePolling() {
+  stopPlanePolling();
+  state.planeTimer = setInterval(() => {
+    if (document.hidden) return;
+    if (state.radar && state.radar.query) loadPlanes({ mode: state.radar.mode, query: state.radar.query, carrier: state.radar.carrier, carrierName: state.radar.carrierName });
+  }, 60000);
+}
+
+function stopPlanePolling() {
+  if (state.planeTimer) clearInterval(state.planeTimer);
+  state.planeTimer = null;
+}
+
+/* Planes for an overseas parcel that is still on its way. */
+function radarForView(view) {
+  if (!view || view.kind !== 'parcel') return null;
+  if (!view.international || view.delivered) return null;
+  const point = view.points[view.points.length - 1];
+  const params = { carrier: view.carrierCode || 'GLOBAL', mode: 'carrier', carrierName: view.carrierName || '' };
+  if (point && Number.isFinite(point.lat)) {
+    params.lat = point.lat.toFixed(3);
+    params.lon = point.lng.toFixed(3);
+    if (point.code) params.iata = point.code;
+  }
+  params.query = { ...params };
+  delete params.query.mode;
+  delete params.query.carrierName;
+  return params;
+}
+
+/* ------------------------------------------------------------------ *
  * Globe
  * ------------------------------------------------------------------ */
 
@@ -426,8 +885,29 @@ function initGlobe() {
       .htmlElementsData([])
       .htmlLat('lat')
       .htmlLng('lng')
-      .htmlAltitude(0.015)
+      .htmlAltitude((d) => {
+        if (d.kind !== 'plane') return 0.015;
+        // Cruise-height aircraft float above the airports they connect.
+        const alt = Math.min(0.09, Math.max(0, Number(d.altFt) || 0) / 45000 * 0.09);
+        return d.onGround ? 0.008 : 0.012 + alt;
+      })
       .htmlElement((d) => {
+        if (d.kind === 'plane') {
+          const plane = document.createElement('button');
+          plane.type = 'button';
+          plane.className = 'globe-plane' + (d.matched ? ' matched' : '') + (d.onGround ? ' ground' : '');
+          plane.title = planeTooltip(d);
+          const icon = document.createElement('span');
+          icon.className = 'plane-icon';
+          icon.textContent = '✈';
+          icon.style.transform = `rotate(${(Number(d.heading) || 0) - 90}deg)`;
+          const tag = document.createElement('span');
+          tag.className = 'plane-tag';
+          tag.textContent = d.callsign || d.hex || '';
+          plane.append(icon, tag);
+          plane.onclick = () => focusPlane(d);
+          return plane;
+        }
         const el = document.createElement('button');
         el.className = 'globe-label' + (d.active ? ' active' : '') + (d.pending ? ' pending' : '') + (d.hideLabel ? ' dot' : '');
         el.textContent = d.hideLabel ? '' : '• ' + d.name + (d.pending ? ' ○' : '');
@@ -456,15 +936,16 @@ function initGlobe() {
 function renderGlobe(view) {
   if (!globe) return;
   if (globe.controls()) globe.controls().autoRotate = !view;
+  const planes = planeMarkers();
   if (!view) {
-    globe.htmlElementsData([]);
+    globe.htmlElementsData(planes);
     globe.arcsData([]);
     return;
   }
-  const data = view.points.map((p, i) => ({
+  const labels = view.points.map((p, i) => ({
     ...p, index: i, pending: Boolean(view.demo && i === view.points.length - 1 && view.points.length > 1)
   }));
-  globe.htmlElementsData(data);
+  globe.htmlElementsData(labels.concat(planes));
   globe.arcsData(view.arcs);
 }
 
@@ -508,6 +989,7 @@ function softwareGlobe(host) {
   let drag = null;
   let moved = false;
   let points = [];
+  let flyers = [];
   let arcs = [];
   let resize = null;
 
@@ -614,6 +1096,29 @@ function softwareGlobe(host) {
       ctx.fillStyle = active ? '#b7f373' : '#e8f0ff';
       ctx.fillText(label, px, py);
     });
+
+    // Live aircraft: same ✈ marker as the WebGL globe, rotated by heading.
+    flyers.forEach((f) => {
+      if (!Number.isFinite(f.lat) || !Number.isFinite(f.lng)) return;
+      const p = project(f.lat, f.lng, r * 1.005);
+      if (p[2] < 0.05) return;
+      ctx.save();
+      ctx.translate(p[0], p[1]);
+      ctx.rotate((((Number(f.heading) || 0) - 90) * Math.PI) / 180);
+      ctx.fillStyle = f.matched ? '#b7f373' : f.onGround ? '#9db0c4' : '#eaf3ff';
+      ctx.font = f.matched ? '15px sans-serif' : '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('✈', 0, 0);
+      ctx.restore();
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+      if (!w || w > 520) {
+        ctx.font = '9px sans-serif';
+        ctx.fillStyle = '#c6d6e6';
+        ctx.fillText(f.callsign || '', p[0] + 9, p[1] - 8);
+      }
+    });
   }
 
   const img = new Image();
@@ -670,7 +1175,9 @@ function softwareGlobe(host) {
       return this;
     },
     htmlElementsData(a) {
-      points = Array.isArray(a) ? a : [];
+      const list = Array.isArray(a) ? a : [];
+      points = list.filter((item) => item && item.kind !== 'plane');
+      flyers = list.filter((item) => item && item.kind === 'plane');
       draw();
       return this;
     },
@@ -709,6 +1216,7 @@ function render() {
   renderCountries();
   renderMapStatus();
   renderGlobe(state.view);
+  renderRadar();
 }
 
 function renderParcels() {
@@ -731,7 +1239,7 @@ function renderParcels() {
   const code = state.view ? state.view.carrierCode : state.carrier;
   const mark = {
     CJ: 'CJ', EPOST: '郵', HANJIN: 'H', LOTTE: 'L', LOGEN: '로', ILYANG: '일',
-    DHL: 'DHL', FEDEX: 'FX', UPS: 'UPS', USPS: 'US', CAINIAO: 'CA', EMS: 'EMS', YUNEXPRESS: 'YX'
+    DHL: 'DHL', FEDEX: 'FX', UPS: 'UPS', USPS: 'US', CAINIAO: 'CA', EMS: 'EMS', YUNEXPRESS: 'YX', AIR: '✈'
   };
   icon.textContent = mark[code] || String(code || '?').slice(0, 3);
   icon.dataset.carrier = code;
@@ -744,9 +1252,21 @@ function renderParcels() {
     small.textContent = state.error.title;
   } else if (state.view) {
     const count = `${state.view.events.length}${isKo() || state.lang === 'ja' ? s.events : ' ' + s.events}`;
-    small.textContent = state.view.demo
-      ? (isKo() ? 'Sofia · Leipzig · Incheon' : state.view.points.map((p) => p.name).join(' · '))
-      : `${state.view.latestDetail || state.view.latestLocation} · ${count}`;
+    if (state.view.kind === 'awb') {
+      const awb = state.view.awb || {};
+      small.textContent = [
+        awb.airline ? awb.airline.name : s.airAwb,
+        awb.origin && awb.destination ? `${awb.origin.iata} → ${awb.destination.iata}` : '',
+        state.view.latestDetail,
+        awb.flights && awb.flights.length ? `${s.airFlights} ${awb.flights.map((f) => f.no).join(' ')}` : ''
+      ].filter(Boolean).join(' · ');
+    } else if (state.view.kind === 'flight') {
+      small.textContent = [state.view.carrierName, state.view.latestDetail].filter(Boolean).join(' · ') || s.flightLive;
+    } else {
+      small.textContent = state.view.demo
+        ? (isKo() ? 'Sofia · Leipzig · Incheon' : state.view.points.map((p) => p.name).join(' · '))
+        : `${state.view.latestDetail || state.view.latestLocation} · ${count}`;
+    }
   } else {
     small.textContent = s.waiting;
   }
@@ -812,7 +1332,7 @@ function renderEvents() {
     item.setAttribute('role', 'button');
 
     const meta = document.createElement('small');
-    const when = formatTime(ev.time);
+    const when = ev.timeLabel || formatTime(ev.time);
     const where = ev.location ? (ev.location.name || '') : '';
     meta.textContent = [when, where].filter(Boolean).join(' · ') || (state.view.demo ? '' : s.liveNote);
 
@@ -836,7 +1356,7 @@ function renderEvents() {
 function renderSteps() {
   const s = t();
   const view = state.view;
-  const labels = view && view.international ? s.stages : s.stagesDomestic;
+  const labels = view && view.kind === 'awb' ? s.airStages : view && view.international ? s.stages : s.stagesDomestic;
   const stage = view ? view.stage : -1;
   $('#steps').innerHTML = labels
     .map((label, i) => {
@@ -862,15 +1382,32 @@ function renderSteps() {
   const summary = $('.history-summary p');
   if (state.error) summary.textContent = state.error.title;
   else if (view && view.demo) summary.textContent = s.historyNote;
+  else if (view && view.kind === 'awb') summary.textContent = [view.carrierName, s.airAwb, view.awb && view.awb.source === 'asiana' ? 'Asiana Cargo' : view.awb && view.awb.source === 'koreanair' ? 'Korean Air Cargo' : ''].filter(Boolean).join(' · ');
+  else if (view && view.kind === 'flight') summary.textContent = `${s.radarFlight} · ${s.radarFlightSub}`;
   else if (view) summary.textContent = `${view.carrierName} · ${s.liveNote}`;
   else summary.textContent = '';
   summary.style.display = view || state.error ? '' : 'none';
 
   const accent = $('.panel-title .accent');
-  accent.textContent = view ? (view.international ? s.international : s.domestic) : state.error ? s.notconnected : s.idleBadge;
+  accent.textContent = view
+    ? view.kind === 'awb'
+      ? s.airAwb
+      : view.international
+        ? s.international
+        : s.domestic
+    : state.error
+      ? s.notconnected
+      : s.idleBadge;
   accent.classList.toggle('done', Boolean(view && view.delivered));
 
-  $('#notice-box').style.display = view && view.demo ? 'flex' : 'none';
+  $('#notice-box').style.display = view && view.kind === 'awb' && !view.events.length ? 'flex' : view && view.demo ? 'flex' : 'none';
+  if (view && view.kind === 'awb' && !view.events.length) {
+    const box = $('#notice-box');
+    if (box && box.lastElementChild) box.lastElementChild.textContent = s.airNoEvents;
+  }
+
+  const bottom = document.querySelector('.bottom');
+  if (bottom) bottom.classList.toggle('is-hidden', Boolean(view && view.kind === 'flight'));
 }
 
 function renderCountries() {
@@ -923,7 +1460,7 @@ function renderMapStatus() {
     $('#location').textContent = '—';
     $('.map-status .code').textContent = '—';
   } else if (view) {
-    $('#location').textContent = view.demo ? 'Leipzig, Germany' : pair(view.points[view.points.length - 1]);
+    $('#location').textContent = view.kind === 'flight' ? view.latestLocation : view.demo ? 'Leipzig, Germany' : pair(view.points[view.points.length - 1]);
     $('.map-status .code').textContent = view.latestCode || '—';
   } else {
     $('#location').textContent = '—';
@@ -934,7 +1471,7 @@ function renderMapStatus() {
   const lastTime = $('#last-time');
   if (lastTime) {
     const latest = view ? latestEvent(view) : null;
-    const when = latest ? formatTime(latest.time) : '';
+    const when = latest ? latest.timeLabel || formatTime(latest.time) : '';
     lastTime.textContent = when || (view ? s.noTime : '—');
   }
 
@@ -976,13 +1513,26 @@ function errorFor(payload) {
   return {
     code,
     title: s.errors[code] || (payload && payload.message) || s.errors.UPSTREAM,
-    hint: s.hints[code] || (payload && payload.hint) || '',
+    hint: (payload && payload.hint) || s.hints[code] || '',
     site: payload && payload.carrier ? payload.carrier.site : ''
   };
 }
 
 async function lookup(number, carrier) {
   if (state.loading) return;
+
+  // Air cargo and flight numbers leave the parcel pipeline entirely.
+  const air = detectAir(number, carrier);
+  if (air && air.kind === 'awb') return lookupAwb(air.value);
+  if (air && air.kind === 'flight') return lookupFlight(air.value, carrier);
+  if (air && air.kind === 'invalid') {
+    state.view = null;
+    state.error = errorFor({ code: 'AIR_BAD_INPUT' });
+    state.number = number;
+    toast(state.error.title);
+    render();
+    return;
+  }
 
   state.loading = true;
   state.error = null;
@@ -1012,15 +1562,98 @@ async function lookup(number, carrier) {
     state.error = null;
     render();
     focusPoint(state.view.points.length - 1);
+    // Overseas parcels still on the move get the live freighter radar.
+    const radar = radarForView(state.view);
+    if (radar) loadPlanes(radar);
+    else loadPlanes(null);
   } catch (err) {
     state.error = errorFor({ code: 'NETWORK' });
     state.view = null;
+    loadPlanes(null);
     toast(t().errors.NETWORK);
   } finally {
     state.loading = false;
     if (state.view) {
       $('#search .primary').disabled = false;
     }
+    render();
+  }
+}
+
+function resetForLookup() {
+  state.loading = true;
+  state.error = null;
+  state.view = null;
+  state.planes = [];
+  state.radar = null;
+  stopPlanePolling();
+  $('#marker-info').hidden = true;
+}
+
+async function lookupAwb(value) {
+  if (state.loading) return;
+  resetForLookup();
+  render();
+  try {
+    const res = await fetch(`${API_AWB}?no=${encodeURIComponent(value)}`, { headers: { accept: 'application/json' } });
+    const payload = await res.json();
+    if (!payload || payload.ok !== true) {
+      state.error = errorFor(payload && payload.error);
+      state.number = value;
+      toast(state.error.title);
+      return;
+    }
+    const awb = payload.awb || {};
+    state.number = awbNumberText(awb);
+    state.carrier = 'AIR';
+    state.view = buildAwbDataset(payload);
+    state.error = null;
+    render();
+    if (state.view.points.length) focusPoint(state.view.points.length - 1);
+    const callsigns = (awb.liveCallsigns || []).filter(Boolean);
+    if (callsigns.length) {
+      const query = { cs: callsigns.join(',') };
+      loadPlanes({ mode: 'awb', query });
+    }
+  } catch (err) {
+    state.error = errorFor({ code: 'NETWORK' });
+    toast(t().errors.NETWORK);
+  } finally {
+    state.loading = false;
+    render();
+  }
+}
+
+async function lookupFlight(value, carrier) {
+  if (state.loading) return;
+  resetForLookup();
+  render();
+  try {
+    const res = await fetch(`${API_PLANE}?cs=${encodeURIComponent(value)}`, { headers: { accept: 'application/json' } });
+    const payload = await res.json();
+    if (!payload || payload.ok !== true) {
+      state.error = errorFor(payload && payload.error);
+      state.number = value;
+      toast(state.error.title);
+      return;
+    }
+    if (!payload.planes || !payload.planes.length) {
+      state.error = errorFor({ code: 'FLIGHT_NONE', hint: payload.message });
+      state.number = value;
+      return;
+    }
+    state.number = value;
+    state.carrier = 'AIR';
+    state.view = buildFlightDataset(payload, value);
+    state.error = null;
+    render();
+    if (state.view.plane) focusPlane(state.view.plane);
+    loadPlanes({ mode: 'flight', query: { cs: value } });
+  } catch (err) {
+    state.error = errorFor({ code: 'NETWORK' });
+    toast(t().errors.NETWORK);
+  } finally {
+    state.loading = false;
     render();
   }
 }
