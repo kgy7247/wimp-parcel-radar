@@ -58,7 +58,7 @@
 
   <form id="search" autocomplete="off">
     <span class="search-icon">⌕</span>
-    <input id="number" placeholder="송장번호를 입력하세요" aria-label="Tracking number" required maxlength="60" value="2746217154" inputmode="text" spellcheck="false">
+    <input id="number" placeholder="송장번호를 입력하세요" aria-label="Tracking number" required maxlength="60" value="" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false">
     <select id="carrier" aria-label="Carrier">
       <option value="auto">배송사 자동 인식</option>
       <option value="DHL">DHL</option>
@@ -73,7 +73,7 @@
   </form>
 
   <div class="sectionline">
-    <div><b data-i="my">조회 결과</b> <span id="count" class="count">3</span></div>
+    <div><b data-i="my">조회 결과</b> <span id="count" class="count">0</span></div>
     <div class="sub"><span data-i="local">저장하지 않는 일회성 조회</span> · <button id="notify" data-i="notify">조회 안내</button></div>
   </div>
   <div id="parcels"></div>
@@ -85,8 +85,9 @@
         <span class="chip">◉ <span data-i="satellite">3D 위성 지구본</span></span>
       </div>
       <div id="globe"></div>
+      <div id="idle-note" class="idle-note"><span aria-hidden="true">◇</span><p data-i="idle">송장번호를 입력하면 배송 여정이 여기에 표시됩니다.</p></div>
       <div id="loading" hidden><span class="spinner" aria-hidden="true"></span><span data-i="loading">배송 조회 중…</span></div>
-      <div class="map-status"><span class="pulse"></span><div><small data-i="last">마지막 확인 위치</small><b id="location">Leipzig, Germany</b></div><span class="code">LEJ</span></div>
+      <div class="map-status" hidden><span class="pulse"></span><div><small data-i="last">마지막 확인 위치</small><b id="location">—</b></div><span class="code">—</span></div>
       <div class="map-controls"><button id="plus" aria-label="Zoom in">＋</button><button id="minus" aria-label="Zoom out">−</button><button id="reset" aria-label="Reset view">⌖</button></div>
       <div id="marker-info" hidden></div>
       <div class="legend"><span><i></i><span data-i="confirmed">확인된 경로</span></span><span id="legend-planned"><i class="dashed"></i><span data-i="planned">예정 경로</span></span></div>

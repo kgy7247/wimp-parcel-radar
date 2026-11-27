@@ -7,6 +7,37 @@
 const $ = (s) => document.querySelector(s);
 const SAMPLE_NUMBER = '2746217154';
 const API = 'api/track';
+const MAX_LENGTH = 60;
+
+/* ------------------------------------------------------------------ *
+ * Tracking-number input
+ * Carriers print numbers with hyphens and people paste them from a
+ * message; keep only A-Z a-z 0-9 while typing or pasting.
+ * ------------------------------------------------------------------ */
+
+function sanitizeNumber(value) {
+  return String(value == null ? '' : value).replace(/[^A-Za-z0-9]/g, '').slice(0, MAX_LENGTH);
+}
+
+function countKept(text, upto) {
+  let kept = 0;
+  for (let i = 0; i < upto && i < text.length; i += 1) {
+    if (/[A-Za-z0-9]/.test(text[i])) kept += 1;
+  }
+  return kept;
+}
+
+function sanitizeField(el) {
+  if (!el) return '';
+  const before = el.value;
+  const clean = sanitizeNumber(before);
+  if (clean === before) return clean;
+  const caret = el.selectionStart == null ? before.length : el.selectionStart;
+  el.value = clean;
+  const pos = Math.min(countKept(before, caret), clean.length);
+  try { el.setSelectionRange(pos, pos); } catch (err) { /* not focusable */ }
+  return clean;
+}
 
 /* ------------------------------------------------------------------ *
  * Language
@@ -42,15 +73,16 @@ const strings = {
     },
     hints: {
       NOT_FOUND: '송장번호와 자릿수를 확인하거나, 택배사가 아직 상품을 인수하지 않았을 수 있습니다.',
-      NEEDS_KEY: 'developer.dhl.com 무료 키(250건/일)를 Vercel 환경변수 DHL_API_KEY에 넣으면 DHL 실시간 조회가 켜집니다. 2746217154는 예시 데이터로 볼 수 있습니다.',
+      NEEDS_KEY: 'developer.dhl.com 무료 키(250건/일)를 Vercel 환경변수 DHL_API_KEY에 넣으면 DHL 실시간 조회가 켜집니다.',
       UNSUPPORTED: '현재 지원: CJ대한통운 · 우체국택배 · 한진택배 · 롯데택배 · DHL',
       UPSTREAM: '잠시 후 다시 시도하거나 택배사 사이트에서 직접 확인해 주세요.',
-      BAD_REQUEST: '하이픈과 공백은 자동으로 정리됩니다.',
+      BAD_REQUEST: '하이픈·공백·특수문자는 자동으로 정리됩니다.',
       NETWORK: '연결 상태를 확인하고 다시 시도해 주세요.'
     },
     openSite: '택배사 사이트에서 보기', again: '다시 조회', empty: '송장번호를 입력하면 배송 이력이 표시됩니다.',
+    idle: '송장번호를 입력하면 배송 여정이 여기에 표시됩니다.', idleBadge: '대기',
     updated: '최종 갱신', events: '건', sampleNote: '예시 데이터 · 실제 조회가 아닙니다', liveNote: '택배사 스캔 기준',
-    privacyLink: '개인정보처리방침', termsLink: '이용약관', noKey: 'DHL 키 없이 예시로 보기', routeDomestic: '국내 이동 경로'
+    privacyLink: '개인정보처리방침', termsLink: '이용약관', noKey: 'DHL 키 없이 예시로 보기', routeDomestic: '국내 이동 경로', notYet: '조회 전'
   },
   en: {
     dashboard: 'Track a parcel', shipments: 'How it works', demo: 'SAMPLE DATA', live: 'LIVE',
@@ -81,15 +113,16 @@ const strings = {
     },
     hints: {
       NOT_FOUND: 'Check the number and its length — the carrier may not have collected the parcel yet.',
-      NEEDS_KEY: 'Add a free key from developer.dhl.com (250 calls/day) as DHL_API_KEY on Vercel. 2746217154 works as sample data.',
+      NEEDS_KEY: 'Add a free key from developer.dhl.com (250 calls/day) as DHL_API_KEY on Vercel.',
       UNSUPPORTED: 'Supported: CJ Logistics · Korea Post · Hanjin · Lotte · DHL',
       UPSTREAM: 'Try again shortly, or check the carrier site directly.',
-      BAD_REQUEST: 'Hyphens and spaces are removed automatically.',
+      BAD_REQUEST: 'Hyphens, spaces and symbols are removed automatically.',
       NETWORK: 'Check your connection and try again.'
     },
     openSite: 'Open the carrier site', again: 'Try again', empty: 'Enter a tracking number to see its journey.',
+    idle: 'Enter a tracking number and its journey appears here.', idleBadge: 'Idle',
     updated: 'Updated', events: 'events', sampleNote: 'Sample data · not a live lookup', liveNote: 'Based on carrier scans',
-    privacyLink: 'Privacy', termsLink: 'Terms', noKey: 'See the sample without a DHL key', routeDomestic: 'Domestic route'
+    privacyLink: 'Privacy', termsLink: 'Terms', noKey: 'See the sample without a DHL key', routeDomestic: 'Domestic route', notYet: 'Not looked up yet'
   },
   ja: {
     dashboard: '荷物追跡', shipments: '使い方', demo: 'サンプル', live: 'リアルタイム',
@@ -120,15 +153,16 @@ const strings = {
     },
     hints: {
       NOT_FOUND: '番号と桁数を確認してください。まだ集荷前の可能性もあります。',
-      NEEDS_KEY: 'developer.dhl.com の無料キー（1日250件）を Vercel の DHL_API_KEY に設定してください。2746217154 はサンプルで確認できます。',
+      NEEDS_KEY: 'developer.dhl.com の無料キー（1日250件）を Vercel の DHL_API_KEY に設定してください。',
       UNSUPPORTED: '対応：CJ大韓通運・韓国郵便・ハンジン・ロッテ・DHL',
       UPSTREAM: 'しばらくしてから再度お試しください。',
-      BAD_REQUEST: 'ハイフンと空白は自動で除去されます。',
+      BAD_REQUEST: 'ハイフン・空白・記号は自動で除去されます。',
       NETWORK: '接続を確認して再度お試しください。'
     },
     openSite: '配送会社サイトを開く', again: '再検索', empty: '追跡番号を入力すると配送履歴が表示されます。',
+    idle: '追跡番号を入力すると、配送の旅がここに表示されます。', idleBadge: '待機中',
     updated: '最終更新', events: '件', sampleNote: 'サンプルデータ・実際の照会ではありません', liveNote: '配送会社スキャン基準',
-    privacyLink: 'プライバシー', termsLink: '利用規約', noKey: 'DHLキーなしでサンプルを見る', routeDomestic: '国内の経路'
+    privacyLink: 'プライバシー', termsLink: '利用規約', noKey: 'DHLキーなしでサンプルを見る', routeDomestic: '国内の経路', notYet: '照会前'
   }
 };
 
@@ -138,12 +172,12 @@ const strings = {
 
 const state = {
   lang: 'ko',
-  number: SAMPLE_NUMBER,
-  carrier: 'DHL',
+  number: '',
+  carrier: 'auto',
   view: null,
   loading: false,
   error: null,
-  demo: true,
+  demo: false,
   selected: -1,
   autoRefresh: 0,
   timer: null
@@ -397,6 +431,8 @@ function initGlobe() {
       globe.controls().enablePan = false;
       globe.controls().minDistance = 130;
       globe.controls().maxDistance = 650;
+      globe.controls().autoRotate = true;
+      globe.controls().autoRotateSpeed = 0.35;
     }
     new ResizeObserver(() => {
       if (!globe) return;
@@ -410,6 +446,7 @@ function initGlobe() {
 
 function renderGlobe(view) {
   if (!globe) return;
+  if (globe.controls()) globe.controls().autoRotate = !view;
   if (!view) {
     globe.htmlElementsData([]);
     globe.arcsData([]);
@@ -652,8 +689,10 @@ function render() {
   });
   $('#number').placeholder = s.placeholder;
   if ($('#carrier').options[0]) $('#carrier').options[0].text = s.detect;
-  $('#mode-badge').textContent = state.view && !state.view.demo ? s.live : s.demo;
-  $('#mode-badge').classList.toggle('live', Boolean(state.view && !state.view.demo));
+  const badge = $('#mode-badge');
+  badge.hidden = !state.view;
+  badge.textContent = state.view && !state.view.demo ? s.live : s.demo;
+  badge.classList.toggle('live', Boolean(state.view && !state.view.demo));
 
   renderParcels();
   renderEvents();
@@ -667,6 +706,13 @@ function renderParcels() {
   const s = t();
   const box = $('#parcels');
   box.replaceChildren();
+
+  if (!state.view && !state.error) {
+    box.style.display = 'none';
+    $('#count').textContent = '0';
+    return;
+  }
+  box.style.display = '';
 
   const row = document.createElement('div');
   row.className = 'parcel selected';
@@ -695,7 +741,7 @@ function renderParcels() {
 
   const status = document.createElement('span');
   status.className = 'state';
-  status.textContent = state.error ? '—' : state.view ? state.view.statusLabel : s.waiting;
+  status.textContent = state.error ? '—' : state.view ? state.view.statusLabel : s.idleBadge;
 
   row.append(icon, body, status);
   box.append(row);
@@ -789,7 +835,7 @@ function renderSteps() {
     .join('');
 
   const badge = $('.history-summary .badge');
-  badge.textContent = state.error ? '—' : view ? view.statusLabel : s.waiting;
+  badge.textContent = state.error ? '—' : view ? view.statusLabel : s.idleBadge;
   badge.classList.toggle('done', Boolean(view && view.delivered));
   badge.classList.toggle('warn', Boolean(state.error || (view && view.statusCode === 'EXCEPTION')));
 
@@ -797,10 +843,11 @@ function renderSteps() {
   if (state.error) summary.textContent = state.error.title;
   else if (view && view.demo) summary.textContent = s.historyNote;
   else if (view) summary.textContent = `${view.carrierName} · ${s.liveNote}`;
-  else summary.textContent = s.empty;
+  else summary.textContent = '';
+  summary.style.display = view || state.error ? '' : 'none';
 
   const accent = $('.panel-title .accent');
-  accent.textContent = view ? (view.international ? s.international : s.domestic) : s.notconnected;
+  accent.textContent = view ? (view.international ? s.international : s.domestic) : state.error ? s.notconnected : s.idleBadge;
   accent.classList.toggle('done', Boolean(view && view.delivered));
 
   $('#notice-box').style.display = view && view.demo ? 'flex' : 'none';
@@ -846,6 +893,10 @@ function renderCountries() {
 function renderMapStatus() {
   const s = t();
   const view = state.view;
+  const statusBox = $('.map-status');
+  statusBox.style.display = view || state.error ? 'flex' : 'none';
+  const idleNote = $('#idle-note');
+  if (idleNote) idleNote.hidden = Boolean(view || state.error || state.loading);
   if (state.error) {
     $('#location').textContent = '—';
     $('.map-status .code').textContent = '—';
@@ -864,11 +915,13 @@ function renderMapStatus() {
   } else if (view) {
     updated.textContent = `${s.updated} ${clockNow()}${view.cached ? ' · cache' : ''}`;
   } else {
-    updated.textContent = s.notconnected;
+    updated.textContent = s.notYet;
   }
 
   const plannedLegend = $('#legend-planned');
   plannedLegend.style.display = view && view.arcs.some((a) => a.planned) ? 'flex' : 'none';
+  const legend = $('.legend');
+  if (legend) legend.style.display = view ? 'flex' : 'none';
   $('#map-panel').setAttribute('aria-busy', state.loading ? 'true' : 'false');
   $('#loading').hidden = !state.loading;
   $('#search').classList.toggle('is-loading', state.loading);
@@ -899,21 +952,8 @@ function errorFor(payload) {
   };
 }
 
-async function lookup(number, carrier, options) {
-  const opts = options || {};
+async function lookup(number, carrier) {
   if (state.loading) return;
-
-  if (number === SAMPLE_NUMBER && (carrier === 'DHL' || carrier === 'auto') && !opts.force) {
-    state.number = number;
-    state.carrier = 'DHL';
-    state.view = sampleDataset();
-    state.error = null;
-    state.demo = true;
-    state.loading = false;
-    render();
-    if (globe) globe.pointOfView({ lat: 37, lng: 67, altitude: 1.85 }, 900);
-    return;
-  }
 
   state.loading = true;
   state.error = null;
@@ -959,9 +999,9 @@ async function lookup(number, carrier, options) {
 
 function submitSearch(event) {
   if (event) event.preventDefault();
-  const raw = $('#number').value.trim().replace(/\s/g, '');
-  if (!/^[a-zA-Z0-9-]{5,60}$/.test(raw)) {
-    toast(isKo() ? '송장번호는 영문·숫자·하이픈 5~60자로 입력하세요.' : 'Use 5–60 letters, digits or hyphens.');
+  const raw = sanitizeField($('#number'));
+  if (raw.length < 5) {
+    toast(isKo() ? '송장번호는 영문·숫자 5~60자로 입력하세요.' : 'Use 5-60 letters or digits.');
     return;
   }
   const number = raw.replace(/-/g, '').toUpperCase();
@@ -981,8 +1021,36 @@ $('#language').onchange = (e) => {
 };
 
 $('#search').onsubmit = submitSearch;
+
+/* Keep the field to A-Z a-z 0-9 while typing, pasting, or finishing an IME composition. */
+const numberField = $('#number');
+if (numberField) {
+  numberField.addEventListener('input', (e) => {
+    if (e.isComposing) return;
+    sanitizeField(numberField);
+  });
+  numberField.addEventListener('compositionend', () => sanitizeField(numberField));
+  numberField.addEventListener('paste', (e) => {
+    const clip = e.clipboardData || window.clipboardData;
+    const text = clip && clip.getData ? clip.getData('text') : '';
+    if (!text) return;
+    e.preventDefault();
+    const before = numberField.value;
+    const start = numberField.selectionStart == null ? before.length : numberField.selectionStart;
+    const end = numberField.selectionEnd == null ? start : numberField.selectionEnd;
+    const inserted = sanitizeNumber(text);
+    const next = sanitizeNumber(before.slice(0, start) + inserted + before.slice(end));
+    numberField.value = next;
+    const pos = Math.min(start + inserted.length, next.length);
+    try { numberField.setSelectionRange(pos, pos); } catch (err) { /* ignore */ }
+  });
+}
+
 $('#settings').onclick = $('#saved').onclick = $('#notify').onclick = () => $('#modal').showModal();
-$('#refresh').onclick = () => lookup(state.number, state.carrier, { force: true });
+$('#refresh').onclick = () => {
+  if (!state.number) { toast(t().empty); return; }
+  lookup(state.number, state.carrier);
+};
 
 $('#interval').onchange = (e) => {
   state.autoRefresh = Number(e.target.value) * 1000;
@@ -1015,8 +1083,8 @@ $('#reset').onclick = () => {
  * ------------------------------------------------------------------ */
 
 initGlobe();
-state.view = sampleDataset();
-state.number = SAMPLE_NUMBER;
-state.carrier = 'DHL';
+state.view = null;
+state.number = '';
+state.carrier = 'auto';
 render();
 if (globe) globe.pointOfView({ lat: 30, lng: 60, altitude: 1.95 }, 0);

@@ -56,3 +56,11 @@
   .footer-legal{width:auto;margin-top:0;white-space:nowrap}
 }
 .globe-label.dot{width:9px;height:9px;padding:0;border-radius:50%;background:#9fb4cc;border:0;min-width:0;box-shadow:0 0 8px #9fb4cc}
+/* ---- Idle (no lookup yet) state — 2026-11 ---- */
+.idle-note{position:absolute;inset:0;z-index:1;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;pointer-events:none;padding:0 32px}
+.idle-note>span{font-size:26px;color:var(--accent);opacity:.9}
+.idle-note p{margin:0;font-size:13px;line-height:1.7;color:#d3dee9;max-width:340px;text-shadow:0 1px 10px #040c15,0 0 22px #040c15}
+.idle-note[hidden]{display:none}
+.map-status[hidden]{display:none}
+.demo[hidden]{display:none}
+#number::placeholder{color:#68788b}
