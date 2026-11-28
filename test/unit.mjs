@@ -258,8 +258,151 @@ await test('DHL: API key path normalises events and stages', async () => {
   assert.equal(out.status, 200);
   assert.equal(out.body.events.length, 3);
   assert.equal(out.body.status.code, 'OUT_FOR_DELIVERY');
-  assert.deepEqual(out.body.countries, ['BG', 'DE']);
+  // "Shipment information received" at Sofia is a pre-advice, not a stop.
+  assert.equal(out.body.events[0].physical, false);
+  assert.deepEqual(out.body.countries, ['DE']);
+  assert.ok(out.body.route.every((p) => p.countryCode === 'DE'), 'only Leipzig is a route node');
   assert.ok(calls[0].url.includes('trackingNumber=1234567896'));
+});
+
+/* The reported itinerary: DHL opens the customs file at Incheon before the
+   parcel leaves Sofia, and the feed lands BG → KR → BG → DE → KR → DE. */
+function dhlPreclearanceJson() {
+  const place = (locality, countryCode) => ({ location: { address: { addressLocality: locality, countryCode } } });
+  return {
+    shipments: [
+      {
+        id: '2746217154',
+        status: { timestamp: '2026-11-28T08:05:00+09:00', ...place('Leipzig', 'DE'), statusCode: 'transit', status: 'Departed from LEIPZIG - GERMANY' },
+        events: [
+          { timestamp: '2026-11-26T05:10:00+09:00', ...place('INCHEON OUTSKIRT OF SEOUL', 'KR'), statusCode: 'transit', status: 'Customs clearance status updated. Note - The Customs clearance process may start in the destination country' },
+          { timestamp: '2026-11-26T22:57:00+09:00', ...place('Sofia', 'BG'), statusCode: 'transit', status: 'Shipment picked up' },
+          { timestamp: '2026-11-27T03:26:00+09:00', ...place('INCHEON OUTSKIRT OF SEOUL', 'KR'), statusCode: 'transit', status: 'Customs clearance status updated. Note - The Customs clearance process may start in the destination country' },
+          { timestamp: '2026-11-27T18:40:00+09:00', ...place('Leipzig', 'DE'), statusCode: 'transit', status: 'Processed at LEIPZIG - GERMANY' },
+          { timestamp: '2026-11-28T00:10:00+09:00', ...place('Leipzig', 'DE'), statusCode: 'transit', status: 'Processed at LEIPZIG - GERMANY' },
+          { timestamp: '2026-11-28T06:30:00+09:00', ...place('INCHEON OUTSKIRT OF SEOUL', 'KR'), statusCode: 'transit', status: 'Customs clearance status updated - INCHEON' },
+          { timestamp: '2026-11-28T08:05:00+09:00', ...place('Leipzig', 'DE'), statusCode: 'transit', status: 'Departed from LEIPZIG - GERMANY' },
+        ],
+      },
+    ],
+  };
+}
+
+await test('DHL: a destination customs notice never becomes a stop (BG → DE, not BG → KR → …)', async () => {
+  stub({ 'api-eu.dhl.com/track/shipments': dhlPreclearanceJson() });
+  process.env.DHL_API_KEY = 'test-key-123';
+  const out = await call('2746217154', 'DHL');
+  delete process.env.DHL_API_KEY;
+  assert.equal(out.status, 200);
+  assert.equal(out.body.events.length, 7, 'every scan stays in the history');
+  assert.deepEqual(out.body.events.map((e) => e.physical), [false, true, false, true, true, false, true]);
+  assert.deepEqual(out.body.countries, ['BG', 'DE']);
+  assert.deepEqual(out.body.route.map((p) => p.countryCode), ['BG', 'DE'], 'Sofia then Leipzig only');
+  assert.equal(out.body.route.at(-1).name, 'Leipzig');
+  assert.equal(out.body.route.at(-1).active, true);
+});
+
+await test('route: repeated scans at one city become one marker with a count', async () => {
+  stub({ 'api-eu.dhl.com/track/shipments': dhlPreclearanceJson() });
+  process.env.DHL_API_KEY = 'test-key-123';
+  const out = await call('2746217155', 'DHL');
+  delete process.env.DHL_API_KEY;
+  const leipzig = out.body.route.find((p) => p.name === 'Leipzig');
+  assert.equal(leipzig.count, 3, 'three Leipzig scans, one marker');
+  assert.equal(out.body.route.filter((p) => p.name === 'Leipzig').length, 1);
+  assert.match(leipzig.lastEvent.scan, /Departed from LEIPZIG/, 'the marker carries the newest scan there');
+});
+
+await test('route: a non-adjacent repeat keeps its arcs but stays one marker', async () => {
+  const { routeModel, routeCountries } = handler._internal;
+  const at = (city, cc, lat, lng) => ({ name: city, city, countryCode: cc, country: '', countryEn: '', lat, lng });
+  const ev = (city, cc, lat, lng, scan, time) => ({ time, scan, description: scan, status: { code: 'IN_TRANSIT', label: '', stage: 2 }, location: at(city, cc, lat, lng) });
+  const { points, visits } = routeModel([
+    ev('Seoul', 'KR', 37.55, 126.99, 'Arrived at SEOUL', '2026-01-01T01:00:00+09:00'),
+    ev('Busan', 'KR', 35.10, 129.04, 'Departed from BUSAN', '2026-01-01T02:00:00+09:00'),
+    ev('Seoul', 'KR', 37.55, 126.99, 'Returned to SEOUL', '2026-01-01T03:00:00+09:00'),
+  ]);
+  assert.equal(points.length, 2, 'two markers');
+  assert.deepEqual(visits, [0, 1, 0], 'three visits, so both legs stay');
+  assert.equal(points[0].count, 2);
+  assert.equal(points[0].active, true, 'the latest visit is Seoul');
+  assert.deepEqual(routeCountries(points, visits), ['KR']);
+});
+
+await test('route: a customs scan sandwiched between one country is dropped even without known wording', async () => {
+  const { routeModel } = handler._internal;
+  const ev = (city, cc, lat, lng, scan, time) => ({ time, scan, description: scan, status: { code: 'IN_TRANSIT', label: '', stage: 2 }, location: { name: city, city, countryCode: cc, country: '', countryEn: '', lat, lng } });
+  const { points } = routeModel([
+    ev('Leipzig', 'DE', 51.34, 12.37, 'Processed at LEIPZIG', '2026-01-01T01:00:00+09:00'),
+    ev('Incheon', 'KR', 37.45, 126.7, 'Import clearance started', '2026-01-01T02:00:00+09:00'),
+    ev('Leipzig', 'DE', 51.34, 12.37, 'Departed from LEIPZIG', '2026-01-01T03:00:00+09:00'),
+  ]);
+  assert.deepEqual(points.map((p) => p.countryCode), ['DE'], 'Incheon never happened physically');
+});
+
+await test('scans: paperwork and notices are told apart from movement', async () => {
+  const { isDocumentScan } = handler._internal;
+  for (const scan of [
+    'Customs clearance status updated - INCHEON',
+    'Shipment information received',
+    'Electronic notification received',
+    'Pre-advice data received',
+    'LABEL CREATED',
+    '사전 통관 정보 접수',
+    '通関情報を受信',
+  ]) {
+    assert.equal(isDocumentScan({ scan }), true, scan);
+  }
+  for (const scan of ['Arrived at INCHEON', 'Processed at LEIPZIG - GERMANY', 'Departed from LEIPZIG', 'Shipment picked up', 'DELIVERED', '배송출발', '집하']) {
+    assert.equal(isDocumentScan({ scan }), false, scan);
+  }
+});
+
+await test('errors: “no such shipment” and “the carrier is down” are labelled differently', async () => {
+  const { errorMeta } = handler._internal;
+  assert.deepEqual(errorMeta('NOT_FOUND'), { kind: 'NOT_FOUND', retryable: false });
+  assert.deepEqual(errorMeta('UPSTREAM'), { kind: 'SERVICE', retryable: true });
+  assert.deepEqual(errorMeta('RATE_LIMITED'), { kind: 'SERVICE', retryable: true });
+  assert.deepEqual(errorMeta('BAD_REQUEST'), { kind: 'INPUT', retryable: false });
+
+  stub({
+    'cjlogistics.com/ko/tool/parcel/tracking-detail': { __status: 502, body: 'bad gateway' },
+    'cjlogistics.com/ko/tool/parcel/tracking': CJ_MAIN,
+  });
+  const out = await call('1234567891', 'CJ');
+  assert.equal(out.status, 502);
+  assert.equal(out.body.error.code, 'UPSTREAM');
+  assert.equal(out.body.error.kind, 'SERVICE');
+  assert.equal(out.body.error.retryable, true);
+});
+
+await test('country: an overseas place without a country code is not painted as Korea', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'nominatim.openstreetmap.org': JSON.stringify([{ lat: '38.2527', lon: '-85.7585', address: { country_code: 'us' } }]),
+      'api.lastscanned.com/v1/track/1Z000Y770414233099': lastscannedJson({
+        events: [
+          { timestamp: '2026-07-31T12:55:04Z', localTime: '2026-07-31T14:55:00', status: 'delivered', description: 'DELIVERED', location: 'LOUISVILLE, KY', code: 'KB' },
+        ],
+      }),
+    });
+    const out = await call('1Z000Y770414233099', 'UPS');
+    assert.equal(out.status, 200);
+    assert.equal(out.body.route[0].countryCode, 'US', 'the geocoder decided the country');
+    assert.equal(out.body.route[0].countryEn, 'United States');
+    assert.ok(!calls.some((c) => c.url.includes('countrycodes=kr')), 'no Korean restriction on an unknown country');
+  });
+});
+
+await test('country: the country named inside the scan text wins over the old KR default', async () => {
+  const { makeLocation, countryFromText } = handler._internal;
+  assert.equal(countryFromText('ROISSY CDG, FRANCE'), 'FR');
+  assert.equal(countryFromText('KOELN, DE'), 'DE');
+  assert.equal(countryFromText('UNITED STATES'), 'US');
+  assert.equal(makeLocation('ROISSY CHARLES DE GAULLE CEDEX, FRANCE').countryCode, 'FR');
+  assert.equal(makeLocation('PADUCAH, KENTUCKY').countryCode, 'KR', 'unknown until the geocoder answers');
+  assert.equal(makeLocation('PADUCAH, KENTUCKY').countryUncertain, true);
+  assert.equal(makeLocation('대전동부').countryCode, 'KR');
 });
 
 await test('lastscanned: UPS delivered, EDD normalised, events oldest-first', async () => {

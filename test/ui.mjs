@@ -65,8 +65,61 @@ const NOT_FOUND_RESPONSE = {
     code: 'NOT_FOUND',
     message: '조회된 배송 정보가 없습니다.',
     hint: '운송장 번호와 자릿수를 확인하거나, 택배사가 아직 상품을 인수하지 않았을 수 있습니다.',
+    kind: 'NOT_FOUND',
+    retryable: false,
     carrier: { code: 'CJ', name: 'CJ대한통운', site: 'https://www.cjlogistics.com/ko/tool/parcel/tracking' }
   }
+};
+
+/* The carrier did not answer — a moment, not an answer. */
+const UPSTREAM_RESPONSE = {
+  ok: false,
+  error: {
+    code: 'UPSTREAM',
+    message: '택배사 조회 서버가 응답하지 않습니다.',
+    hint: '잠시 후 다시 시도하거나, 택배사 사이트에서 직접 확인해 주세요.',
+    kind: 'SERVICE',
+    retryable: true
+  }
+};
+
+const DHL_INCHEON = { name: 'INCHEON OUTSKIRT OF SEOUL, KOREA, REPUBLIC OF (SOUTH K.)', city: '인천', code: 'ICN', country: '대한민국', countryEn: 'South Korea', countryCode: 'KR', lat: 37.4563, lng: 126.7052 };
+const DHL_SOFIA = { name: 'SOFIA, BULGARIA', city: 'Sofia', code: 'SOF', country: '불가리아', countryEn: 'Bulgaria', countryCode: 'BG', lat: 42.6977, lng: 23.3219 };
+const DHL_LEIPZIG = { name: 'LEIPZIG, GERMANY', city: 'Leipzig', code: 'LEJ', country: '독일', countryEn: 'Germany', countryCode: 'DE', lat: 51.3397, lng: 12.3731 };
+const PRE_CLEARANCE = 'Customs clearance status updated. Note - The Customs clearance process may start in the destination country';
+
+/* The reported case: DHL opens the customs file at Incheon before the parcel
+   ever leaves Sofia, so the raw scan order reads BG → KR → BG → DE → KR → DE. */
+const DHL_PRECLEARANCE_RESPONSE = {
+  ok: true,
+  carrier: { code: 'DHL', name: 'DHL', site: 'https://www.dhl.com/kr-ko/home/tracking.html' },
+  number: '2746217154',
+  status: { code: 'IN_TRANSIT', label: '이동 중', stage: 2, delivered: false },
+  estimatedDelivery: null,
+  latest: { time: '2026-11-28T08:05:00+09:00', scan: 'Departed from LEIPZIG - GERMANY', location: { name: 'LEIPZIG, GERMANY' } },
+  events: [
+    { time: '2026-11-26T05:10:00+09:00', scan: PRE_CLEARANCE, description: '통관 정보가 갱신되었습니다', status: { code: 'IN_TRANSIT' }, location: DHL_INCHEON, physical: false },
+    { time: '2026-11-26T22:57:00+09:00', scan: 'Shipment picked up', description: 'DHL 화물이 접수되었습니다', status: { code: 'PICKED_UP' }, location: DHL_SOFIA, physical: true },
+    { time: '2026-11-27T03:26:00+09:00', scan: PRE_CLEARANCE, description: '통관 정보가 갱신되었습니다', status: { code: 'IN_TRANSIT' }, location: DHL_INCHEON, physical: false },
+    { time: '2026-11-27T18:40:00+09:00', scan: 'Processed at LEIPZIG - GERMANY', description: '라이프치히 허브에서 처리되었습니다', status: { code: 'IN_TRANSIT' }, location: DHL_LEIPZIG, physical: true },
+    { time: '2026-11-28T00:10:00+09:00', scan: 'Processed at LEIPZIG - GERMANY', description: '라이프치히 허브에서 처리되었습니다', status: { code: 'IN_TRANSIT' }, location: { ...DHL_LEIPZIG }, physical: true },
+    { time: '2026-11-28T06:30:00+09:00', scan: 'Customs clearance status updated - INCHEON', description: '통관 정보가 갱신되었습니다', status: { code: 'IN_TRANSIT' }, location: { ...DHL_INCHEON }, physical: false },
+    { time: '2026-11-28T08:05:00+09:00', scan: 'Departed from LEIPZIG - GERMANY', description: '라이프치히 허브를 출발했습니다', status: { code: 'IN_TRANSIT' }, location: { ...DHL_LEIPZIG }, physical: true }
+  ],
+  route: [],
+  countries: ['BG', 'DE'],
+  meta: { source: 'dhl', cached: false, demo: false, fetchedAt: '2026-11-28T01:00:00.000Z' }
+};
+
+/* The same parcel after it physically lands at Incheon: KR must appear once, at the end. */
+const DHL_ARRIVED_RESPONSE = {
+  ...DHL_PRECLEARANCE_RESPONSE,
+  events: [
+    ...DHL_PRECLEARANCE_RESPONSE.events,
+    { time: '2026-11-29T09:20:00+09:00', scan: 'Arrived at INCHEON - KOREA', description: '인천에 도착했습니다', status: { code: 'IN_TRANSIT' }, location: { ...DHL_INCHEON }, physical: true }
+  ],
+  countries: ['BG', 'DE', 'KR'],
+  meta: { source: 'dhl', cached: false, demo: false, fetchedAt: '2026-11-28T01:00:00.000Z' }
 };
 
 const DHL_RESPONSE = {
@@ -124,6 +177,9 @@ function buildDom(url = 'https://www.wimp911.com/', browserLanguage = 'ko-KR') {
         let payload;
         if (mode === 'cj') payload = CJ_RESPONSE;
         else if (mode === 'dhl') payload = DHL_RESPONSE;
+        else if (mode === 'dhl-pre') payload = DHL_PRECLEARANCE_RESPONSE;
+        else if (mode === 'dhl-arrived') payload = DHL_ARRIVED_RESPONSE;
+        else if (mode === 'upstream') payload = UPSTREAM_RESPONSE;
         else payload = NOT_FOUND_RESPONSE;
         return { ok: true, status: 200, json: async () => payload, text: async () => JSON.stringify(payload) };
       };
@@ -155,7 +211,7 @@ console.log('\nWIMP public UI — jsdom tests\n');
 await test('idle: empty state, no default parcel, nothing fetched on load', async () => {
   assert.equal($('#number').value, '');
   assert.equal($('#events').querySelectorAll('.event').length, 0);
-  assert.equal($('#count').textContent, '0');
+  assert.equal($('#count').textContent, '0건');
   assert.equal($('#parcels').style.display, 'none');
   assert.equal(fetched.length, 0, 'no API call before the user asks');
 });
@@ -489,6 +545,114 @@ await test('parcel: an overseas parcel is looked up without any aircraft request
   assert.ok(fetched.slice(before).some((u) => u.includes('api/track')), 'the parcel endpoint was asked');
   assert.equal(fetched.slice(before).filter((u) => /plane|awb/.test(u)).length, 0, 'no aircraft request');
   assert.ok($('#location').textContent.includes('인천'), 'the last scan location still renders');
+  mode = 'cj';
+});
+
+/* ------------------------------------------------------------------ *
+ * 2026-11-28 — route accuracy, refresh safety, fetch time, count label
+ * ------------------------------------------------------------------ */
+
+await test('route: a destination customs notice never becomes a stop', async () => {
+  mode = 'dhl-pre';
+  pickLang('ko');
+  $('#number').value = '2746217154';
+  $('#carrier').value = 'auto';
+  submit();
+  await tick(120);
+
+  const chips = [...document.querySelectorAll('#countries div')]
+    .map((n) => `${n.querySelector('b').textContent} ${n.querySelector('small').textContent}`);
+  assert.deepEqual(chips, ['BG Sofia', 'DE Leipzig'], 'only the physical stops, in order');
+  assert.equal($('#location').textContent, 'Leipzig, 독일');
+
+  const notice = [...$('#events').querySelectorAll('.event')].find((e) => /이동 스캔 아님/.test(e.querySelector('small').textContent));
+  assert.ok(notice, 'the customs notice still appears in the timeline');
+  assert.equal(notice.querySelector('h3').textContent, '통관 정보가 갱신되었습니다');
+});
+
+await test('route: a parcel that really lands shows its destination country once, at the end', async () => {
+  mode = 'dhl-arrived';
+  submit();
+  await tick(120);
+  const codes = [...document.querySelectorAll('#countries div b')].map((b) => b.textContent);
+  assert.deepEqual(codes, ['BG', 'DE', 'KR']);
+  assert.equal($('#location').textContent, '인천, 대한민국');
+});
+
+await test('globe: repeated scans at one city collapse into a single marker with its count', async () => {
+  mode = 'dhl-pre';
+  submit();
+  await tick(120);
+  assert.equal($('#events').querySelectorAll('.event').length, 7, 'every scan stays in the timeline');
+  const leipzig = [...$('#events').querySelectorAll('.event')].find((e) => e.textContent.includes('LEIPZIG, GERMANY'));
+  assert.ok(leipzig);
+  leipzig.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.match($('#marker-info').textContent, /Leipzig, 독일 · 3건/, $('#marker-info').textContent);
+});
+
+await test('count: the header names what it counts — 배송 이력 7건', async () => {
+  assert.equal($('.sectionline b').textContent, '배송 이력');
+  assert.equal($('#count').textContent, '7건');
+  pickLang('en');
+  assert.equal($('.sectionline b').textContent, 'Tracking history');
+  assert.equal($('#count').textContent, '7 events');
+  pickLang('ko');
+  assert.equal($('#count').textContent, '7건');
+});
+
+await test('updated: the fetch time comes from the result and survives a language switch', async () => {
+  assert.equal($('#updated').textContent, '최종 갱신 11월 28일 10:00');
+  pickLang('en');
+  assert.equal($('#updated').textContent, 'Updated 28 Nov, 10:00');
+  pickLang('ja');
+  assert.equal($('#updated').textContent, '最終更新 11月28日 10:00');
+  pickLang('ko');
+  assert.equal($('#updated').textContent, '최종 갱신 11월 28일 10:00', 'the clock did not move with the redraw');
+});
+
+await test('refresh: a 5xx on the same number keeps the result and only adds a notice', async () => {
+  const kept = $('#updated').textContent;
+  mode = 'upstream';
+  submit();
+  await tick(120);
+
+  assert.equal($('#stale-note').hidden, false);
+  assert.match($('#stale-note').textContent, /다시 조회하지 못했습니다/);
+  assert.match($('#stale-note').textContent, /택배사 조회 서버가 응답하지 않습니다/);
+  assert.equal($('#events').querySelectorAll('.event').length, 7, 'the timeline is still there');
+  assert.equal($('#events .error-box'), null, 'no error box replaced the result');
+  assert.equal($('#location').textContent, 'Leipzig, 독일');
+  assert.equal($('#updated').textContent, kept, 'the successful fetch time is unchanged');
+  assert.equal($('#count').textContent, '7건');
+});
+
+await test('refresh: the notice disappears when the carrier answers again', async () => {
+  mode = 'dhl-pre';
+  submit();
+  await tick(120);
+  assert.equal($('#stale-note').hidden, true);
+  assert.equal($('#events').querySelectorAll('.event').length, 7);
+});
+
+await test('error: a real “no such shipment” replaces the result instead of keeping it', async () => {
+  mode = 'notfound';
+  submit();
+  await tick(120);
+  assert.ok($('#events .error-box'));
+  assert.equal($('#stale-note').hidden, true);
+  assert.equal($('#location').textContent, '—');
+  assert.equal($('.bottom .panel-title .accent').textContent, '조회된 배송 정보가 없습니다.');
+});
+
+await test('error: “the carrier is down” and “no such shipment” read differently', async () => {
+  mode = 'upstream';
+  $('#number').value = '1111111111';
+  submit();
+  await tick(120);
+  assert.equal($('.bottom .panel-title .accent').textContent, '택배사 조회 서버가 응답하지 않습니다.');
+  const box = $('#events .error-box');
+  assert.ok(box);
+  assert.match(box.querySelector('p').textContent, /다시 시도/);
   mode = 'cj';
 });
 

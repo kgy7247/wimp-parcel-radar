@@ -133,6 +133,8 @@ const state = {
   view: null,
   loading: false,
   error: null,
+  notice: null,
+  refreshing: false,
   selected: -1,
   autoRefresh: 0,
   timer: null
@@ -156,6 +158,11 @@ function localizeNames() {
     /* The API's own wording is Korean, so it is only a fallback inside Korean. */
     state.error.title = s.errors[state.error.code] || (isKo() ? state.error.apiMessage : '') || s.errors.UPSTREAM;
     state.error.hint = s.hints[state.error.code] || (isKo() ? state.error.apiHint : '') || '';
+  }
+  if (state.notice && state.notice.code) {
+    const s = t();
+    state.notice.title = s.errors[state.notice.code] || (isKo() ? state.notice.apiMessage : '') || s.errors.UPSTREAM;
+    state.notice.hint = s.hints[state.notice.code] || (isKo() ? state.notice.apiHint : '') || '';
   }
   const view = state.view;
   if (!view) return;
@@ -224,69 +231,177 @@ function latestEvent(view) {
   return best || view.events[view.events.length - 1] || null;
 }
 
+/* ------------------------------------------------------------------ *
+ * Physical movement vs paperwork
+ *   A customs file opened at the destination before the parcel gets there
+ *   (“Customs clearance status updated – INCHEON”), a pre-advice or a label
+ *   creation is not a stop. Drawing those makes the parcel look as if it
+ *   flew Sofia → Incheon → Sofia → Leipzig. Only movement scans may become
+ *   route nodes, markers and country chips.
+ * ------------------------------------------------------------------ */
+
+const DOCUMENT_SCAN = [
+  /customs clearance status/i,
+  /clearance status updated/i,
+  /customs status updated/i,
+  /customs (?:clearance )?(?:information|notification|pre-?notification)/i,
+  /shipment information (?:received|sent)/i,
+  /shipment data (?:received|sent)/i,
+  /information received/i,
+  /electronic (?:notification|data|advance|pre-?advice)/i,
+  /pre-?advice/i,
+  /pre-?alert/i,
+  /label (?:created|printed|issued)/i,
+  /waybill (?:created|issued)/i,
+  /사전\s*통관/,
+  /통관\s*(?:정보|서류|신고\s*접수)/,
+  /전자\s*(?:통관|정보|사전\s*신고)/,
+  /수입\s*신고\s*접수/,
+  /(?:書類|電子)\s*(?:受信|通知)/,
+  /通関\s*(?:情報|書類)/,
+  /事前\s*通関/,
+];
+
+const CUSTOMS_SCAN = /customs|clearance|통관|通関|zoll|douane|aduana/i;
+
+function isDocumentScan(text) {
+  const body = String(text || '').trim();
+  if (!body) return false;
+  return DOCUMENT_SCAN.some((re) => re.test(body));
+}
+
+function isCustomsScan(ev) {
+  return CUSTOMS_SCAN.test(`${(ev && ev.note) || ''} ${(ev && ev.title) || ''}`);
+}
+
+/* The API already says which scans are notices; older cached payloads do not. */
+function eventIsPhysical(ev) {
+  if (!ev) return false;
+  if (ev.physical === false) return false;
+  if (ev.physical === true) return true;
+  return !isDocumentScan(`${ev.scan || ''} ${ev.description || ''}`);
+}
+
+/* One marker per city/terminal, however many scans land there. */
+function locationKey(loc) {
+  if (!loc) return '';
+  const city = String(loc.city || loc.name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\uac00-\ud7a3]/g, '');
+  const cc = String(loc.countryCode || '').toUpperCase();
+  if (city) return `${cc}|${city}`;
+  return `${Number(loc.lat).toFixed(2)},${Number(loc.lng).toFixed(2)}`;
+}
+
+/* A customs scan the parcel never reached: the same country lies before and after it. */
+function dropSandwichedCustoms(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i += 1) {
+    const ev = list[i];
+    if (!isCustomsScan(ev)) {
+      out.push(ev);
+      continue;
+    }
+    const prev = out[out.length - 1];
+    const next = list.slice(i + 1).find((other) => !isCustomsScan(other));
+    const cc = ev.location.countryCode;
+    if (prev && next && cc && prev.location.countryCode === next.location.countryCode && cc !== prev.location.countryCode) {
+      continue;
+    }
+    out.push(ev);
+  }
+  return out;
+}
+
 function buildDataset(api, demo) {
   const events = (api.events || []).map((ev) => ({
     time: ev.time,
     title: ev.description || ev.scan || statusLabel(ev.status && ev.status.code),
     note: ev.scan || '',
     statusCode: (ev.status && ev.status.code) || 'UNKNOWN',
-    location: ev.location || null
+    location: ev.location || null,
+    physical: eventIsPhysical(ev)
   }));
 
+  const located = events.filter((ev) => ev.location && Number.isFinite(ev.location.lat) && Number.isFinite(ev.location.lng));
+  const moving = located.filter((ev) => ev.physical);
+  // With no movement scan at all (label only), show where the record says it is.
+  const usable = new Set(moving.length ? dropSandwichedCustoms(moving) : located);
+
   const points = [];
+  const byKey = new Map();
+  const visits = [];
   for (const ev of events) {
+    if (!usable.has(ev)) {
+      // A notice is not a place; a scan without coordinates still belongs to the last one.
+      ev.point = ev.physical && points.length ? points.length - 1 : -1;
+      continue;
+    }
     const loc = ev.location;
-    if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) {
-      ev.point = points.length ? points.length - 1 : -1;
-      continue;
+    const key = locationKey(loc);
+    let index = byKey.get(key);
+    if (index === undefined) {
+      index = points.findIndex((p) => Math.abs(p.lat - loc.lat) < 0.01 && Math.abs(p.lng - loc.lng) < 0.01);
+      if (index < 0) {
+        points.push({
+          lat: loc.lat, lng: loc.lng,
+          name: loc.city || loc.name,
+          detail: loc.name,
+          code: loc.code || '',
+          country: loc.country || '',
+          countryEn: loc.countryEn || '',
+          countryCode: loc.countryCode || '',
+          count: 0,
+          firstEvent: ev,
+          lastEvent: ev,
+          active: false
+        });
+        index = points.length - 1;
+      }
+      byKey.set(key, index);
     }
-    const last = points[points.length - 1];
-    if (last && Math.abs(last.lat - loc.lat) < 0.01 && Math.abs(last.lng - loc.lng) < 0.01) {
-      last.lastEvent = ev;
-      ev.point = points.length - 1;
-      continue;
-    }
-    points.push({
-      lat: loc.lat, lng: loc.lng,
-      name: loc.city || loc.name,
-      detail: loc.name,
-      code: loc.code || '',
-      country: loc.country || '',
-      countryEn: loc.countryEn || '',
-      countryCode: loc.countryCode || '',
-      firstEvent: ev,
-      lastEvent: ev
-    });
-    ev.point = points.length - 1;
+    const point = points[index];
+    point.count += 1;
+    point.lastEvent = ev;
+    ev.point = index;
+    if (visits[visits.length - 1] !== index) visits.push(index);
   }
 
-  points.forEach((p, i) => { p.active = i === points.length - 1; });
+  const lastIndex = visits.length ? visits[visits.length - 1] : -1;
+  points.forEach((p, i) => { p.active = i === lastIndex; });
+  const latestPoint = points[lastIndex] || null;
+
   // Labels: first stop, last stop, and every country change. Points crowded together become dots.
+  const seenCountry = new Set();
   points.forEach((p, i) => {
     const isFirst = i === 0;
-    const isLast = i === points.length - 1;
-    const sameCountryAsPrev = i > 0 && points[i - 1].countryCode === p.countryCode;
-    const crowded = points.some((q, j) => j > i && Math.abs(q.lat - p.lat) < 0.35 && Math.abs(q.lng - p.lng) < 0.35);
-    p.hideLabel = !isFirst && !isLast && (sameCountryAsPrev || crowded);
+    const isLast = p === latestPoint;
+    const newCountry = !seenCountry.has(p.countryCode);
+    seenCountry.add(p.countryCode);
+    const crowded = points.some((q, j) => j !== i && Math.abs(q.lat - p.lat) < 0.35 && Math.abs(q.lng - p.lng) < 0.35);
+    p.hideLabel = !isFirst && !isLast && (!newCountry || crowded);
   });
 
+  // Arcs follow the visits, so a genuine A → B → A keeps both legs while the marker stays one.
   const arcs = [];
-  for (let i = 1; i < points.length; i += 1) {
+  for (let i = 1; i < visits.length; i += 1) {
+    const from = points[visits[i - 1]];
+    const to = points[visits[i]];
+    if (from === to) continue;
     arcs.push({
-      startLat: points[i - 1].lat, startLng: points[i - 1].lng,
-      endLat: points[i].lat, endLng: points[i].lng,
-      planned: Boolean(demo && i === points.length - 1)
+      startLat: from.lat, startLng: from.lng,
+      endLat: to.lat, endLng: to.lng,
+      planned: Boolean(demo && i === visits.length - 1)
     });
   }
 
   const ordered = events.filter((e) => e.time).sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
   const latestEvent = ordered[ordered.length - 1] || events[events.length - 1] || null;
-  const latestPoint = points[points.length - 1] || null;
 
   const countries = [];
-  for (const p of points) {
-    const last = countries[countries.length - 1];
-    if (!last || last.code !== p.countryCode) {
+  for (const index of visits) {
+    const p = points[index];
+    if (!countries.length || countries[countries.length - 1].code !== p.countryCode) {
       countries.push({
         code: p.countryCode, flag: flagOf(p.countryCode), city: p.name,
         planned: Boolean(demo && p === latestPoint && countries.length > 0)
@@ -298,7 +413,8 @@ function buildDataset(api, demo) {
   const stage = api.status ? api.status.stage : 0;
 
   // The last country chip shows where the parcel is now, not where it entered the country.
-  if (points.length && countries.length) countries[countries.length - 1].city = points[points.length - 1].name;
+  if (latestPoint && countries.length) countries[countries.length - 1].city = latestPoint.name;
+
 
   return {
     kind: 'parcel',
@@ -321,6 +437,8 @@ function buildDataset(api, demo) {
     latestLocation: latestPoint ? pair(latestPoint) : '',
     latestCode: latestPoint ? latestPoint.code || latestPoint.countryCode : '',
     latestDetail: latestPoint ? latestPoint.detail : '',
+    latestIndex: lastIndex,
+    latestPoint,
     fetchedAt: (api.meta && api.meta.fetchedAt) || new Date().toISOString(),
     cached: Boolean(api.meta && api.meta.cached)
   };
@@ -331,6 +449,26 @@ function pair(point) {
   const country = isKo() ? (point.country || point.countryEn) : (point.countryEn || point.country);
   if (point.name && country && point.name !== country) return `${point.name}, ${country}`;
   return point.name || country || '';
+}
+
+/* A merged city marker says how many scans it stands for: “Leipzig · 3건”. */
+function pointCount(point) {
+  if (!point || !(point.count > 1)) return '';
+  return `${point.count}${joinsCount() ? ' ' : ''}${t().events}`;
+}
+
+/* Where the parcel is now: the last place it was actually seen. */
+function currentPoint(view) {
+  if (!view || !view.points || !view.points.length) return null;
+  if (view.latestPoint) return view.latestPoint;
+  if (Number.isFinite(view.latestIndex) && view.points[view.latestIndex]) return view.points[view.latestIndex];
+  return view.points[view.points.length - 1] || null;
+}
+
+function pointSummary(point) {
+  if (!point) return '';
+  const event = point.lastEvent || point.firstEvent;
+  return [pair(point), pointCount(point), event ? (event.note || event.title) : ''].filter(Boolean).join(' · ');
 }
 
 function flagOf(code) {
@@ -528,13 +666,12 @@ function frameRoute() {
   const view = state.view;
   if (!view) return;
   const usable = view.points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-  const last = usable[usable.length - 1];
-  if (!last) return;
+  const last = currentPoint(view);
+  if (!last || !Number.isFinite(last.lat)) return;
   const info = $('#marker-info');
   if (info) {
-    const event = last.lastEvent || last.firstEvent;
     info.hidden = false;
-    info.textContent = event ? `${pair(last)} · ${event.note || event.title}` : pair(last);
+    info.textContent = pointSummary(last) || pair(last);
   }
   if (!globe) return;
   if (usable.length < 2) {
@@ -580,7 +717,9 @@ function initGlobe() {
       .htmlElement((d) => {
         const el = document.createElement('button');
         el.className = 'globe-label' + (d.active ? ' active' : '') + (d.pending ? ' pending' : '') + (d.hideLabel ? ' dot' : '');
-        el.textContent = d.hideLabel ? '' : '• ' + d.name + (d.pending ? ' ○' : '');
+        const count = d.count > 1 ? ` · ${d.count}` : '';
+        el.textContent = d.hideLabel ? '' : `• ${d.name}${count}${d.pending ? ' ○' : ''}`;
+        el.title = pointSummary(d);
         el.onclick = () => focusPoint(d.index);
         return el;
       });
@@ -612,19 +751,21 @@ function renderGlobe(view) {
     return;
   }
   // One label per stop: several scans at the same place would otherwise stack a
-  // dot on top of the name and smear the text.
+  // dot on top of the name and smear the text. buildDataset already merges a
+  // city's scans into one point; this keeps a second guard for near coordinates.
   const labels = [];
   const seen = new Map();
   view.points.forEach((p, i) => {
     // A point without both coordinates would put the camera at NaN; skip it instead.
     if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
-    const pending = Boolean(view.demo && i === view.points.length - 1 && view.points.length > 1);
+    const pending = Boolean(view.demo && p.active && view.points.length > 1);
     const key = `${p.lat.toFixed(2)},${p.lng.toFixed(2)}`;
     const earlier = seen.get(key);
     if (earlier) {
       earlier.index = i; // the newest scan at this stop answers a tap
       earlier.active = Boolean(p.active) || earlier.active;
       earlier.pending = pending;
+      earlier.count = (earlier.count || 1) + (p.count || 1);
       earlier.lastEvent = p.lastEvent || earlier.lastEvent;
       return;
     }
@@ -636,7 +777,8 @@ function renderGlobe(view) {
   labels.forEach((p, i) => {
     const sameCountryAsPrev = i > 0 && labels[i - 1].countryCode === p.countryCode;
     const crowded = labels.some((q, j) => j > i && Math.abs(q.lat - p.lat) < 0.35 && Math.abs(q.lng - p.lng) < 0.35);
-    p.hideLabel = !(i === 0 || i === labels.length - 1) && (sameCountryAsPrev || crowded);
+    // A merged stop can sit first in the list yet be where the parcel is now.
+    p.hideLabel = !(i === 0 || p.active) && (sameCountryAsPrev || crowded);
   });
   globe.htmlElementsData(labels);
   globe.arcsData(routeArcs(view.arcs));
@@ -660,7 +802,7 @@ function focusPoint(index) {
   const info = $('#marker-info');
   const event = point.lastEvent || point.firstEvent;
   info.hidden = false;
-  info.textContent = `${pair(point)} · ${event ? (event.note || event.title) : ''}`;
+  info.textContent = pointSummary(point) || (event ? (event.note || event.title) : '');
 }
 
 /* Canvas fallback — same drawing as the original, driven by dynamic data. */
@@ -890,6 +1032,7 @@ function render() {
   badge.classList.toggle('live', Boolean(state.view && !state.view.demo));
 
   renderParcels();
+  renderNotice();
   renderEvents();
   renderSteps();
   renderCountries();
@@ -904,7 +1047,7 @@ function renderParcels() {
 
   if (!state.view && !state.error) {
     box.style.display = 'none';
-    $('#count').textContent = '0';
+    $('#count').textContent = countText(0);
     return;
   }
   box.style.display = '';
@@ -929,7 +1072,7 @@ function renderParcels() {
   if (state.error) {
     small.textContent = state.error.title;
   } else if (state.view) {
-    const count = `${state.view.events.length}${joinsCount() ? ' ' : ''}${s.events}`;
+    const count = countText(state.view.events.length);
     small.textContent = state.view.demo
       ? (isKo() ? 'Sofia · Leipzig · Incheon' : state.view.points.map((p) => p.name).join(' · '))
       : `${state.view.latestDetail || state.view.latestLocation} · ${count}`;
@@ -945,7 +1088,26 @@ function renderParcels() {
   row.append(icon, body, status);
   box.append(row);
   const events = state.view ? state.view.events.length : 0;
-  $('#count').textContent = String(events);
+  $('#count').textContent = countText(events);
+}
+
+/* “배송 이력 9건” / “9 tracking events” — the header count carries its unit. */
+function countText(n) {
+  return `${n}${joinsCount() ? ' ' : ''}${t().events}`;
+}
+
+/* A refresh that failed while a good result is already on screen: keep the
+   result and say so, instead of clearing the globe over a moment's outage. */
+function renderNotice() {
+  const el = $('#stale-note');
+  if (!el) return;
+  if (!state.notice) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  el.hidden = false;
+  el.textContent = [t().staleNote, state.notice.title].filter(Boolean).join(' ');
 }
 
 function renderEvents() {
@@ -954,11 +1116,14 @@ function renderEvents() {
   box.replaceChildren();
 
   if (state.loading) {
-    const note = document.createElement('div');
-    note.className = 'empty-note';
-    note.textContent = s.loading;
-    box.append(note);
-    return;
+    // A same-number refresh keeps the timeline it already has on screen.
+    if (!(state.refreshing && state.view)) {
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = s.loading;
+      box.append(note);
+      return;
+    }
   }
 
   if (state.error) {
@@ -1001,7 +1166,8 @@ function renderEvents() {
     const meta = document.createElement('small');
     const when = ev.timeLabel || formatTime(ev.time);
     const where = ev.location ? (ev.location.name || '') : '';
-    meta.textContent = [when, where].filter(Boolean).join(' · ') || (state.view.demo ? '' : s.liveNote);
+    meta.textContent = [when, where, ev.physical === false ? s.infoOnly : ''].filter(Boolean).join(' · ')
+      || (state.view.demo ? '' : s.liveNote);
 
     const title = document.createElement('h3');
     title.textContent = ev.title || statusLabel(ev.statusCode);
@@ -1054,10 +1220,12 @@ function renderSteps() {
   summary.style.display = view || state.error ? '' : 'none';
 
   const accent = $('.panel-title .accent');
+  /* “Not connected” is for a missing key; a carrier outage says what it is. */
+  const disconnected = state.error && ['NEEDS_KEY', 'UNSUPPORTED'].includes(state.error.code);
   accent.textContent = view
     ? view.international ? s.international : s.domestic
     : state.error
-      ? state.error.apiOk ? state.error.title : s.notconnected
+      ? disconnected ? s.notconnected : state.error.title
       : s.idleBadge;
   accent.classList.toggle('done', Boolean(view && view.delivered));
 
@@ -1114,7 +1282,7 @@ function renderMapStatus() {
     $('#location').textContent = '—';
     $('.map-status .code').textContent = '—';
   } else if (view) {
-    $('#location').textContent = view.demo ? 'Leipzig, Germany' : pair(view.points[view.points.length - 1]);
+    $('#location').textContent = view.demo ? 'Leipzig, Germany' : pair(currentPoint(view));
     $('.map-status .code').textContent = view.latestCode || '—';
   } else {
     $('#location').textContent = '—';
@@ -1133,7 +1301,10 @@ function renderMapStatus() {
   if (state.error) {
     updated.textContent = '—';
   } else if (view) {
-    updated.textContent = `${s.updated} ${clockNow()}${view.cached ? ` · ${s.cachedLabel}` : ''}`;
+    /* The moment the data actually arrived. A language switch only re-formats it;
+       the clock must not move just because the page was redrawn. */
+    const when = formatTime(view.fetchedAt);
+    updated.textContent = `${s.updated} ${when || clockNow()}${view.cached ? ` · ${s.cachedLabel}` : ''}`;
   } else {
     updated.textContent = s.notYet;
   }
@@ -1177,10 +1348,22 @@ function errorFor(payload) {
   };
 }
 
+/* The API marks an error retryable when the carrier, not the number, failed. */
+const TRANSIENT_CODES = ['UPSTREAM', 'TIMEOUT', 'NETWORK', 'RATE_LIMITED'];
+function isTransientError(err) {
+  if (!err) return false;
+  if (typeof err.retryable === 'boolean') return err.retryable;
+  return TRANSIENT_CODES.includes(String(err.code || ''));
+}
+
 async function lookup(number, carrier) {
   if (state.loading) return;
 
+  // Asking again for the number already on screen: a failure must not throw that away.
+  const sameNumber = Boolean(state.view && state.number && state.number === number);
+
   state.loading = true;
+  state.refreshing = sameNumber;
   state.error = null;
   $('#marker-info').hidden = true;
   renderMapStatus();
@@ -1194,7 +1377,14 @@ async function lookup(number, carrier) {
 
     if (!payload || payload.ok !== true) {
       const error = errorFor(payload && payload.error);
+      if (sameNumber && isTransientError(payload && payload.error)) {
+        // The carrier is down, not the shipment. Keep the last good result and say what happened.
+        state.notice = error;
+        toast(error.title);
+        return;
+      }
       state.error = error;
+      state.notice = null;
       state.view = null;
       state.number = number;
       state.carrier = carrier === 'auto' ? 'auto' : carrier;
@@ -1206,14 +1396,22 @@ async function lookup(number, carrier) {
     state.carrier = payload.carrier ? payload.carrier.code : carrier;
     state.view = buildDataset(payload, Boolean(payload.meta && payload.meta.demo));
     state.error = null;
+    state.notice = null;
     render();
     frameRoute();
   } catch (err) {
+    if (sameNumber) {
+      state.notice = errorFor({ code: 'NETWORK' });
+      toast(t().errors.NETWORK);
+      return;
+    }
     state.error = errorFor({ code: 'NETWORK' });
+    state.notice = null;
     state.view = null;
     toast(t().errors.NETWORK);
   } finally {
     state.loading = false;
+    state.refreshing = false;
     if (state.view) {
       $('#search .primary').disabled = false;
     }
@@ -1337,7 +1535,7 @@ function chooseLanguage(code, restoreFocus) {
   syncLanguageUrl();
   if (changed) render();
   else updateLanguageControl(langInfo());
-  if (state.view) focusPoint(state.view.points.length - 1);
+  if (state.view) focusPoint(Number.isFinite(state.view.latestIndex) ? state.view.latestIndex : state.view.points.length - 1);
   if (restoreFocus && langButton) langButton.focus();
 }
 

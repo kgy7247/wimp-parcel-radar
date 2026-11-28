@@ -158,3 +158,6 @@ body{font-family:'DM Sans','Noto Sans KR','Noto Sans JP','Noto Sans SC','Noto Sa
 
 /* unknown carrier in an error state: neutral badge instead of "aut" */
 .carrier-logo[data-carrier="none"]{background:#2b3745;color:#cfdae5;font-size:13px}
+
+/* A refresh that failed while a good result is still on screen (5xx/timeout/limit). */
+.stale-note{margin:0 0 12px;border:1px solid #5b4a2b;background:#1c1810;color:#e9d9b4;border-radius:8px;padding:11px 14px;font-size:12px;line-height:1.7}

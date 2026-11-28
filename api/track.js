@@ -622,7 +622,13 @@ function makeLocation(name, opts) {
     };
   }
 
-  const cc = options.countryCode || 'KR';
+  /* A UPS scan says “ROISSY CDG, FRANCE”; the old default of KR painted
+     every unrecognised overseas terminal with a Korean flag. Read the
+     country out of the text first, then the carrier hint, and only then
+     fall back — a Korean branch string is the only thing left. */
+  const hint = String(options.countryCode || '').toUpperCase();
+  const fromText = countryFromText(cleanName);
+  const cc = (hint && COUNTRY[hint] ? hint : '') || fromText || 'KR';
   const country = COUNTRY[cc] || COUNTRY.KR;
   return {
     name: cleanName,
@@ -635,8 +641,38 @@ function makeLocation(name, opts) {
     lng: country.lng,
     precision: 'country',
     needsGeocode: true,
+    /* No hint and no country in the text: let the geocoder decide the country too. */
+    countryUncertain: !(hint && COUNTRY[hint]) && !fromText,
   };
 }
+
+const COUNTRY_ALIASES = {
+  KR: ['South Korea', 'Korea', 'Republic of Korea', '대한민국', '한국'],
+  BG: ['Bulgaria'], DE: ['Germany', 'Deutschland'], NL: ['Netherlands', 'Holland'],
+  BE: ['Belgium'], FR: ['France'], GB: ['United Kingdom', 'Great Britain', 'England', 'UK'],
+  ES: ['Spain'], IT: ['Italy'], PL: ['Poland'], CZ: ['Czech Republic', 'Czechia'],
+  AT: ['Austria'], CH: ['Switzerland'], RO: ['Romania'], HU: ['Hungary'],
+  TR: ['Türkiye', 'Turkey'], AE: ['United Arab Emirates', 'UAE'], QA: ['Qatar'],
+  HK: ['Hong Kong'], TW: ['Taiwan'], CN: ['China'], JP: ['Japan'], SG: ['Singapore'],
+  TH: ['Thailand'], MY: ['Malaysia'], ID: ['Indonesia'], VN: ['Vietnam'],
+  PH: ['Philippines'], IN: ['India'], US: ['United States', 'USA', 'U.S.A.'],
+  CA: ['Canada'], MX: ['Mexico'], BR: ['Brazil'], AU: ['Australia'],
+  NZ: ['New Zealand'], KZ: ['Kazakhstan'], UZ: ['Uzbekistan'],
+};
+
+/** “ROISSY CDG, FRANCE”, “…, DE”, “(JP)” → the ISO code, when the text names one. */
+function countryFromText(text) {
+  const raw = String(text || '');
+  if (!raw) return '';
+  const tail = raw.trim().match(/(?:^|[\s,(\-])([A-Z]{2})[)\].]?\s*$/);
+  if (tail && COUNTRY[tail[1]]) return tail[1];
+  const padded = ` ${raw.toLowerCase().replace(/[^a-z0-9\uac00-\ud7a3]+/g, ' ')} `;
+  for (const [cc, aliases] of Object.entries(COUNTRY_ALIASES)) {
+    if (aliases.some((alias) => padded.includes(` ${alias.toLowerCase()} `))) return cc;
+  }
+  return '';
+}
+
 
 const ALPHA3 = { KR: 'KOR', BG: 'BGR', DE: 'DEU', NL: 'NLD', BE: 'BEL', FR: 'FRA', GB: 'GBR', ES: 'ESP', IT: 'ITA', PL: 'POL', CZ: 'CZE', AT: 'AUT', CH: 'CHE', RO: 'ROU', HU: 'HUN', TR: 'TUR', AE: 'ARE', QA: 'QAT', HK: 'HKG', TW: 'TWN', CN: 'CHN', JP: 'JPN', SG: 'SGP', TH: 'THA', MY: 'MYS', ID: 'IDN', VN: 'VNM', PH: 'PHL', IN: 'IND', US: 'USA', CA: 'CAN', MX: 'MEX', BR: 'BRA', AU: 'AUS', NZ: 'NZL', KZ: 'KAZ', UZ: 'UZB' };
 const countryCode3 = (cc) => ALPHA3[cc] || cc;
@@ -644,7 +680,9 @@ const countryCode3 = (cc) => ALPHA3[cc] || cc;
 /** Nominatim fallback for locations the built-in table does not know (1 req/s, cached). */
 function geocodeRemote(location) {
   if (!location || !location.needsGeocode) return Promise.resolve(location);
-  const key = normaliseKey(location.name) + '|' + location.countryCode;
+  /* When the country was only guessed, do not restrict the search to it. */
+  const certain = !location.countryUncertain;
+  const key = normaliseKey(location.name) + '|' + (certain ? location.countryCode : '??');
   const cached = geoCache.get(key);
   if (cached && cached.expires > Date.now()) return Promise.resolve({ ...location, ...cached.value });
   if (geoCache.size > 300) geoCache.clear();
@@ -653,11 +691,12 @@ function geocodeRemote(location) {
     const wait = Math.max(0, 1100 - (Date.now() - lastGeocodeAt));
     if (wait > 0) await sleep(wait);
     lastGeocodeAt = Date.now();
-    const q = `${location.name}, ${location.countryCode === 'KR' ? '대한민국' : (location.countryEn || location.countryCode)}`;
+    const korean = certain && location.countryCode === 'KR';
+    const q = certain ? `${location.name}, ${korean ? '대한민국' : (location.countryEn || location.countryCode)}` : location.name;
     const url =
-      'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0' +
-      (location.countryCode === 'KR' ? '&countrycodes=kr' : '') +
-      '&accept-language=' + (location.countryCode === 'KR' ? 'ko' : 'en') +
+      'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1' +
+      (korean ? '&countrycodes=kr' : '') +
+      '&accept-language=' + (korean ? 'ko' : 'en') +
       '&q=' + encodeURIComponent(q);
     try {
       const res = await fetch(url, {
@@ -668,6 +707,14 @@ function geocodeRemote(location) {
       const list = await res.json();
       if (!Array.isArray(list) || !list.length) throw new Error('no result');
       const point = { lat: Number(list[0].lat), lng: Number(list[0].lon), precision: 'geocoded' };
+      // The geocoder knows the country even when the scan text did not.
+      const found = String((list[0].address && list[0].address.country_code) || '').toUpperCase();
+      if (!certain && COUNTRY[found]) {
+        point.countryCode = found;
+        point.country = COUNTRY[found].name;
+        point.countryEn = COUNTRY[found].nameEn;
+        point.code = countryCode3(found);
+      }
       geoCache.set(key, { value: point, expires: Date.now() + 24 * 3600 * 1000 });
       return { ...location, ...point };
     } catch {
@@ -854,6 +901,89 @@ function statusOf(code) {
 
 function includesAny(text, needles) {
   return needles.some((n) => text.includes(n));
+}
+
+/* ------------------------------------------------------------------ *
+ * Physical movement vs paperwork
+ *   DHL opens the customs file at the destination days before the parcel
+ *   gets there (“Customs clearance status updated – INCHEON”) and many
+ *   feeds carry the pre-advice (“Shipment information received”, “label
+ *   created”). Those scans describe data, not a stop: drawing them as a
+ *   route sends the parcel Sofia → Incheon → Sofia → Leipzig → Incheon.
+ *   Only a scan that says the parcel itself moved may become a route node.
+ * ------------------------------------------------------------------ */
+
+const DOCUMENT_SCAN = [
+  /customs clearance status/i,
+  /clearance status updated/i,
+  /customs status updated/i,
+  /customs (?:clearance )?(?:information|notification|pre-?notification)/i,
+  /shipment information (?:received|sent)/i,
+  /shipment data (?:received|sent)/i,
+  /information received/i,
+  /electronic (?:notification|data|advance|pre-?advice)/i,
+  /pre-?advice/i,
+  /pre-?alert/i,
+  /label (?:created|printed|issued)/i,
+  /waybill (?:created|issued)/i,
+  /사전\s*통관/,
+  /통관\s*(?:정보|서류|신고\s*접수)/,
+  /전자\s*(?:통관|정보|사전\s*신고)/,
+  /수입\s*신고\s*접수/,
+  /(?:書類|電子)\s*(?:受信|通知)/,
+  /通関\s*(?:情報|書類)/,
+  /事前\s*通関/,
+];
+
+const CUSTOMS_SCAN = /customs|clearance|통관|通関|zoll|douane|aduana/i;
+
+/** True when the scan announces paperwork/notification rather than a physical scan. */
+function isDocumentScan(ev) {
+  if (!ev) return false;
+  const text = `${(ev && ev.scan) || ''} ${(ev && ev.description) || ''}`.trim();
+  if (!text) return false;
+  return DOCUMENT_SCAN.some((re) => re.test(text));
+}
+
+function isCustomsScan(ev) {
+  if (!ev) return false;
+  return CUSTOMS_SCAN.test(`${(ev && ev.scan) || ''} ${(ev && ev.description) || ''}`);
+}
+
+/* One route node per city/terminal, however many scans land there. */
+function locationKey(loc) {
+  if (!loc) return '';
+  const city = String(loc.city || loc.name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\uac00-\ud7a3]/g, '');
+  const cc = String(loc.countryCode || '').toUpperCase();
+  if (city) return `${cc}|${city}`;
+  return `${Number(loc.lat).toFixed(2)},${Number(loc.lng).toFixed(2)}`;
+}
+
+/* Events that can move a parcel: they carry coordinates and are not paperwork. */
+function locatedEvents(events) {
+  return events.filter((ev) => ev && ev.location && Number.isFinite(ev.location.lat) && Number.isFinite(ev.location.lng));
+}
+
+/** A customs scan the parcel never physically reached: same country on both sides of it. */
+function dropSandwichedCustoms(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i += 1) {
+    const ev = list[i];
+    if (!isCustomsScan(ev)) {
+      out.push(ev);
+      continue;
+    }
+    const prev = out[out.length - 1];
+    const next = list.slice(i + 1).find((other) => !isCustomsScan(other));
+    const cc = ev.location.countryCode;
+    if (prev && next && cc && prev.location.countryCode === next.location.countryCode && cc !== prev.location.countryCode) {
+      continue;
+    }
+    out.push(ev);
+  }
+  return out;
 }
 
 function cjStatus(row) {
@@ -1258,8 +1388,10 @@ async function trackDHL(number) {
 
   const events = (shipment.events || []).map((ev) => {
     const addr = (ev.location && ev.location.address) || {};
-    const place = addr.addressLocality || addr.countryCode || '';
-    const cc = (addr.countryCode || '').toUpperCase() || 'DE';
+    /* The event's own location string usually names the country; do not
+default a US or French event to Germany. */
+    const place = addr.addressLocality || (ev.location && ev.location.address && ev.location.address.countryCode) || '';
+    const cc = (addr.countryCode || '').toUpperCase();
     return {
       time: isoToKst(ev.timestamp),
       status: statusOf(dhlStatus(ev.statusCode, ev.status)),
@@ -1578,31 +1710,66 @@ function dedupeEvents(events) {
   return out;
 }
 
-function buildRoute(events) {
+function routeModel(events) {
+  const located = locatedEvents(events);
+  const moving = located.filter((ev) => !isDocumentScan(ev));
+  // With no physical scan at all (label only), show where the record says it is.
+  const usable = moving.length ? dropSandwichedCustoms(moving) : located;
+
   const points = [];
-  for (const ev of events) {
+  const byKey = new Map();
+  const visits = [];
+  for (const ev of usable) {
     const loc = ev.location;
-    if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) continue;
-    const last = points[points.length - 1];
-    if (last && Math.abs(last.lat - loc.lat) < 0.01 && Math.abs(last.lng - loc.lng) < 0.01) {
-      last.lastEvent = ev;
-      continue;
+    const key = locationKey(loc);
+    let index = byKey.get(key);
+    if (index === undefined) {
+      index = points.findIndex((p) => Math.abs(p.lat - loc.lat) < 0.01 && Math.abs(p.lng - loc.lng) < 0.01);
+      if (index < 0) {
+        points.push({
+          lat: loc.lat,
+          lng: loc.lng,
+          name: loc.city || loc.name,
+          detail: loc.name,
+          code: loc.code,
+          country: loc.country,
+          countryEn: loc.countryEn,
+          countryCode: loc.countryCode,
+          precision: loc.precision,
+          count: 0,
+          firstEvent: null,
+          lastEvent: null,
+          active: false,
+        });
+        index = points.length - 1;
+      }
+      byKey.set(key, index);
     }
-    points.push({
-      lat: loc.lat,
-      lng: loc.lng,
-      name: loc.city || loc.name,
-      detail: loc.name,
-      code: loc.code,
-      country: loc.country,
-      countryEn: loc.countryEn,
-      countryCode: loc.countryCode,
-      precision: loc.precision,
-      firstEvent: ev,
-      lastEvent: ev,
-    });
+    const point = points[index];
+    point.count += 1;
+    if (!point.firstEvent) point.firstEvent = ev;
+    point.lastEvent = ev;
+    if (visits[visits.length - 1] !== index) visits.push(index);
   }
-  return points;
+
+  const lastIndex = visits.length ? visits[visits.length - 1] : -1;
+  points.forEach((p, i) => { p.active = i === lastIndex; });
+  return { points, visits };
+}
+
+function buildRoute(events) {
+  return routeModel(events).points;
+}
+
+/* The countries in the order the parcel actually passed through them. */
+function routeCountries(points, visits) {
+  const countries = [];
+  for (const index of visits) {
+    const point = points[index];
+    if (!point) continue;
+    if (!countries.length || countries[countries.length - 1] !== point.countryCode) countries.push(point.countryCode);
+  }
+  return countries;
 }
 
 function summarise(carrierCode, number, events, meta, extra) {
@@ -1631,11 +1798,8 @@ function summarise(carrierCode, number, events, meta, extra) {
 
   const delivered = code === 'DELIVERED';
 
-  const route = buildRoute(ordered);
-  const countries = [];
-  for (const point of route) {
-    if (!countries.includes(point.countryCode)) countries.push(point.countryCode);
-  }
+  const route = routeModel(ordered);
+  const countries = routeCountries(route.points, route.visits);
 
   return {
     ok: true,
@@ -1662,8 +1826,10 @@ function summarise(carrierCode, number, events, meta, extra) {
       description: ev.description,
       status: ev.status,
       location: ev.location,
+      /* false = a notice/paperwork scan, not a place the parcel went. */
+      physical: !isDocumentScan(ev),
     })),
-    route,
+    route: route.points,
     countries,
     meta,
   };
@@ -1701,8 +1867,27 @@ function normalizeNumber(input) {
     .toUpperCase();
 }
 
+/* “No such shipment” is an answer; “the carrier did not answer” is a moment
+   that may pass. The client keeps the last good result only for the second. */
+const NOT_FOUND_CODES = new Set(['NOT_FOUND', 'AWB_NOT_FOUND', 'FLIGHT_NONE']);
+const RETRYABLE_CODES = new Set(['UPSTREAM', 'TIMEOUT', 'NETWORK', 'RATE_LIMITED']);
+const SERVICE_CODES = new Set([...RETRYABLE_CODES, 'NEEDS_KEY', 'AIRLINE_BLOCKED']);
+
+function errorMeta(code) {
+  const key = String(code || '');
+  return {
+    kind: NOT_FOUND_CODES.has(key) ? 'NOT_FOUND' : SERVICE_CODES.has(key) ? 'SERVICE' : 'INPUT',
+    retryable: RETRYABLE_CODES.has(key),
+  };
+}
+
 function respond(res, status, body) {
-  const payload = JSON.stringify(body);
+  // The UI has to tell “no such shipment” from “the carrier is down right now”.
+  let out = body;
+  if (body && body.ok === false && body.error) {
+    out = { ...body, error: { ...body.error, ...errorMeta(body.error.code) } };
+  }
+  const payload = JSON.stringify(out);
   res.statusCode = status;
   if (typeof res.setHeader === 'function') {
     res.setHeader('content-type', 'application/json; charset=utf-8');
@@ -1843,6 +2028,13 @@ async function handler(req, res) {
               ev.location.lat = geo.lat;
               ev.location.lng = geo.lng;
               ev.location.precision = geo.precision;
+              /* The geocoder may also be the only source of the country. */
+              if (geo.countryCode) {
+                ev.location.countryCode = geo.countryCode;
+                ev.location.country = geo.country;
+                ev.location.countryEn = geo.countryEn;
+                ev.location.code = geo.code;
+              }
             }
           }
         }
@@ -1974,6 +2166,13 @@ module.exports._internal = {
   planRoute,
   summarise,
   buildRoute,
+  routeModel,
+  routeCountries,
+  isDocumentScan,
+  isCustomsScan,
+  locationKey,
+  countryFromText,
+  errorMeta,
   makeLocation,
   lookupGeo,
   maskPersonal,
