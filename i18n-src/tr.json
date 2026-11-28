@@ -196,5 +196,6 @@
   "plannedTag": "planlanan",
   "cachedLabel": "önbellek",
   "guideNotice": "Bu rehber Korece yazılmıştır; sayfanın altında İngilizce ve Japonca özetler bulunur.",
-  "noAircraft": "Gözlenen uçak yok"
+  "noAircraft": "Gözlenen uçak yok",
+  "radarSrc": "Uçak konumları © adsb.lol · ODbL 1.0"
 }

@@ -196,5 +196,6 @@
   "plannedTag": "예정",
   "cachedLabel": "캐시",
   "guideNotice": "이 안내는 한국어로 작성되어 있고, 페이지 아래에 영어·일본어 요약이 있습니다.",
-  "noAircraft": "관측된 항공기 없음"
+  "noAircraft": "관측된 항공기 없음",
+  "radarSrc": "항공기 위치 © adsb.lol · ODbL 1.0"
 }

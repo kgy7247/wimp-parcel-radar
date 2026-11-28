@@ -196,5 +196,6 @@
   "plannedTag": "gepland",
   "cachedLabel": "uit cache",
   "guideNotice": "Deze gids is in het Koreaans geschreven; onderaan de pagina staan samenvattingen in het Engels en Japans.",
-  "noAircraft": "Geen vliegtuig waargenomen"
+  "noAircraft": "Geen vliegtuig waargenomen",
+  "radarSrc": "Vliegtuigposities © adsb.lol · ODbL 1.0"
 }

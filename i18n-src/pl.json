@@ -196,5 +196,6 @@
   "plannedTag": "plan",
   "cachedLabel": "z pamięci",
   "guideNotice": "Ten poradnik jest napisany po koreańsku; na dole strony są streszczenia po angielsku i japońsku.",
-  "noAircraft": "Nie zaobserwowano samolotu"
+  "noAircraft": "Nie zaobserwowano samolotu",
+  "radarSrc": "Pozycje samolotów © adsb.lol · ODbL 1.0"
 }

@@ -329,7 +329,8 @@ window.WIMP_I18N = {
    "plannedTag": "예정",
    "cachedLabel": "캐시",
    "guideNotice": "이 안내는 한국어로 작성되어 있고, 페이지 아래에 영어·일본어 요약이 있습니다.",
-   "noAircraft": "관측된 항공기 없음"
+   "noAircraft": "관측된 항공기 없음",
+   "radarSrc": "항공기 위치 © adsb.lol · ODbL 1.0"
   },
   "en": {
    "dashboard": "Track a parcel",
@@ -529,7 +530,8 @@ window.WIMP_I18N = {
    "plannedTag": "planned",
    "cachedLabel": "cached",
    "guideNotice": "This guide is written in Korean, with shorter English and Japanese versions at the bottom of the page.",
-   "noAircraft": "No aircraft observed"
+   "noAircraft": "No aircraft observed",
+   "radarSrc": "Aircraft positions © adsb.lol · ODbL 1.0"
   },
   "ja": {
    "dashboard": "荷物追跡",
@@ -729,7 +731,8 @@ window.WIMP_I18N = {
    "plannedTag": "予定",
    "cachedLabel": "キャッシュ",
    "guideNotice": "このガイドは韓国語で書かれています。ページ下部に英語・日本語の要約があります。",
-   "noAircraft": "観測された航空機なし"
+   "noAircraft": "観測された航空機なし",
+   "radarSrc": "航空機位置 © adsb.lol · ODbL 1.0"
   },
   "zh-CN": {
    "dashboard": "查询包裹",
@@ -929,7 +932,8 @@ window.WIMP_I18N = {
    "plannedTag": "预计",
    "cachedLabel": "缓存",
    "guideNotice": "本说明以韩语撰写，页面底部有英语和日语摘要。",
-   "noAircraft": "未观测到飞机"
+   "noAircraft": "未观测到飞机",
+   "radarSrc": "飞机位置 © adsb.lol · ODbL 1.0"
   },
   "zh-TW": {
    "dashboard": "查詢包裹",
@@ -1129,7 +1133,8 @@ window.WIMP_I18N = {
    "plannedTag": "預計",
    "cachedLabel": "快取",
    "guideNotice": "本說明以韓語撰寫，頁面底部有英語與日語摘要。",
-   "noAircraft": "未觀測到飛機"
+   "noAircraft": "未觀測到飛機",
+   "radarSrc": "飛機位置 © adsb.lol · ODbL 1.0"
   },
   "es": {
    "dashboard": "Rastrear un paquete",
@@ -1329,7 +1334,8 @@ window.WIMP_I18N = {
    "plannedTag": "prevista",
    "cachedLabel": "en caché",
    "guideNotice": "Esta guía está escrita en coreano; al final de la página hay resúmenes en inglés y japonés.",
-   "noAircraft": "Ningún avión observado"
+   "noAircraft": "Ningún avión observado",
+   "radarSrc": "Posiciones de aeronaves © adsb.lol · ODbL 1.0"
   },
   "fr": {
    "dashboard": "Suivre un colis",
@@ -1529,7 +1535,8 @@ window.WIMP_I18N = {
    "plannedTag": "prévu",
    "cachedLabel": "en cache",
    "guideNotice": "Ce guide est rédigé en coréen ; des résumés en anglais et en japonais figurent en bas de page.",
-   "noAircraft": "Aucun avion observé"
+   "noAircraft": "Aucun avion observé",
+   "radarSrc": "Positions des aéronefs © adsb.lol · ODbL 1.0"
   },
   "de": {
    "dashboard": "Sendung verfolgen",
@@ -1729,7 +1736,8 @@ window.WIMP_I18N = {
    "plannedTag": "geplant",
    "cachedLabel": "zwischengespeichert",
    "guideNotice": "Dieser Ratgeber ist auf Koreanisch verfasst; unten auf der Seite stehen Zusammenfassungen auf Englisch und Japanisch.",
-   "noAircraft": "Kein Flugzeug beobachtet"
+   "noAircraft": "Kein Flugzeug beobachtet",
+   "radarSrc": "Flugzeugpositionen © adsb.lol · ODbL 1.0"
   },
   "pt": {
    "dashboard": "Rastrear um pacote",
@@ -1929,7 +1937,8 @@ window.WIMP_I18N = {
    "plannedTag": "previsto",
    "cachedLabel": "em cache",
    "guideNotice": "Este guia está escrito em coreano; no fim da página há resumos em inglês e japonês.",
-   "noAircraft": "Nenhuma aeronave observada"
+   "noAircraft": "Nenhuma aeronave observada",
+   "radarSrc": "Posições das aeronaves © adsb.lol · ODbL 1.0"
   },
   "it": {
    "dashboard": "Traccia un pacco",
@@ -2129,7 +2138,8 @@ window.WIMP_I18N = {
    "plannedTag": "previsto",
    "cachedLabel": "in cache",
    "guideNotice": "Questa guida è scritta in coreano; in fondo alla pagina ci sono riassunti in inglese e giapponese.",
-   "noAircraft": "Nessun aeromobile osservato"
+   "noAircraft": "Nessun aeromobile osservato",
+   "radarSrc": "Posizioni degli aeromobili © adsb.lol · ODbL 1.0"
   },
   "ru": {
    "dashboard": "Отследить посылку",
@@ -2329,7 +2339,8 @@ window.WIMP_I18N = {
    "plannedTag": "план",
    "cachedLabel": "из кеша",
    "guideNotice": "Эта справка написана на корейском; внизу страницы есть краткие версии на английском и японском.",
-   "noAircraft": "Самолётов не наблюдается"
+   "noAircraft": "Самолётов не наблюдается",
+   "radarSrc": "Положения самолётов © adsb.lol · ODbL 1.0"
   },
   "ar": {
    "dashboard": "تتبّع طرد",
@@ -2529,7 +2540,8 @@ window.WIMP_I18N = {
    "plannedTag": "متوقع",
    "cachedLabel": "ذاكرة مؤقتة",
    "guideNotice": "هذا الدليل مكتوب بالكورية، وفي أسفل الصفحة ملخّصان بالإنجليزية واليابانية.",
-   "noAircraft": "لا تُرصد طائرات"
+   "noAircraft": "لا تُرصد طائرات",
+   "radarSrc": "مواقع الطائرات © adsb.lol · ODbL 1.0"
   },
   "vi": {
    "dashboard": "Tra cứu đơn hàng",
@@ -2729,7 +2741,8 @@ window.WIMP_I18N = {
    "plannedTag": "dự kiến",
    "cachedLabel": "bộ nhớ đệm",
    "guideNotice": "Hướng dẫn này viết bằng tiếng Hàn; cuối trang có bản tóm tắt tiếng Anh và tiếng Nhật.",
-   "noAircraft": "Không quan sát thấy máy bay"
+   "noAircraft": "Không quan sát thấy máy bay",
+   "radarSrc": "Vị trí máy bay © adsb.lol · ODbL 1.0"
   },
   "th": {
    "dashboard": "ติดตามพัสดุ",
@@ -2929,7 +2942,8 @@ window.WIMP_I18N = {
    "plannedTag": "วางแผน",
    "cachedLabel": "แคช",
    "guideNotice": "คู่มือนี้เขียนเป็นภาษาเกาหลี ท้ายหน้ามีสรุปภาษาอังกฤษและภาษาญี่ปุ่น",
-   "noAircraft": "ไม่พบเครื่องบิน"
+   "noAircraft": "ไม่พบเครื่องบิน",
+   "radarSrc": "ตำแหน่งเครื่องบิน © adsb.lol · ODbL 1.0"
   },
   "id": {
    "dashboard": "Lacak paket",
@@ -3129,7 +3143,8 @@ window.WIMP_I18N = {
    "plannedTag": "rencana",
    "cachedLabel": "cache",
    "guideNotice": "Panduan ini ditulis dalam bahasa Korea; di bagian bawah halaman ada ringkasan bahasa Inggris dan Jepang.",
-   "noAircraft": "Tidak ada pesawat teramati"
+   "noAircraft": "Tidak ada pesawat teramati",
+   "radarSrc": "Posisi pesawat © adsb.lol · ODbL 1.0"
   },
   "hi": {
    "dashboard": "पार्सल ट्रैक करें",
@@ -3329,7 +3344,8 @@ window.WIMP_I18N = {
    "plannedTag": "नियोजित",
    "cachedLabel": "कैश",
    "guideNotice": "यह गाइड कोरियन में लिखी है; पेज के नीचे अंग्रेज़ी और जापानी सारांश हैं।",
-   "noAircraft": "कोई विमान नहीं दिखा"
+   "noAircraft": "कोई विमान नहीं दिखा",
+   "radarSrc": "विमान की स्थिति © adsb.lol · ODbL 1.0"
   },
   "tr": {
    "dashboard": "Kargo takip et",
@@ -3529,7 +3545,8 @@ window.WIMP_I18N = {
    "plannedTag": "planlanan",
    "cachedLabel": "önbellek",
    "guideNotice": "Bu rehber Korece yazılmıştır; sayfanın altında İngilizce ve Japonca özetler bulunur.",
-   "noAircraft": "Gözlenen uçak yok"
+   "noAircraft": "Gözlenen uçak yok",
+   "radarSrc": "Uçak konumları © adsb.lol · ODbL 1.0"
   },
   "nl": {
    "dashboard": "Pakket traceren",
@@ -3729,7 +3746,8 @@ window.WIMP_I18N = {
    "plannedTag": "gepland",
    "cachedLabel": "uit cache",
    "guideNotice": "Deze gids is in het Koreaans geschreven; onderaan de pagina staan samenvattingen in het Engels en Japans.",
-   "noAircraft": "Geen vliegtuig waargenomen"
+   "noAircraft": "Geen vliegtuig waargenomen",
+   "radarSrc": "Vliegtuigposities © adsb.lol · ODbL 1.0"
   },
   "pl": {
    "dashboard": "Śledź przesyłkę",
@@ -3929,7 +3947,8 @@ window.WIMP_I18N = {
    "plannedTag": "plan",
    "cachedLabel": "z pamięci",
    "guideNotice": "Ten poradnik jest napisany po koreańsku; na dole strony są streszczenia po angielsku i japońsku.",
-   "noAircraft": "Nie zaobserwowano samolotu"
+   "noAircraft": "Nie zaobserwowano samolotu",
+   "radarSrc": "Pozycje samolotów © adsb.lol · ODbL 1.0"
   }
  }
 };

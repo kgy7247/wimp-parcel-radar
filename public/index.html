@@ -35,7 +35,7 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="./"><span class="logo">◉</span> WIMP<span class="brand-caption">/ parcel tracker</span></a>
+  <a class="brand" href="./" dir="ltr"><span class="logo">◉</span> WIMP<span class="brand-caption">/ parcel tracker</span></a>
   <nav><button class="active" data-i="dashboard">배송 조회</button><a class="nav-link" id="guide-link" href="guide.html" data-i="shipments">이용 안내</a></nav>
   <div class="header-right">
     <span class="demo" id="mode-badge" data-i="demo">예시 데이터</span>
@@ -55,7 +55,7 @@
 <main>
   <section class="intro">
     <div>
-      <div class="eyebrow">WHERE IS MY PARCEL?</div>
+      <div class="eyebrow" dir="ltr">WHERE IS MY PARCEL?</div>
       <h1 data-i="title">내 택배, 지금 어디쯤?</h1>
       <p data-i="subtitle">송장번호 하나로 만나는, 내 배송의 여정.</p>
     </div>
@@ -114,7 +114,7 @@
   <div class="workspace">
     <section class="map-panel" id="map-panel" aria-busy="false">
       <div class="map-top">
-        <div><span class="eyebrow">GLOBAL SHIPMENT MAP</span><h2 data-i="journey">배송 여정</h2></div>
+        <div><span class="eyebrow" dir="ltr">GLOBAL SHIPMENT MAP</span><h2 data-i="journey">배송 여정</h2></div>
         <span class="chip">◉ <span data-i="satellite">3D 위성 지구본</span></span>
       </div>
       <div id="globe"></div>
@@ -123,7 +123,7 @@
       <div class="map-controls"><button id="plus" aria-label="Zoom in">＋</button><button id="minus" aria-label="Zoom out">−</button><button id="reset" aria-label="Reset view">⌖</button></div>
       <div id="marker-info" hidden></div>
       <div class="legend"><span><i></i><span data-i="confirmed">확인된 경로</span></span><span id="legend-planned"><i class="dashed"></i><span data-i="planned">예정 경로</span></span></div>
-      <div class="map-foot"><span data-i="drag">드래그하여 회전 · 스크롤하여 확대</span><span>Earth imagery · NASA</span></div>
+      <div class="map-foot"><span data-i="drag">드래그하여 회전 · 스크롤하여 확대</span><span dir="ltr">Earth imagery · NASA</span></div>
     </section>
 
     <aside class="history">
@@ -137,7 +137,7 @@
         <span class="radar-dot" aria-hidden="true"></span>
         <b id="radar-title" data-i="radarTitle">실시간 운항 화물기 레이더</b>
         <span class="radar-sub" id="radar-sub" data-i="radarSub">해당 구간 운항 중인 실제 항공기</span>
-        <span class="radar-src">항공기 위치 © adsb.lol · ODbL 1.0</span>
+        <span class="radar-src" data-i="radarSrc" dir="auto">항공기 위치 © adsb.lol · ODbL 1.0</span>
       </div>
       <div class="radar-list" id="radar-list"></div>
     </div>
@@ -150,7 +150,7 @@
       <div class="notice" id="notice-box"><span>ⓘ</span><span data-i="notice">인천 사전 통관 정보는 실제 도착을 의미하지 않습니다.</span></div>
     </div>
     <div class="route-panel">
-      <span class="eyebrow" id="route-eyebrow">ACROSS BORDERS</span>
+      <span class="eyebrow" id="route-eyebrow" dir="ltr">ACROSS BORDERS</span>
       <h2 data-i="route">국가별 이동 경로</h2>
       <div class="countries" id="countries"></div>
     </div>
@@ -159,7 +159,7 @@
   <section class="guide-teaser" id="guide-teaser">
     <div class="guide-teaser-head">
       <div>
-        <span class="eyebrow">READ BEFORE YOU PANIC</span>
+        <span class="eyebrow" dir="ltr">READ BEFORE YOU PANIC</span>
         <h2 data-i="guideTitle">배송 상태가 헷갈릴 때</h2>
         <p data-i="guideLead">“통관 중”이 멈춘 것인지, 송장번호가 왜 조회되지 않는지 — 해외배송 스캔 문구의 뜻과 해결법을 한 페이지에 정리했습니다.</p>
       </div>
@@ -180,7 +180,7 @@
   </section>
 
   <footer>
-    <span>WIMP <span class="muted">/</span> A little closer, every day.</span>
+    <span dir="ltr">WIMP <span class="muted">/</span> A little closer, every day.</span>
     <span class="footer-right">
       <span data-i="footer">GPS 실시간 위치가 아닌 배송사 스캔 위치입니다.</span>
       <span class="footer-legal">
@@ -195,7 +195,7 @@
 
 <dialog id="modal">
   <form method="dialog"><button class="close" aria-label="Close">×</button></form>
-  <span class="eyebrow">GLOBAL SETTINGS</span>
+  <span class="eyebrow" dir="ltr">GLOBAL SETTINGS</span>
   <h2 data-i="settings">글로벌 설정</h2>
   <p data-i="settingNote">화면 설정과 자동 갱신만 다루는 창입니다. 송장번호와 조회 결과는 저장하지 않습니다.</p>
   <label><span data-i="auto">자동 갱신</span>
@@ -207,7 +207,7 @@
 </dialog>
 
 <div id="toast" role="status"></div>
-<noscript><p style="padding:24px;color:#edf2f6">배송 조회에는 JavaScript가 필요합니다.</p></noscript>
+<noscript><p style="padding:24px;color:#edf2f6">배송 조회에는 JavaScript가 필요합니다. · This page needs JavaScript.</p></noscript>
 <script src="globe.min.js"></script>
 <script src="i18n.js"></script>
 <script src="app.js"></script>

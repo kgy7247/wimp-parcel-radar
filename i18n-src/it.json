@@ -196,5 +196,6 @@
   "plannedTag": "previsto",
   "cachedLabel": "in cache",
   "guideNotice": "Questa guida è scritta in coreano; in fondo alla pagina ci sono riassunti in inglese e giapponese.",
-  "noAircraft": "Nessun aeromobile osservato"
+  "noAircraft": "Nessun aeromobile osservato",
+  "radarSrc": "Posizioni degli aeromobili © adsb.lol · ODbL 1.0"
 }

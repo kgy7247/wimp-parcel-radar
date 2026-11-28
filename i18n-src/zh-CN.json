@@ -196,5 +196,6 @@
   "plannedTag": "预计",
   "cachedLabel": "缓存",
   "guideNotice": "本说明以韩语撰写，页面底部有英语和日语摘要。",
-  "noAircraft": "未观测到飞机"
+  "noAircraft": "未观测到飞机",
+  "radarSrc": "飞机位置 © adsb.lol · ODbL 1.0"
 }

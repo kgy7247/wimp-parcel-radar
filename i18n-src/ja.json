@@ -196,5 +196,6 @@
   "plannedTag": "予定",
   "cachedLabel": "キャッシュ",
   "guideNotice": "このガイドは韓国語で書かれています。ページ下部に英語・日本語の要約があります。",
-  "noAircraft": "観測された航空機なし"
+  "noAircraft": "観測された航空機なし",
+  "radarSrc": "航空機位置 © adsb.lol · ODbL 1.0"
 }

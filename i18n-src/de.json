@@ -196,5 +196,6 @@
   "plannedTag": "geplant",
   "cachedLabel": "zwischengespeichert",
   "guideNotice": "Dieser Ratgeber ist auf Koreanisch verfasst; unten auf der Seite stehen Zusammenfassungen auf Englisch und Japanisch.",
-  "noAircraft": "Kein Flugzeug beobachtet"
+  "noAircraft": "Kein Flugzeug beobachtet",
+  "radarSrc": "Flugzeugpositionen © adsb.lol · ODbL 1.0"
 }

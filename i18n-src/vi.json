@@ -196,5 +196,6 @@
   "plannedTag": "dự kiến",
   "cachedLabel": "bộ nhớ đệm",
   "guideNotice": "Hướng dẫn này viết bằng tiếng Hàn; cuối trang có bản tóm tắt tiếng Anh và tiếng Nhật.",
-  "noAircraft": "Không quan sát thấy máy bay"
+  "noAircraft": "Không quan sát thấy máy bay",
+  "radarSrc": "Vị trí máy bay © adsb.lol · ODbL 1.0"
 }

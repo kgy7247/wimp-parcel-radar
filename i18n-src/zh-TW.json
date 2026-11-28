@@ -196,5 +196,6 @@
   "plannedTag": "預計",
   "cachedLabel": "快取",
   "guideNotice": "本說明以韓語撰寫，頁面底部有英語與日語摘要。",
-  "noAircraft": "未觀測到飛機"
+  "noAircraft": "未觀測到飛機",
+  "radarSrc": "飛機位置 © adsb.lol · ODbL 1.0"
 }
