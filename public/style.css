@@ -200,3 +200,6 @@ body{font-family:'DM Sans','Noto Sans KR','Noto Sans JP','Noto Sans SC','Noto Sa
   .sectionline{flex-wrap:wrap;row-gap:6px;align-items:baseline}
   .sectionline .sub{flex:1 1 100%;text-align:start}
 }
+
+/* unknown carrier in an error state: neutral badge instead of "aut" */
+.carrier-logo[data-carrier="none"]{background:#2b3745;color:#cfdae5;font-size:13px}
