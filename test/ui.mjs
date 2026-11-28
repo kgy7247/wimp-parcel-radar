@@ -716,7 +716,7 @@ await test('map switch: 2D keeps the current lookup, its route and its timeline'
   assert.equal($('#location').textContent, location, 'the status strip did not move');
   assert.equal($('#events').querySelectorAll('.event').length, events, 'timeline kept');
   assert.equal(fetched.filter((url) => url.includes('api/track')).length, lookups, 'no second lookup');
-  assert.ok(!fetched.some((url) => url.includes('world-110m.json')), 'the coastline file is not re-fetched when a topology is supplied');
+  assert.ok(!fetched.some((url) => url.includes('world-50m.json')), 'the coastline file is not re-fetched when a topology is supplied');
 
   const state2d = window.WIMP_MAP;
   assert.equal(state2d.mode, 'flat');
@@ -755,12 +755,12 @@ await test('map switch: both labels and the hint follow the language', async () 
 
 await test('map: the 2D view ships local vector coastlines, not a tile server', async () => {
   const html = read('index.html');
-  const topoText = read('world-110m.json');
+  const topoText = read('world-50m.json');
   const topo = JSON.parse(topoText);
   assert.equal(topo.type, 'Topology');
   assert.ok(topo.objects.countries.geometries.length > 100, 'a real world atlas');
-  assert.ok(topoText.length < 200 * 1024, 'light enough to ship (' + topoText.length + ' bytes)');
-  assert.ok(appJs.includes('world-110m.json'), 'the app reads the local file');
+  assert.ok(topoText.length < 600 * 1024, 'light enough to ship (' + topoText.length + ' bytes)');
+  assert.ok(appJs.includes('world-50m.json'), 'the app reads the local file');
   assert.ok(!appJs.includes('mapbox.com') && !appJs.includes('openstreetmap.org/tiles'), 'no third-party tile host');
   assert.ok(!html.includes('leaflet') && !html.includes('mapbox'), 'no map library tag');
 });

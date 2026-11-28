@@ -1047,7 +1047,7 @@ function softwareGlobe(host) {
  *   switching is only a change of projection.
  * ------------------------------------------------------------------ */
 
-const WORLD_URL = 'world-110m.json';
+const WORLD_URL = 'world-50m.json';
 
 const flat = {
   root: null, canvas: null, ctx: null, tip: null, tipTitle: null, tipBody: null, pulse: null,
@@ -1135,7 +1135,16 @@ function decodeWorld(topo) {
       minLng += shift;
       maxLng += shift;
     }
-    if (out[0].length > 2) shapes.push({ rings: out, minLng, maxLng });
+    if (out[0].length < 3) return;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    for (const ring of out) {
+      for (const p of ring) {
+        if (p[1] < minLat) minLat = p[1];
+        if (p[1] > maxLat) maxLat = p[1];
+      }
+    }
+    shapes.push({ rings: out, minLng, maxLng, minLat, maxLat });
   };
   const walk = (geometry) => {
     if (!geometry) return;
@@ -1201,6 +1210,18 @@ function clampFlatLat() {
   const half = flat.h / 2 / (flat.scale || 1);
   if (half >= 90) flat.lat = 0;
   else flat.lat = Math.max(-90 + half, Math.min(90 - half, flat.lat));
+}
+
+/* Pointer input can fire faster than the screen refreshes; one repaint per
+   frame keeps a drag on a big route smooth on a phone. */
+let flatFrame = 0;
+function scheduleFlatDraw() {
+  if (flatFrame) return;
+  const raf = window.requestAnimationFrame || ((fn) => setTimeout(fn, 16));
+  flatFrame = raf(() => {
+    flatFrame = 0;
+    drawFlat();
+  });
 }
 
 function drawFlat() {
@@ -1295,6 +1316,8 @@ function drawLand(ctx) {
   const reach = w / 2 / scale + 6;
   const left = flat.lon - reach;
   const right = flat.lon + reach;
+  const topLat = flat.lat + h / 2 / scale + 6;
+  const bottomLat = flat.lat - h / 2 / scale - 6;
   ctx.save();
   ctx.lineJoin = 'round';
   /* A slightly heavier hairline as the map zooms keeps the 1:110m coastlines
@@ -1302,6 +1325,7 @@ function drawLand(ctx) {
   ctx.lineWidth = Math.max(0.7, Math.min(1.6, scale / 60));
   ctx.strokeStyle = 'rgba(96,144,178,.55)';
   for (const shape of flat.shapes) {
+    if (shape.maxLat < bottomLat || shape.minLat > topLat) continue;
     /* Shapes are unwrapped, so they repeat every 360° instead of at ±180°. */
     const from = Math.max(-1, Math.ceil((left - shape.maxLng) / 360));
     const to = Math.min(1, Math.floor((right - shape.minLng) / 360));
@@ -1651,7 +1675,7 @@ function bindFlat() {
         wrapFlatLon();
         clampFlatLat();
         hideFlatTip();
-        drawFlat();
+        scheduleFlatDraw();
       }
       return;
     }
@@ -1668,7 +1692,7 @@ function bindFlat() {
         flat.hover = -1;
         hideFlatTip();
       }
-      drawFlat();
+      scheduleFlatDraw();
       return;
     }
 
@@ -1743,8 +1767,13 @@ function initFlatMap() {
   sizeFlat();
   /* Warm the coastline file while the globe is on screen, so the first
      switch to 2D is already painted. */
-  if ('requestIdleCallback' in window) window.requestIdleCallback(() => loadWorld(), { timeout: 3000 });
-  else setTimeout(loadWorld, 1200);
+  const link = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const cheap = !link || (!link.saveData && !/^(slow-)?2g$/.test(link.effectiveType || ''));
+  if (cheap) {
+    if ('requestIdleCallback' in window) window.requestIdleCallback(() => loadWorld(), { timeout: 3000 });
+    else setTimeout(loadWorld, 1200);
+  }
+  /* On a metered or slow link the coastline file waits for the first 2D tap. */
 }
 
 function setMapMode(mode) {

@@ -50,7 +50,7 @@
       ]
     },
     {
-      "source": "/world-110m.json",
+      "source": "/world-50m.json",
       "headers": [
         {
           "key": "Cache-Control",

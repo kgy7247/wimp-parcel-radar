@@ -120,7 +120,7 @@ lastscanned가 DHL을 포함하므로 보통은 필요하지 않습니다. DHL �
 
 - 헤더의 **이용 안내**는 `guide.html` 로 이동하는 링크이고, 설정 모달은 **⚙ 버튼만** 엽니다.
 - 조회 결과는 **현재 상태·도착 예정 → 마지막 확인 위치·마지막 스캔 → 지도 → 상세 이력** 순서로 배치됩니다(`#result-head` 가 `.workspace` 앞).
-- 지도 상단의 **3D 지구본 | 2D 평면 지도** 전환 버튼으로 같은 조회 결과를 두 투영으로 봅니다. 2D 평면 지도는 `world-110m.json`(Natural Earth 1:110m, 108KB) 한 파일을 한 번 받아 캔버스로 그리므로 타일 서버·추가 이미지 요청이 없고, 확대해도 경계가 흐려지지 않습니다. 두 뷰는 같은 뷰 모델(지점·경로·마지막 확인 위치)을 읽기 때문에 전환해도 재조회가 없습니다.
+- 지도 상단의 **3D 지구본 | 2D 평면 지도** 전환 버튼으로 같은 조회 결과를 두 투영으로 봅니다. 2D 평면 지도는 `world-50m.json`(Natural Earth 1:50m을 0.03° 허용오차로 단순화한 TopoJSON, 415KB·gzip 141KB) 한 파일을 한 번 받아 캔버스로 그리므로 타일 서버·추가 이미지 요청이 없고, 확대해도 경계가 흐려지지 않습니다. 두 뷰는 같은 뷰 모델(지점·경로·마지막 확인 위치)을 읽기 때문에 전환해도 재조회가 없습니다. 느린 회선(`effectiveType` 2g·saveData)에서는 이 파일을 첫 2D 전환 때 받습니다.
 - `guide.html` 은 배송 상태 뜻, 조회가 안 될 때의 5가지 이유, 해외배송 경유지, 도착 예정일 계산, FAQ 를 담은 독립 콘텐츠 페이지이며 `FAQPage` 구조화 데이터를 포함합니다.
 - **제품 범위는 택배 조회 하나입니다.** 항공 화물(AWB)·편명 조회와 실시간 화물기 레이더는 2026-11-28 제거했습니다(1분 폴링·외부 ADS-B 의존으로 무겁고 실제 적중률이 낮았음). 지도에는 택배 스캔 경로만 그립니다.
 
@@ -226,7 +226,7 @@ npm run i18n:check    # 생성 파일이 최신인지 확인 (테스트에 포�
 │   ├── style.css           # 원본 디자인 유지 + 로딩·에러·법적 링크 스타일
 │   ├── globe.min.js        # globe.gl 2.46.2 (MIT)
 │   ├── earth.jpg           # NASA Earth imagery
-│   ├── world-110m.json     # Natural Earth 1:110m 국경·해안선 (public domain, 2D 평면 지도용)
+│   ├── world-50m.json      # Natural Earth 1:50m 국경·해안선을 0.03°로 단순화 (public domain, 2D 평면 지도용)
 │   ├── guide.html          # 이용 안내 (조회 방법·배송 상태 뜻·FAQ, AdSense용 콘텐츠)
 │   ├── privacy.html        # 개인정보처리방침
 │   ├── terms.html          # 이용약관
@@ -260,6 +260,6 @@ npm run i18n:check    # 생성 파일이 최신인지 확인 (테스트에 포�
 
 - 3D 지구본: [globe.gl](https://github.com/vasturiano/globe.gl) (MIT)
 - 지구 이미지: NASA Earth imagery (public domain)
-- 2D 평면 지도 해안선·국경: [Natural Earth](https://www.naturalearthdata.com/) 1:110m (public domain) — [world-atlas](https://github.com/topojson/world-atlas) TopoJSON, 타일 서버 없이 로컬에서 렌더
+- 2D 평면 지도 해안선·국경: [Natural Earth](https://www.naturalearthdata.com/) 1:50m (public domain) — [world-atlas](https://github.com/topojson/world-atlas) `countries-50m.json`을 Douglas–Peucker 0.03°로 단순화(80,617→35,942점)하고 0.001°로 양자화해 재인코딩. 타일 서버 없이 로컬에서 렌더
 - 택배 정보: 각 택배사 공개 조회 페이지, DHL Shipment Tracking API, [lastscanned](https://www.lastscanned.com/) (551개 택배사 단일 스키마)
 - 지도 좌표 보완: © OpenStreetMap contributors (ODbL)
