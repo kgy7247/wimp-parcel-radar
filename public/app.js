@@ -345,6 +345,211 @@ function flagOf(code) {
 let globe = null;
 let globeBroken = false;
 
+/* ------------------------------------------------------------------ *
+ * Route arcs
+ *   three-globe draws a leg as a cubic Bézier: both ends sit on the surface
+ *   and the control points ride at 1.5× the requested altitude over the 25 %
+ *   and 75 % marks of the great circle. Two traps follow from that shape —
+ *   ends left on the surface cut the tube into the globe, so the line fades
+ *   out exactly where it starts and lands, and the Bézier is a chord in
+ *   space, so a long leg sags below the surface even at a generous altitude.
+ *   So the ends are lifted, the arc grows with the distance it covers, and it
+ *   is raised until a sample of the real curve clears the globe. A leg that
+ *   would need an absurd height is split into shorter hops instead.
+ * ------------------------------------------------------------------ */
+
+const ARC_END_ALT = 0.02; // both ends sit this far above the surface
+const ARC_STROKE = 1.35; // tube width, in globe units (the globe radius is 100)
+const ARC_BASE_ALT = 0.075; // height of the hop for a leg of no length
+const ARC_SPAN_ALT = 0.3; // extra height per radian of great-circle distance
+const ARC_MAX_ALT = 0.45; // beyond this, split the leg rather than balloon it
+const ARC_CLEAR = 1 + ARC_STROKE / 200 + 0.006; // tube radius + depth room, in radii
+const DEG = Math.PI / 180;
+
+function latLngUnit(lat, lng) {
+  const p = lat * DEG;
+  const l = lng * DEG;
+  return [Math.cos(p) * Math.cos(l), Math.sin(p), Math.cos(p) * Math.sin(l)];
+}
+
+function angularDistance(a, b) {
+  const cos =
+    Math.sin(a.lat * DEG) * Math.sin(b.lat * DEG) +
+    Math.cos(a.lat * DEG) * Math.cos(b.lat * DEG) * Math.cos((b.lng - a.lng) * DEG);
+  return Math.acos(Math.max(-1, Math.min(1, cos))) / DEG;
+}
+
+/* Unit vector at fraction t of the great circle between two places. */
+function greatCircleUnit(a, b, t) {
+  const va = latLngUnit(a.lat, a.lng);
+  const vb = latLngUnit(b.lat, b.lng);
+  const dot = Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2]));
+  const omega = Math.acos(dot);
+  const sin = Math.sin(omega);
+  if (sin < 1e-9) return va;
+  const s0 = Math.sin((1 - t) * omega) / sin;
+  const s1 = Math.sin(t * omega) / sin;
+  return [va[0] * s0 + vb[0] * s1, va[1] * s0 + vb[1] * s1, va[2] * s0 + vb[2] * s1];
+}
+
+function greatCirclePlace(a, b, t) {
+  const u = greatCircleUnit(a, b, t);
+  return { lat: Math.asin(Math.max(-1, Math.min(1, u[1]))) / DEG, lng: Math.atan2(u[2], u[0]) / DEG };
+}
+
+/* Smallest distance from the globe centre that three-globe's curve reaches. */
+function arcMinRadius(a, b, alt) {
+  const endAlt = ARC_END_ALT;
+  const ctrlAlt = alt + (alt - endAlt) * 0.5;
+  const ua = latLngUnit(a.lat, a.lng);
+  const ub = latLngUnit(b.lat, b.lng);
+  const p1 = greatCircleUnit(a, b, 0.25);
+  const p2 = greatCircleUnit(a, b, 0.75);
+  let min = Infinity;
+  for (let i = 0; i <= 24; i += 1) {
+    const t = i / 24;
+    const u = 1 - t;
+    const w0 = u * u * u;
+    const w1 = 3 * u * u * t;
+    const w2 = 3 * u * t * t;
+    const w3 = t * t * t;
+    const x = w0 * (ua[0] * (1 + endAlt)) + w1 * (p1[0] * (1 + ctrlAlt)) + w2 * (p2[0] * (1 + ctrlAlt)) + w3 * (ub[0] * (1 + endAlt));
+    const y = w0 * (ua[1] * (1 + endAlt)) + w1 * (p1[1] * (1 + ctrlAlt)) + w2 * (p2[1] * (1 + ctrlAlt)) + w3 * (ub[1] * (1 + endAlt));
+    const z = w0 * (ua[2] * (1 + endAlt)) + w1 * (p1[2] * (1 + ctrlAlt)) + w2 * (p2[2] * (1 + ctrlAlt)) + w3 * (ub[2] * (1 + endAlt));
+    const r = Math.hypot(x, y, z);
+    if (r < min) min = r;
+  }
+  return min;
+}
+
+/* Altitude for one leg, or null when no sane height keeps it above the globe. */
+function arcAltitudeFor(a, b) {
+  const span = angularDistance(a, b) * DEG;
+  const base = ARC_BASE_ALT + ARC_SPAN_ALT * (span / Math.PI);
+  if (arcMinRadius(a, b, base) >= ARC_CLEAR) return base;
+  if (arcMinRadius(a, b, ARC_MAX_ALT) < ARC_CLEAR) return null;
+  let lo = base;
+  let hi = ARC_MAX_ALT;
+  for (let i = 0; i < 16; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (arcMinRadius(a, b, mid) >= ARC_CLEAR) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}
+
+/* One leg in, the arcs that get drawn out: a too-long hop becomes a chain. */
+function arcLegs(arc) {
+  const a = { lat: arc.startLat, lng: arc.startLng };
+  const b = { lat: arc.endLat, lng: arc.endLng };
+  const altitude = arcAltitudeFor(a, b);
+  if (altitude != null) return [{ ...arc, altitude }];
+  const span = angularDistance(a, b);
+  const parts = Math.min(4, Math.max(2, Math.ceil(span / 80)));
+  const legs = [];
+  for (let i = 0; i < parts; i += 1) {
+    const from = i === 0 ? a : greatCirclePlace(a, b, i / parts);
+    const to = i === parts - 1 ? b : greatCirclePlace(a, b, (i + 1) / parts);
+    const legAlt = arcAltitudeFor(from, to);
+    legs.push({
+      ...arc,
+      startLat: from.lat,
+      startLng: from.lng,
+      endLat: to.lat,
+      endLng: to.lng,
+      altitude: legAlt == null ? ARC_BASE_ALT : legAlt
+    });
+  }
+  return legs;
+}
+
+function routeArcs(arcs) {
+  const out = [];
+  for (const arc of arcs || []) {
+    if (![arc.startLat, arc.startLng, arc.endLat, arc.endLng].every(Number.isFinite)) continue;
+    out.push(...arcLegs(arc));
+  }
+  return out;
+}
+
+/* Middle of every stop, as seen from outside the globe. */
+function sphericalCenter(points) {
+  const sum = [0, 0, 0];
+  for (const p of points) {
+    const u = latLngUnit(p.lat, p.lng);
+    sum[0] += u[0];
+    sum[1] += u[1];
+    sum[2] += u[2];
+  }
+  const len = Math.hypot(sum[0], sum[1], sum[2]);
+  if (!len) return { lat: points[0].lat, lng: points[0].lng };
+  return {
+    lat: Math.asin(Math.max(-1, Math.min(1, sum[1] / len))) / DEG,
+    lng: Math.atan2(sum[2], sum[0]) / DEG
+  };
+}
+
+/* Pull the camera back until every stop — and the label beside it — fits the box. */
+function routeViewAltitude(points, center) {
+  const box = $('#globe');
+  const fov = (globe && globe.camera && globe.camera().fov) || 50;
+  const w = (box && box.clientWidth) || 360;
+  const h = (box && box.clientHeight) || 400;
+  // Room for the marker label that hangs beside a stop ("• Los Angeles" is wide).
+  const longest = points.reduce((max, p) => Math.max(max, String(p.name || '').length), 4);
+  const pad = Math.min(w / 2 - 12, 24 + 3.3 * longest);
+  const tanV = Math.tan((fov / 2) * DEG);
+  const tanH = tanV * (w / h);
+  const fits = (alt) => {
+    const d = 1 + alt;
+    return points.every((p) => {
+      const psi = angularDistance(center, p) * DEG;
+      const denom = d - Math.cos(psi);
+      if (denom < 0.01) return false;
+      const reach = Math.sin(psi) / denom;
+      return (reach / tanH) * (w / 2) <= w / 2 - pad && (reach / tanV) * (h / 2) <= h / 2 - pad;
+    });
+  };
+  // A domestic route keeps its country-level zoom; a wide one only needs the room.
+  let lo = 0.8;
+  let hi = 3.4;
+  if (fits(lo)) return lo;
+  for (let i = 0; i < 22; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}
+
+/* Frame the whole journey, not one stop: on a long route the far end would
+   otherwise sit behind the globe and the confirmed line looks cut off. */
+function frameRoute() {
+  const view = state.view;
+  if (!view) return;
+  const usable = view.points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  const last = usable[usable.length - 1];
+  if (!last) return;
+  const info = $('#marker-info');
+  if (info) {
+    const event = last.lastEvent || last.firstEvent;
+    info.hidden = false;
+    info.textContent = event ? `${pair(last)} · ${event.note || event.title}` : pair(last);
+  }
+  if (!globe) return;
+  if (usable.length < 2) {
+    globe.pointOfView({ lat: last.lat, lng: last.lng, altitude: 1.1 }, 800);
+    return;
+  }
+  // The same place can appear on several scans; weigh each stop once.
+  const stops = [];
+  for (const p of usable) {
+    if (!stops.some((q) => Math.abs(q.lat - p.lat) < 0.01 && Math.abs(q.lng - p.lng) < 0.01)) stops.push(p);
+  }
+  const center = sphericalCenter(stops);
+  globe.pointOfView({ lat: center.lat, lng: center.lng, altitude: routeViewAltitude(stops, center) }, 900);
+}
+
 function initGlobe() {
   const container = $('#globe');
   if (!container) return;
@@ -359,21 +564,15 @@ function initGlobe() {
       .atmosphereColor('#537eaa')
       .atmosphereAltitude(0.14)
       .arcsData([])
-      .arcColor((d) => (d.planned ? '#b4c6dd' : '#b7f373'))
-      .arcStroke(0.5)
+      .arcColor((d) => (d.planned ? '#b9cbe1' : '#b0f95e'))
+      .arcStroke((d) => (d.planned ? ARC_STROKE * 0.72 : ARC_STROKE))
+      .arcStartAltitude(ARC_END_ALT)
+      .arcEndAltitude(ARC_END_ALT)
       .arcDashLength((d) => (d.planned ? 0.035 : 1))
       .arcDashGap((d) => (d.planned ? 0.022 : 0))
-      // A fixed height sinks long-haul arcs (LAX→ICN is ~95°) inside the globe,
-      // so the arc rises with the distance it covers.
-      .arcAltitude((d) => {
-        if (d.planned) return 0.24;
-        const rad = Math.PI / 180;
-        const cos =
-          Math.sin(d.startLat * rad) * Math.sin(d.endLat * rad) +
-          Math.cos(d.startLat * rad) * Math.cos(d.endLat * rad) * Math.cos((d.endLng - d.startLng) * rad);
-        const distance = Math.acos(Math.max(-1, Math.min(1, cos)));
-        return 0.06 + 0.28 * (distance / Math.PI);
-      })
+      // Height per leg comes from routeArcs(): distance-based, and raised until
+      // the drawn curve is provably clear of the globe surface.
+      .arcAltitude((d) => (Number.isFinite(d.altitude) ? d.altitude : 0.18))
       .htmlElementsData([])
       .htmlLat('lat')
       .htmlLng('lng')
@@ -412,12 +611,35 @@ function renderGlobe(view) {
     globe.arcsData([]);
     return;
   }
-  const labels = view.points
-    .map((p, i) => ({ ...p, index: i, pending: Boolean(view.demo && i === view.points.length - 1 && view.points.length > 1) }))
+  // One label per stop: several scans at the same place would otherwise stack a
+  // dot on top of the name and smear the text.
+  const labels = [];
+  const seen = new Map();
+  view.points.forEach((p, i) => {
     // A point without both coordinates would put the camera at NaN; skip it instead.
-    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+    const pending = Boolean(view.demo && i === view.points.length - 1 && view.points.length > 1);
+    const key = `${p.lat.toFixed(2)},${p.lng.toFixed(2)}`;
+    const earlier = seen.get(key);
+    if (earlier) {
+      earlier.index = i; // the newest scan at this stop answers a tap
+      earlier.active = Boolean(p.active) || earlier.active;
+      earlier.pending = pending;
+      earlier.lastEvent = p.lastEvent || earlier.lastEvent;
+      return;
+    }
+    const label = { ...p, index: i, pending };
+    seen.set(key, label);
+    labels.push(label);
+  });
+  // Name the first and last stop and every country change; the rest stay dots.
+  labels.forEach((p, i) => {
+    const sameCountryAsPrev = i > 0 && labels[i - 1].countryCode === p.countryCode;
+    const crowded = labels.some((q, j) => j > i && Math.abs(q.lat - p.lat) < 0.35 && Math.abs(q.lng - p.lng) < 0.35);
+    p.hideLabel = !(i === 0 || i === labels.length - 1) && (sameCountryAsPrev || crowded);
+  });
   globe.htmlElementsData(labels);
-  globe.arcsData(view.arcs);
+  globe.arcsData(routeArcs(view.arcs));
 }
 
 function focusPoint(index) {
@@ -985,7 +1207,7 @@ async function lookup(number, carrier) {
     state.view = buildDataset(payload, Boolean(payload.meta && payload.meta.demo));
     state.error = null;
     render();
-    focusPoint(state.view.points.length - 1);
+    frameRoute();
   } catch (err) {
     state.error = errorFor({ code: 'NETWORK' });
     state.view = null;
