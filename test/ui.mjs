@@ -99,6 +99,30 @@ const PLANE_RESPONSE = {
   meta: { fetchedAt: '2026-11-28T01:00:05.000Z', elapsedMs: 120, cached: false }
 };
 
+/* The API answered 200 normally, but this flight number is not airborne right now. */
+const PLANE_NONE_RESPONSE = {
+  ok: true,
+  kind: 'planes',
+  query: { type: 'callsign', carrier: null, callsigns: [{ input: 'KE9999', icao: 'KAL9999', iata: 'KE9999' }], center: null },
+  planes: [],
+  counts: { shown: 0, matched: 0, total: 0 },
+  missing: ['KE9999'],
+  message: '지금 이 편명의 항공기가 관측되지 않습니다. 지상에 있거나 레이더 범위 밖일 수 있습니다.',
+  source: 'adsb.lol',
+  attribution: { text: '© adsb.lol (ODbL 1.0)', url: 'https://adsb.lol' },
+  meta: { fetchedAt: '2026-11-28T01:00:05.000Z', elapsedMs: 90, cached: false }
+};
+
+/* The aircraft feed itself failed (429 from /api/plane) — a real connection problem. */
+const PLANE_FAIL_RESPONSE = {
+  ok: false,
+  error: {
+    code: 'RATE_LIMITED',
+    message: '실시간 항공기 데이터 제공처가 잠시 응답하지 않습니다.',
+    hint: '잠시 후 다시 시도해 주세요. 위치 데이터는 약 1분 단위로 갱신됩니다.'
+  }
+};
+
 const AWB_RESPONSE = {
   ok: true,
   kind: 'awb',
@@ -174,7 +198,7 @@ function buildDom() {
         const target = String(url);
         fetched.push(target);
         let payload;
-        if (target.includes('api/plane')) payload = PLANE_RESPONSE;
+        if (target.includes('api/plane')) payload = mode === 'plane-none' ? PLANE_NONE_RESPONSE : mode === 'plane-fail' ? PLANE_FAIL_RESPONSE : PLANE_RESPONSE;
         else if (target.includes('api/awb')) payload = mode === 'awb-missing' ? AWB_MISSING : AWB_RESPONSE;
         else if (mode === 'cj') payload = CJ_RESPONSE;
         else if (mode === 'dhl') payload = DHL_RESPONSE;
@@ -450,6 +474,45 @@ await test('flight: KE082 shows the aircraft position in flight', async () => {
   assert.ok($('#location').textContent.includes('°N'));
   assert.equal($('.bottom').classList.contains('is-hidden'), true, 'parcel-only panels are hidden');
   assert.ok(fetched.at(-1).includes('api/plane?cs=KE082') || fetched.some((u) => u.includes('api/plane?cs=KE082')));
+});
+
+await test('flight: an answered lookup with no aircraft says “관측된 항공기 없음”, not “API 미연결”', async () => {
+  mode = 'plane-none';
+  $('#number').value = 'KE9999';
+  $('#carrier').value = 'AIR';
+  submit();
+  await tick(120);
+
+  const accent = $('.bottom .panel-title .accent');
+  assert.ok($('#events .error-box'), 'the reason is still explained');
+  assert.equal(accent.textContent, '관측된 항공기 없음');
+  assert.ok(!accent.textContent.includes('API 미연결'), 'a 200 answer is not called a broken API');
+  assert.ok(fetched.some((u) => u.includes('api/plane?cs=KE9999')), 'the flight endpoint was asked');
+
+  $('#language').value = 'en';
+  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  assert.equal($('.bottom .panel-title .accent').textContent, 'No aircraft observed');
+  $('#language').value = 'ko';
+  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  mode = 'cj';
+});
+
+await test('flight: a failed aircraft feed still says “최종 갱신: API 미연결”', async () => {
+  mode = 'plane-fail';
+  $('#number').value = 'KE082';
+  $('#carrier').value = 'AIR';
+  submit();
+  await tick(120);
+
+  const accent = $('.bottom .panel-title .accent');
+  assert.ok($('#events .error-box'));
+  assert.equal(accent.textContent, '최종 갱신: API 미연결');
+  $('#language').value = 'en';
+  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  assert.equal($('.bottom .panel-title .accent').textContent, 'Last updated: API not connected');
+  $('#language').value = 'ko';
+  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  mode = 'cj';
 });
 
 await test('parcel: an overseas parcel on the move gets the freighter radar', async () => {

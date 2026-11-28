@@ -118,7 +118,8 @@ const strings = {
     airPieces: '조각', airWeight: '중량', airNoEvents: '아직 화물 스캔 기록이 없습니다. 예약만 접수된 상태일 수 있습니다.',
     airNote: 'AWB로 조회한 항공 화물입니다. 택배 송장이라면 배송사를 직접 선택해 주세요.',
     airStages: ['접수', '출발', '도착', '통관·통지', '배송 완료'],
-    flightLive: '실시간 항공기 위치', flightCoord: '관측 좌표', flightNoPlane: '지금 이 편명의 항공기가 관측되지 않습니다.'
+    flightLive: '실시간 항공기 위치', flightCoord: '관측 좌표', flightNoPlane: '지금 이 편명의 항공기가 관측되지 않습니다.',
+    noAircraft: '관측된 항공기 없음'
   },
   en: {
     dashboard: 'Track a parcel', shipments: 'How it works', demo: 'SAMPLE DATA', live: 'LIVE',
@@ -193,7 +194,8 @@ const strings = {
     airPieces: 'pieces', airWeight: 'weight', airNoEvents: 'No cargo scan records yet — the shipment may only be booked.',
     airNote: 'This is an air cargo AWB result. If you meant a parcel, pick its carrier instead.',
     airStages: ['Booked', 'Departed', 'Arrived', 'Customs / notice', 'Delivered'],
-    flightLive: 'Live aircraft position', flightCoord: 'Observed position', flightNoPlane: 'No aircraft with this flight number is being observed right now.'
+    flightLive: 'Live aircraft position', flightCoord: 'Observed position', flightNoPlane: 'No aircraft with this flight number is being observed right now.',
+    noAircraft: 'No aircraft observed'
   },
   ja: {
     dashboard: '荷物追跡', shipments: '使い方', demo: 'サンプル', live: 'リアルタイム',
@@ -268,7 +270,8 @@ const strings = {
     airPieces: '個数', airWeight: '重量', airNoEvents: '貨物スキャン記録はまだありません。予約のみの可能性があります。',
     airNote: 'AWBで照会した航空貨物です。宅配便の場合は配送会社を選択してください。',
     airStages: ['受付', '出発', '到着', '通関・通知', '配達完了'],
-    flightLive: 'リアルタイム航空機位置', flightCoord: '観測座標', flightNoPlane: 'この便名の航空機は現在観測されていません。'
+    flightLive: 'リアルタイム航空機位置', flightCoord: '観測座標', flightNoPlane: 'この便名の航空機は現在観測されていません。',
+    noAircraft: '観測された航空機なし'
   }
 };
 
@@ -1450,7 +1453,9 @@ function renderSteps() {
         ? s.international
         : s.domestic
     : state.error
-      ? s.notconnected
+      ? state.error.apiOk
+        ? s.noAircraft
+        : s.notconnected
       : s.idleBadge;
   accent.classList.toggle('done', Boolean(view && view.delivered));
 
@@ -1695,7 +1700,9 @@ async function lookupFlight(value, carrier) {
       return;
     }
     if (!payload.planes || !payload.planes.length) {
-      state.error = errorFor({ code: 'FLIGHT_NONE', hint: payload.message });
+      // 200 with zero aircraft is an answer, not a broken connection: mark it so the
+      // progress panel says “no aircraft observed” instead of “API not connected”.
+      state.error = { ...errorFor({ code: 'FLIGHT_NONE', hint: payload.message }), apiOk: true };
       state.number = value;
       state.carrier = 'AIR';
       return;
