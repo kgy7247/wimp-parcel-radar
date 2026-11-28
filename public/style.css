@@ -112,51 +112,6 @@ nav a:hover{color:var(--accent)}
 @media(max-width:1000px){.result-head{grid-template-columns:1fr 1fr}.result-time{grid-column:1 / -1;border-left:0;border-top:1px solid var(--line)}}
 @media(max-width:760px){.result-head{grid-template-columns:1fr}.result-cell{border-left:0;border-top:1px solid var(--line);padding:14px 18px}.result-cell:first-child{border-top:0}.result-head{margin-bottom:14px}.guide-teaser{padding:18px}.guide-teaser h2{font-size:16px}.guide-links a{font-size:11.5px;padding:6px 11px}}
 
-/* ---- Live aircraft radar (adsb.lol) + AWB / flight lookup — 2026-11 ---- */
-.radar{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:#0c131b;padding:12px 16px 11px;display:flex;flex-direction:column;gap:9px}
-.radar[hidden]{display:none}
-.radar-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:#c3d0dd}
-.radar-head b{font-size:12.5px;color:#e9f1fa;font-weight:600;letter-spacing:.2px}
-.radar-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px #b7f37318;animation:radar-pulse 2.4s ease-out infinite}
-@keyframes radar-pulse{0%{box-shadow:0 0 0 0 #b7f37340}70%{box-shadow:0 0 0 7px #b7f37300}100%{box-shadow:0 0 0 0 #b7f37300}}
-.radar-sub{color:#8592a2;font-size:11.5px}
-.radar-src{margin-left:auto;font-size:10px;color:#68788b;white-space:nowrap}
-.radar-list{display:flex;gap:8px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin}
-.radar-list::-webkit-scrollbar{height:5px}
-.radar-list::-webkit-scrollbar-thumb{background:#2b3642;border-radius:3px}
-.radar-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid #2b3947;background:#111b26;border-radius:6px;padding:7px 10px;font-size:11px;white-space:nowrap;color:#cfdae6;flex:none}
-.radar-chip:hover{border-color:#5c7893;color:#fff}
-.radar-chip.matched{border-color:#4c6b39;background:#131f16}
-.radar-chip .rc-cs{font-weight:600;letter-spacing:.4px;font-size:11.5px}
-.radar-chip .rc-op{color:var(--accent);font-size:10px;letter-spacing:.3px;text-transform:uppercase}
-.radar-chip.matched .rc-op{color:#cdf5b8}
-.radar-chip .rc-meta{color:#8695a6;font-size:10px;font-variant-numeric:tabular-nums}
-.radar-note{font-size:11px;color:#8592a2;line-height:1.7}
-.radar-note b{color:#c3d0dd;font-weight:500}
-.radar-updated{font-size:10px;color:#68788b;margin-left:auto;white-space:nowrap}
-.globe-plane{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:0;cursor:pointer;line-height:1}
-.globe-plane .plane-icon{display:inline-block;font-size:12px;color:#e7f1ff;text-shadow:0 0 5px #000,0 0 9px #0008;will-change:transform}
-.globe-plane.matched .plane-icon{font-size:15px;color:var(--accent);text-shadow:0 0 6px #000,0 0 10px #5b8d33}
-.globe-plane.ground .plane-icon{color:#9db0c4}
-.globe-plane .plane-tag{font:9px 'DM Sans','Noto Sans KR',sans-serif;color:#dbe7f4;background:#0b1525cc;border:1px solid #3e556b;border-radius:3px;padding:1px 4px;letter-spacing:.3px}
-.globe-plane.matched .plane-tag{border-color:#6f9550;color:#dff7c8}
-@media(max-width:760px){
-  .globe-plane .plane-tag{display:none}
-  .radar{padding:11px 13px}
-  /* ODbL attribution stays visible on every screen size — it wraps to its own line. */
-  .radar-src{flex-basis:100%;margin-left:0;font-size:9.5px}
-  .radar-sub{font-size:11px}
-}
-/* air-cargo result card: AWB / flight rows */
-.parcel .state.air{color:#9fc8ff}
-.air-facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.air-facts span{font-size:10.5px;color:#a9b8c8;border:1px solid #2c3a48;border-radius:4px;padding:3px 7px;background:#0f1822}
-.air-facts b{color:#e4eef9;font-weight:500}
-.bottom.is-hidden{display:none}
-
-.carrier-logo[data-carrier="AIR"]{background:#16334d;color:#bfe3ff;font-size:16px;font-style:normal}
-.parcel .state.air{color:#9fc8ff}
-
 @media(max-width:760px){.brand-caption{display:none}}
 
 @media(max-width:760px){

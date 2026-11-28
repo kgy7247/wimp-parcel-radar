@@ -100,13 +100,11 @@
     <tr><td>CJ대한통운, 우체국(과학기술정보통신부 우정사업본부), 한진택배, 롯데글로벌로지스</td><td>운송장 번호</td><td>국내 배송 현황 조회(택배사 공개 조회 페이지)</td></tr>
     <tr><td>DHL (DHL Express Track API)</td><td>운송장 번호</td><td>DHL 배송 현황 조회</td></tr>
     <tr><td>lastscanned.com</td><td>운송장 번호, 택배사 구분</td><td>로젠·일양·FedEx·UPS·USPS·Cainiao·EMS 등 전 세계 550여 개 택배사의 조회를 중계</td></tr>
-    <tr><td>아시아나항공(asianacargo.com), 대한항공(cargo.koreanair.com)</td><td>항공 화물운송장(AWB) 번호 11자리</td><td>항공 화물 운송 현황 조회(항공사 공개 조회 화면)</td></tr>
-    <tr><td>adsb.lol</td><td>조회 좌표와 편명(운송장·AWB 번호는 전송하지 않음)</td><td>실시간 항공기 위치 표시(ODbL 1.0 공개 데이터)</td></tr>
     <tr><td>OpenStreetMap Foundation (Nominatim)</td><td>도시·지역 이름만</td><td>스캔 지명을 지구본 좌표로 변환(운송장 번호·이용자 식별값은 전송하지 않음)</td></tr>
     <tr><td>Vercel Inc.</td><td>접속 로그</td><td>웹사이트 호스팅 및 CDN 캐시</td></tr>
     <tr><td>Vercel Inc. (Web Analytics)</td><td>방문 페이지, 유입 경로, 국가·기기·브라우저 정보</td><td>익명 방문 통계 집계(쿠키 미사용, 운송장 번호 전송 없음)</td></tr>
   </table>
-  <p>해외 사업자에게 전송되는 값은 운송장 번호(및 지명)뿐이며, 이는 이용자가 조회를 요청한 순간에만 발생합니다. 항공 화물 조회에서 항공사가 내려주는 화주·수하인 이름·주소·연락처 필드는 서비스가 읽지 않고 응답에서 제외합니다. 실시간 항공기 위치는 좌표·편명만으로 조회되며, 이용자의 운송장·AWB 번호는 adsb.lol로 전송되지 않습니다.</p>
+  <p>해외 사업자에게 전송되는 값은 운송장 번호(및 지명)뿐이며, 이는 이용자가 조회를 요청한 순간에만 발생합니다. 방문 통계에는 운송장 번호가 포함되지 않습니다.</p>
 
   <h2>3. 쿠키 및 광고</h2>
   <p>서비스 자체는 쿠키를 만들지 않습니다. 방문 통계(Vercel Web Analytics)도 쿠키를 사용하지 않습니다. 다만 서비스에 Google AdSense 광고가 게재되는 경우, Google 및 그 파트너가 쿠키 또는 유사 기술을 사용해 이용자의 관심에 기반한 광고를 표시하거나 광고 빈도를 조절할 수 있습니다. 이 쿠키는 서비스가 아니라 광고 사업자가 설정하는 것입니다.</p>
@@ -136,7 +134,7 @@
 
   <h1 style="font-size:19px">Privacy Policy (English summary)</h1>
   <p>WIMP looks up parcel tracking numbers on the carrier's public tracking pages and through the lastscanned.com aggregation API. <strong>We do not store your tracking number or the results on our server.</strong> The number is used only to perform the lookup, and a response is held in server memory for at most 15 minutes as a cache (up to 400 entries per instance) before it expires. Vercel's CDN may cache a response for up to 60 seconds.</p>
-  <p>The tracking number is sent to the relevant carrier (CJ Logistics, Korea Post, Hanjin, Lotte Global Logistics, DHL), and to lastscanned.com for the other 550+ carriers; city names alone are sent to OpenStreetMap Nominatim to resolve map coordinates. For air cargo, an AWB number goes only to the airline (Asiana Cargo or Korean Air Cargo), and shipper/consignee fields returned by the airline are dropped. Live aircraft positions are requested with coordinates and flight callsigns only — never with a tracking or AWB number — from adsb.lol (ODbL 1.0). Hosting logs (IP address, user agent, timestamp) are processed by Vercel Inc. under its standard log policy.</p>
+  <p>The tracking number is sent to the relevant carrier (CJ Logistics, Korea Post, Hanjin, Lotte Global Logistics, DHL), and to lastscanned.com for the other 550+ carriers; city names alone are sent to OpenStreetMap Nominatim to resolve map coordinates. Hosting logs (IP address, user agent, timestamp) are processed by Vercel Inc. under its standard log policy.</p>
   <p>Anonymous visit statistics (page, referrer, country, device and browser type) are collected with Vercel Web Analytics, which sets no cookies and does not store personal data or an IP address; your tracking number is never part of it. The service sets no cookies of its own and uses no local storage: the number you type lives in page memory only and disappears when you reload or close the tab. If third-party advertising (Google AdSense) is displayed, the ad provider may set cookies — you can opt out at <a href="https://adssettings.google.com" target="_blank" rel="noopener">adssettings.google.com</a>.</p>
   <p>Contact: <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub issues</a>. Usage guide (Korean): <a href="guide.html">guide.html</a>.</p>
 

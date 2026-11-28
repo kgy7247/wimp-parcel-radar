@@ -7,14 +7,6 @@
     "api/track.js": {
       "maxDuration": 10,
       "memory": 1024
-    },
-    "api/plane.js": {
-      "maxDuration": 10,
-      "memory": 512
-    },
-    "api/awb.js": {
-      "maxDuration": 10,
-      "memory": 512
     }
   },
   "headers": [

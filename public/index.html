@@ -80,7 +80,6 @@
       <option value="CAINIAO" data-i="carrierCAINIAO">알리익스프레스 (Cainiao)</option>
       <option value="EMS" data-i="carrierEMS">우체국 EMS / 국제</option>
       <option value="GLOBAL" data-i="carrierGLOBAL">기타 글로벌 (550+ 자동)</option>
-      <option value="AIR" data-i="carrierAIR">항공 화물 / 편명 (AWB · Flight)</option>
     </select>
     <button class="primary" type="submit" data-i="track">어디 있지?</button>
   </form>
@@ -131,16 +130,6 @@
       <div id="events"></div>
       <div class="history-bottom"><span data-i="historyFoot">최신 스캔이 가장 위에 표시됩니다</span><button id="refresh" aria-label="Refresh" data-i-aria="again">⟳</button></div>
     </aside>
-
-    <div class="radar" id="radar" hidden aria-live="polite">
-      <div class="radar-head">
-        <span class="radar-dot" aria-hidden="true"></span>
-        <b id="radar-title" data-i="radarTitle">실시간 운항 화물기 레이더</b>
-        <span class="radar-sub" id="radar-sub" data-i="radarSub">해당 구간 운항 중인 실제 항공기</span>
-        <span class="radar-src" data-i="radarSrc" dir="auto">항공기 위치 © adsb.lol · ODbL 1.0</span>
-      </div>
-      <div class="radar-list" id="radar-list"></div>
-    </div>
   </div>
 
   <section class="bottom">
@@ -170,7 +159,6 @@
       <a href="guide.html#not-found" data-i="guideNotFound">송장번호가 조회되지 않는 5가지 이유</a>
       <a href="guide.html#route" data-i="guideRoute">해외배송 경유지 이해하기</a>
       <a href="guide.html#edd" data-i="guideEdd">도착 예정일은 어떻게 계산되나</a>
-      <a href="guide.html#aircargo" data-i="guideAir">화물기 레이더·항공 AWB 조회</a>
       <a href="guide.html#faq" data-i="guideFaq">자주 묻는 질문</a>
     </div>
   </section>
