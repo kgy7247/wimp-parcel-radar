@@ -65,7 +65,7 @@
   .guide .en h2,.guide .ja h2{margin-top:34px}
   .guide .cta{display:inline-block;margin:22px 0 0;background:var(--accent);color:#182310;border-radius:6px;padding:13px 22px;font-weight:700;text-decoration:none;font-size:13.5px}
   .guide .cta:hover{background:#ccff91;color:#000}
-  .lang-notice{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid #2c3a48;background:#101923;border-radius:8px;padding:10px 13px;margin:0 0 18px;font-size:12px;color:#a9b8c8;line-height:1.65}
+  .lang-notice{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid #2c3a48;background:#101923;border-radius:8px;padding:10px 13px;margin:0 0 20px;font-size:12px;color:#a9b8c8;line-height:1.65}
   .lang-notice[hidden]{display:none}
   .lang-notice a{color:var(--accent);text-decoration:none;white-space:nowrap}
   @media(max-width:760px){header{gap:10px}header .brand-caption{display:none}header .guide-cta{font-size:12px;padding:9px 12px}.guide{padding:24px 4% 60px}.guide h1{font-size:22px}.guide h2{font-size:17px;margin-top:38px}.guide table{font-size:11.5px}.guide th,.guide td{padding:7px 8px}}
@@ -155,9 +155,6 @@
 </header>
 
 <main class="guide">
-  <div class="lang-notice" id="lang-notice" hidden>
-    <span id="lang-notice-text"></span><a id="lang-notice-link" hidden></a>
-  </div>
   <div class="top">
     <a class="home" href="./">◉ WIMP <span class="muted">/ parcel tracker</span></a>
     <span>
@@ -165,6 +162,10 @@
       <a class="back" href="privacy.html">개인정보처리방침</a>
       <a class="back" href="terms.html">이용약관</a>
     </span>
+  </div>
+
+  <div class="lang-notice" id="lang-notice" hidden>
+    <span id="lang-notice-text"></span><a id="lang-notice-link" hidden></a>
   </div>
 
   <span class="eyebrow">HOW WIMP WORKS</span>
