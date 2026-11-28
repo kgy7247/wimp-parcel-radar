@@ -222,6 +222,23 @@ node --check api/track.js && node --check public/app.js
 npx vercel dev
 ```
 
+### 다국어(19개 언어)
+
+UI 문구는 `i18n-src/<코드>.json` 에 언어별로 들어 있고, `npm run i18n` 이 이를 합쳐
+`public/i18n.js` 를 만듭니다(생성 파일은 커밋합니다).
+
+```bash
+npm run i18n          # i18n-src/*.json → public/i18n.js
+npm run i18n:check    # 생성 파일이 최신인지 확인 (테스트에 포함)
+```
+
+- 지원 언어: ko · en · ja · zh-CN · zh-TW · es · fr · de · pt · it · ru · ar(RTL) · vi · th · id · hi · tr · nl · pl
+- 언어 결정 순서: URL `?lang=<코드>` → `navigator.languages` → `en`. 브라우저 저장소는 쓰지 않습니다
+  (선택한 언어는 주소의 `?lang=` 에만 남고, `privacy.html` 의 "저장 없음" 원칙과 같습니다).
+- 번역을 추가할 때: `i18n-src/` 에 파일을 넣고 `_meta.json` 의 `order` 에 한 줄 추가한 뒤 `npm run i18n`.
+  키가 하나라도 비면 빌드가 실패하므로 미번역 키가 화면에 나오지 않습니다.
+- 캐리어·항공사·공항 이름은 한국어 표와 로마자 표를 함께 쓰며, 한국어 이외 언어에서는 로마자 표기가 나옵니다.
+
 `api/track.js` 는 `req.query` / `res.statusCode`·`setHeader`·`end` 만 쓰는 순수 Node 핸들러라 Vercel 없이도 테스트할 수 있습니다.
 
 ---
@@ -238,7 +255,8 @@ npx vercel dev
 │   └── air-cargo.js        # 항공사·공항·콜사인 공용 표
 ├── public/
 │   ├── index.html          # 화면 + SEO/OG/JSON-LD 메타
-│   ├── app.js              # UI·3D 지구본·API 연동 (ko/en/ja)
+│   ├── app.js              # UI·3D 지구본·API 연동 (언어 선택·이름 현지화)
+│   ├── i18n.js             # 언어팩 (i18n-src 에서 생성, 19개 언어)
 │   ├── style.css           # 원본 디자인 유지 + 로딩·에러·법적 링크 스타일
 │   ├── globe.min.js        # globe.gl 2.46.2 (MIT)
 │   ├── earth.jpg           # NASA Earth imagery
@@ -247,6 +265,9 @@ npx vercel dev
 │   ├── terms.html          # 이용약관
 │   ├── robots.txt
 │   └── sitemap.xml
+├── i18n-src/               # 언어별 UI 사전 (원본) + _meta.json (순서·현지어명·로캘)
+├── scripts/
+│   └── build-i18n.mjs      # 사전 → public/i18n.js 빌드·검증
 ├── test/
 │   ├── unit.mjs            # 픽스처 기반 단위 테스트
 │   ├── ui.mjs              # jsdom UI 테스트 (링크·화면 순서·AWB/레이더·콘텐츠 페이지)

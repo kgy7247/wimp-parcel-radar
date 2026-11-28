@@ -162,3 +162,35 @@ nav a:hover{color:var(--accent)}
 @media(max-width:760px){
   #marker-info{font-size:11px;line-height:1.6;max-width:calc(100% - 96px);padding:9px 12px;top:76px;left:16px}
 }
+
+/* ---- Language dropdown (19 languages, 2026-11) ----
+   A panel anchored to the header button: it scrolls on its own so 19 rows
+   never run off the screen, and it is right-aligned in LTR / left-aligned
+   in RTL through inset-inline-end. */
+body{font-family:'DM Sans','Noto Sans KR','Noto Sans JP','Noto Sans SC','Noto Sans TC','Noto Sans Thai','Noto Sans Devanagari','Noto Sans Arabic',system-ui,-apple-system,'Segoe UI',sans-serif}
+.lang{position:relative}
+.lang-button{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;background:#111923;color:var(--text);padding:9px 11px;font-size:13px;line-height:1;white-space:nowrap}
+.lang-button:hover{border-color:#3b4a58;color:var(--text)}
+.lang-globe{color:var(--accent);font-size:14px;line-height:1}
+.lang-current{max-width:118px;overflow:hidden;text-overflow:ellipsis}
+.lang-caret{color:#8b98a8;font-size:9px;transition:transform .16s}
+.lang.open .lang-caret{transform:rotate(180deg)}
+.lang-menu{position:absolute;z-index:70;inset-inline-end:0;top:calc(100% + 10px);width:min(286px,calc(100vw - 28px));max-height:min(64vh,420px);overflow-y:auto;overscroll-behavior:contain;background:#0e151e;border:1px solid #2b3745;border-radius:11px;padding:8px;box-shadow:0 22px 48px #000000b8}
+.lang-menu[hidden]{display:none}
+.lang-menu-title{margin:4px 8px 8px;font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:#6f7f90}
+.lang-list{display:grid;gap:2px}
+.lang-option{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;text-align:start;padding:9px 10px;border-radius:7px;font-size:13px;color:#cfdae5}
+.lang-option:hover,.lang-option:focus-visible{background:#17222d;color:#fff;outline:none}
+.lang-option:focus-visible{box-shadow:inset 0 0 0 1px #4a6136}
+.lang-option.active{background:#1b2a1c;color:var(--accent)}
+.lang-native{white-space:nowrap}
+.lang-english{font-size:10.5px;color:#6f7f90;white-space:nowrap}
+.lang-option.active .lang-english{color:#8fbf74}
+.lang-menu::-webkit-scrollbar{width:8px}
+.lang-menu::-webkit-scrollbar-thumb{background:#2b3642;border-radius:4px}
+@media(max-width:760px){
+  .lang-button{padding:7px 9px;font-size:12px;gap:6px}
+  .lang-current{max-width:82px}
+  .lang-menu{width:min(300px,calc(100vw - 24px));max-height:min(70vh,430px)}
+  .lang-option{padding:11px 9px}
+}

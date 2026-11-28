@@ -65,6 +65,9 @@
   .guide .en h2,.guide .ja h2{margin-top:34px}
   .guide .cta{display:inline-block;margin:22px 0 0;background:var(--accent);color:#182310;border-radius:6px;padding:13px 22px;font-weight:700;text-decoration:none;font-size:13.5px}
   .guide .cta:hover{background:#ccff91;color:#000}
+  .lang-notice{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid #2c3a48;background:#101923;border-radius:8px;padding:10px 13px;margin:0 0 18px;font-size:12px;color:#a9b8c8;line-height:1.65}
+  .lang-notice[hidden]{display:none}
+  .lang-notice a{color:var(--accent);text-decoration:none;white-space:nowrap}
   @media(max-width:760px){header{gap:10px}header .brand-caption{display:none}header .guide-cta{font-size:12px;padding:9px 12px}.guide{padding:24px 4% 60px}.guide h1{font-size:22px}.guide h2{font-size:17px;margin-top:38px}.guide table{font-size:11.5px}.guide th,.guide td{padding:7px 8px}}
 </style>
 <script type="application/ld+json">
@@ -152,6 +155,9 @@
 </header>
 
 <main class="guide">
+  <div class="lang-notice" id="lang-notice" hidden>
+    <span id="lang-notice-text"></span><a id="lang-notice-link" hidden></a>
+  </div>
   <div class="top">
     <a class="home" href="./">◉ WIMP <span class="muted">/ parcel tracker</span></a>
     <span>
@@ -402,7 +408,7 @@
     <p>If a number returns nothing: check for O/0 and I/1 mix-ups, pick the carrier manually for 11–12 digit Korean numbers, and remember that an international parcel can go several days without a new scan between the origin flight and import clearance. WIMP does not store tracking numbers; a result is kept in server memory for at most 15 minutes.</p>
   </section>
 
-  <section class="ja" lang="ja">
+  <section class="ja" lang="ja" id="japanese">
     <h2>日本語メモ — 追跡番号が照会できないとき</h2>
     <p>ハイフンや空白は自動で除去されますが、文字の取り違え（0とO、1とI）は自動では直りません。韓国の11〜12桁の番号は複数の配送会社が同じ桁数を使うため、配送会社を手動で選ぶと確実です。海外配送は出発国のスキャンと輸入通関の間に数日間の空白ができることがあり、これは通常の状態です。WIMPは追跡番号を保存せず、照会結果はサーバーのメモリに最大15分だけ保持します。</p>
   </section>
@@ -414,5 +420,67 @@
     <a href="https://github.com/kgy7247/wimp-parcel-radar" target="_blank" rel="noopener">GitHub</a>
   </p>
 </main>
+<script>
+/* The guide itself is Korean, with English and Japanese summaries at the end.
+   When the reader arrived from a non-Korean UI (?lang=es, or a German browser)
+   say so in their language and link straight to the summary when there is one. */
+(function () {
+  var NOTICE = {
+    en: 'This guide is written in Korean, with shorter English and Japanese versions at the bottom of the page.',
+    ja: 'このガイドは韓国語で書かれています。ページ下部に英語・日本語の要約があります。',
+    'zh-CN': '本说明以韩语撰写，页面底部有英语和日语摘要。',
+    'zh-TW': '本說明以韓語撰寫，頁面底部有英語與日語摘要。',
+    es: 'Esta guía está escrita en coreano; al final de la página hay resúmenes en inglés y japonés.',
+    fr: 'Ce guide est rédigé en coréen ; des résumés en anglais et en japonais figurent en bas de page.',
+    de: 'Dieser Ratgeber ist auf Koreanisch verfasst; unten auf der Seite stehen Zusammenfassungen auf Englisch und Japanisch.',
+    pt: 'Este guia está escrito em coreano; no fim da página há resumos em inglês e japonês.',
+    it: 'Questa guida è scritta in coreano; in fondo alla pagina ci sono riassunti in inglese e giapponese.',
+    ru: 'Эта справка написана на корейском; внизу страницы есть краткие версии на английском и японском.',
+    ar: 'هذا الدليل مكتوب بالكورية، وفي أسفل الصفحة ملخّصان بالإنجليزية واليابانية.',
+    vi: 'Hướng dẫn này viết bằng tiếng Hàn; cuối trang có bản tóm tắt tiếng Anh và tiếng Nhật.',
+    th: 'คู่มือนี้เขียนเป็นภาษาเกาหลี ท้ายหน้ามีสรุปภาษาอังกฤษและภาษาญี่ปุ่น',
+    id: 'Panduan ini ditulis dalam bahasa Korea; di bagian bawah halaman ada ringkasan bahasa Inggris dan Jepang.',
+    hi: 'यह गाइड कोरियन में लिखी है; पेज के नीचे अंग्रेज़ी और जापानी सारांश हैं।',
+    tr: 'Bu rehber Korece yazılmıştır; sayfanın altında İngilizce ve Japonca özetler bulunur.',
+    nl: 'Deze gids is in het Koreaans geschreven; onderaan de pagina staan samenvattingen in het Engels en Japans.',
+    pl: 'Ten poradnik jest napisany po koreańsku; na dole strony są streszczenia po angielsku i japońsku.'
+  };
+  var NATIVE = { en: 'English', ja: '日本語' };
+  var ALIAS = { zh: 'zh-CN', 'zh-hans': 'zh-CN', 'zh-sg': 'zh-CN', 'zh-hant': 'zh-TW', 'zh-hk': 'zh-TW', 'zh-mo': 'zh-TW', 'pt-br': 'pt', 'pt-pt': 'pt' };
+  function match(tag) {
+    var raw = String(tag || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (NOTICE[raw.toLowerCase()]) return Object.keys(NOTICE).filter(function (k) { return k.toLowerCase() === raw; })[0];
+    var parts = raw.split('-');
+    for (var i = parts.length; i > 0; i -= 1) {
+      var prefix = parts.slice(0, i).join('-');
+      if (ALIAS[prefix]) return ALIAS[prefix];
+      var hit = Object.keys(NOTICE).filter(function (k) { return k.toLowerCase() === prefix; })[0];
+      if (hit) return hit;
+    }
+    return '';
+  }
+  var query = '';
+  try { query = new URLSearchParams(window.location.search).get('lang') || ''; } catch (err) { /* no URL API */ }
+  var code = match(query) || match(navigator.language) || '';
+  if (!code) return;
+  var box = document.getElementById('lang-notice');
+  var text = document.getElementById('lang-notice-text');
+  if (!box || !text) return;
+  text.textContent = NOTICE[code];
+  text.lang = code;
+  box.lang = code;
+  box.dir = code === 'ar' ? 'rtl' : 'ltr';
+  var anchor = code === 'en' ? 'english' : code === 'ja' ? 'japanese' : '';
+  var link = document.getElementById('lang-notice-link');
+  if (anchor && link) {
+    link.href = '#' + anchor;
+    link.textContent = NATIVE[code] + ' ↓';
+    link.lang = code;
+    link.hidden = false;
+  }
+  box.hidden = false;
+})();
+</script>
 </body>
 </html>

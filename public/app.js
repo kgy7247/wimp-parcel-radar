@@ -44,243 +44,92 @@ function sanitizeField(el) {
  * Language
  * ------------------------------------------------------------------ */
 
-const strings = {
-  ko: {
-    dashboard: '배송 조회', shipments: '이용 안내', demo: '예시 데이터', live: '실시간 조회',
-    title: '내 택배, 지금 어디쯤?', subtitle: '송장번호 하나로 만나는, 내 배송의 여정.', scan: '물류 스캔 기반 추적',
-    track: '어디 있지?', loading: '배송 조회 중…', my: '조회 결과', local: '저장하지 않는 일회성 조회', notify: '조회 안내',
-    journey: '배송 여정', satellite: '3D 위성 지구본', last: '마지막 확인 위치', confirmed: '확인된 경로', planned: '예정 경로',
-    drag: '드래그하여 회전 · 스크롤하여 확대', history: '배송 이력', newest: '최신순', transit: '이동 중',
-    historyNote: '제공된 경로 기반 예시 · 스캔 시각 미확인', notconnected: '최종 갱신: API 미연결',
-    progress: '배송 진행 상황', international: '국제 운송 중', domestic: '국내 배송 중',
-    notice: '인천 사전 통관 정보는 실제 도착을 의미하지 않습니다.', route: '국가별 이동 경로',
-    footer: 'GPS 실시간 위치가 아닌 배송사 스캔 위치입니다.', settings: '글로벌 설정',
-    settingNote: '화면 설정과 자동 갱신만 다루는 창입니다. 송장번호와 조회 결과는 저장하지 않습니다.',
-    auto: '자동 갱신',
-    apiNote: '실시간 조회는 택배사가 남긴 스캔 정보를 그대로 보여줍니다. 조회 결과는 15분 동안 캐시됩니다.',
-    privacy: '새로고침하거나 창을 닫으면 입력한 정보가 사라집니다.',
-    placeholder: '송장번호를 입력하세요', detect: '배송사 자동 인식', waiting: '배송사 선택 대기',
-    edd: '도착 예정',
-    carrierAuto: '배송사 자동 인식', carrierCJ: 'CJ대한통운', carrierEPOST: '우체국택배', carrierHANJIN: '한진택배', carrierLOTTE: '롯데택배',
-    carrierLOGEN: '로젠택배', carrierILYANG: '일양택배', carrierDHL: 'DHL', carrierFEDEX: 'FedEx', carrierUPS: 'UPS', carrierUSPS: 'USPS',
-    carrierCAINIAO: '알리익스프레스 (Cainiao)', carrierEMS: '우체국 EMS / 국제', carrierGLOBAL: '기타 글로벌 (550+ 자동)',
-    stages: ['접수', '집하', '국제 운송', '배송 출발', '배송 완료'],
-    stagesDomestic: ['접수', '집하', '이동 중', '배송 출발', '배달 완료'],
-    sampleEvents: [
-      { title: '출발지 확인', note: '출발지', place: 'Sofia, Bulgaria' },
-      { title: '경유지 확인', note: '마지막 확인 위치', place: 'Leipzig, Germany' },
-      { title: '사전 통관 정보 접수', note: '실제 도착 아님', place: 'Incheon, South Korea' }
-    ],
-    status: { DELIVERED: '배달 완료', OUT_FOR_DELIVERY: '배송 출발', IN_TRANSIT: '이동 중', PICKED_UP: '집하', REGISTERED: '접수', EXCEPTION: '예외', RETURNED: '반송', UNKNOWN: '확인 중', ARRIVED: '도착', CUSTOMS: '통관·수령 통지', IN_FLIGHT: '운항 중', GROUND: '지상' },
-    errors: {
-      NOT_FOUND: '조회된 배송 정보가 없습니다.', NEEDS_KEY: '해외 택배사 조회 키(LASTSCANNED_API_KEY)가 필요합니다.', UNSUPPORTED: '아직 지원하지 않는 택배사입니다.',
-      UPSTREAM: '택배사 조회 서버가 응답하지 않습니다.', BAD_REQUEST: '송장번호를 다시 확인해 주세요.', NETWORK: '네트워크에 연결하지 못했습니다.',
-      RATE_LIMITED: '택배사 조회 한도에 잠시 도달했습니다.',
-      AWB_NOT_FOUND: '항공 화물 조회 결과가 없습니다.', AIRLINE_BLOCKED: '항공사가 자동 조회를 잠시 막고 있습니다.',
-      AWB_UNSUPPORTED: '아직 지원하지 않는 항공사 AWB입니다.', IS_FLIGHT: 'AWB가 아니라 편명입니다.',
-      AIR_BAD_INPUT: 'AWB(11자리) 또는 편명(KE082)을 입력해 주세요.', FLIGHT_NONE: '이 편명의 항공기가 관측되지 않습니다.'
-    },
-    hints: {
-      NOT_FOUND: '송장번호와 자릿수를 확인하거나, 택배사가 아직 상품을 인수하지 않았을 수 있습니다.',
-      NEEDS_KEY: 'lastscanned.com 키를 Vercel의 LASTSCANNED_API_KEY에 넣으면 로젠·FedEx·UPS·USPS·Cainiao·EMS 등 551개 택배사가 켜집니다.',
-      UNSUPPORTED: '현재 지원: CJ대한통운 · 우체국택배 · 한진택배 · 롯데택배 · 로젠택배 · DHL · FedEx · UPS · USPS · Cainiao · EMS + 전 세계 550개 이상',
-      UPSTREAM: '잠시 후 다시 시도하거나 택배사 사이트에서 직접 확인해 주세요.',
-      BAD_REQUEST: '하이픈·공백·특수문자는 자동으로 정리됩니다.',
-      NETWORK: '연결 상태를 확인하고 다시 시도해 주세요.',
-      RATE_LIMITED: '1분 뒤 다시 시도해 주세요.',
-      AWB_NOT_FOUND: 'AWB 번호를 다시 확인해 주세요. 택배 송장이라면 배송사를 직접 선택하면 택배로 조회됩니다.',
-      AIRLINE_BLOCKED: '대한항공은 서버 자동 조회에 세션 확인을 요구합니다. 아래 링크에서 AWB를 직접 조회하거나 아시아나(988) · 편명 조회를 이용해 주세요.',
-      AWB_UNSUPPORTED: '지금은 아시아나(988)와 대한항공(180) 화물 AWB만 조회됩니다.',
-      IS_FLIGHT: '편명은 검색창에 그대로 입력하면 지구본에 항공기 위치가 표시됩니다.',
-      AIR_BAD_INPUT: '예) 988-12345675 (아시아나) · 180-12345675 (대한항공) · KE082',
-      FLIGHT_NONE: '지상에 있거나 레이더 범위 밖일 수 있습니다. 편명을 확인하거나 잠시 후 다시 시도해 주세요.'
-    },
-    openSite: '택배사 사이트에서 보기', again: '다시 조회', empty: '송장번호를 입력하면 배송 이력이 표시됩니다.',
-    idle: '송장번호를 입력하면 배송 여정이 여기에 표시됩니다.', idleBadge: '대기',
-    updated: '최종 갱신', events: '건', sampleNote: '예시 데이터 · 실제 조회가 아닙니다', liveNote: '택배사 스캔 기준',
-    privacyLink: '개인정보처리방침', termsLink: '이용약관', noKey: 'DHL 키 없이 예시로 보기', routeDomestic: '국내 이동 경로', notYet: '조회 전',
-    currentStatus: '현재 배송 상태', lastScan: '마지막 스캔', noTime: '스캔 시각 미확인', historyFoot: '최신 스캔이 가장 위에 표시됩니다',
-    openGuide: '이용 안내 · 조회 방법과 오류 해결 보기 →',
-    guideTitle: '배송 상태가 헷갈릴 때',
-    guideLead: '“통관 중”이 멈췄는지, 송장번호가 왜 조회되지 않는지 — 해외배송 스캔 문구의 뜻과 해결법을 한 페이지에 정리했습니다.',
-    guideAll: '이용 안내 전체 보기 →', guideStatus: 'DHL·FedEx·UPS·알리 배송 상태 뜻',
-    guideNotFound: '송장번호가 조회되지 않는 5가지 이유', guideRoute: '해외배송 경유지 이해하기',
-    guideEdd: '도착 예정일은 어떻게 계산되나', guideFaq: '자주 묻는 질문',
-    guideAir: '화물기 레이더·항공 AWB 조회',
-    carrierAIR: '항공 화물 / 편명 (AWB · Flight)',
-    radarTitle: '실시간 운항 화물기 레이더', radarSub: '해당 구간 운항 중인 실제 항공기',
-    radarFlight: '실시간 항공기 위치', radarFlightSub: '입력한 편명의 실제 항공기',
-    radarNone: '지금 이 구간에서 관측된 화물기가 없습니다.',
-    radarNoCarrier: '해당 택배사 화물기는 관측되지 않아 인근 화물기를 표시합니다.',
-    radarUpdated: '갱신', radarError: '항공기 위치를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-    radarGround: '지상', radarAlt: '고도', radarSpeed: '속도', radarSeen: '초 전', radarNow: '방금',
-    airAwb: '항공 화물 AWB', airFlight: '편명', airFlights: '운항 편명', airRoute: '구간',
-    airPieces: '조각', airWeight: '중량', airNoEvents: '아직 화물 스캔 기록이 없습니다. 예약만 접수된 상태일 수 있습니다.',
-    airNote: 'AWB로 조회한 항공 화물입니다. 택배 송장이라면 배송사를 직접 선택해 주세요.',
-    airStages: ['접수', '출발', '도착', '통관·통지', '배송 완료'],
-    flightLive: '실시간 항공기 위치', flightCoord: '관측 좌표', flightNoPlane: '지금 이 편명의 항공기가 관측되지 않습니다.',
-    noAircraft: '관측된 항공기 없음'
-  },
-  en: {
-    dashboard: 'Track a parcel', shipments: 'How it works', demo: 'SAMPLE DATA', live: 'LIVE',
-    title: 'Where is my parcel?', subtitle: 'One tracking number. A whole journey, in view.', scan: 'Carrier scan tracking',
-    track: 'Find my parcel', loading: 'Looking it up…', my: 'Tracking result', local: 'One-time lookup · nothing saved', notify: 'About tracking',
-    journey: 'The journey', satellite: '3D satellite globe', last: 'LAST CONFIRMED LOCATION', confirmed: 'Confirmed route', planned: 'Planned route',
-    drag: 'Drag to rotate · Scroll to zoom', history: 'Tracking history', newest: 'Newest first', transit: 'In transit',
-    historyNote: 'Illustrative route · scan times unavailable', notconnected: 'Last updated: API not connected',
-    progress: 'Delivery progress', international: 'International transit', domestic: 'Domestic delivery',
-    notice: 'Pre-clearance in Incheon does not mean the parcel has arrived.', route: 'Across borders',
-    footer: 'Locations reflect carrier scans, not live GPS.', settings: 'Global settings',
-    settingNote: 'This window only holds display settings and auto-refresh. Tracking numbers and results are not saved.',
-    auto: 'Auto refresh',
-    apiNote: 'Live results show the scans your carrier recorded. Each lookup is cached for 15 minutes.',
-    privacy: 'Refreshing or closing this page clears your input.',
-    placeholder: 'Enter your tracking number', detect: 'Detect carrier', waiting: 'Waiting for a carrier',
-    edd: 'Est. delivery',
-    carrierAuto: 'Detect carrier', carrierCJ: 'CJ Logistics', carrierEPOST: 'Korea Post', carrierHANJIN: 'Hanjin', carrierLOTTE: 'Lotte',
-    carrierLOGEN: 'Logen', carrierILYANG: 'Ilyang', carrierDHL: 'DHL', carrierFEDEX: 'FedEx', carrierUPS: 'UPS', carrierUSPS: 'USPS',
-    carrierCAINIAO: 'AliExpress (Cainiao)', carrierEMS: 'Korea Post EMS / Intl', carrierGLOBAL: 'Other global (550+ auto)',
-    stages: ['Registered', 'Collected', 'In transit', 'Out for delivery', 'Delivered'],
-    stagesDomestic: ['Registered', 'Collected', 'In transit', 'Out for delivery', 'Delivered'],
-    sampleEvents: [
-      { title: 'Origin confirmed', note: 'Origin', place: 'Sofia, Bulgaria' },
-      { title: 'Transit location confirmed', note: 'Last confirmed location', place: 'Leipzig, Germany' },
-      { title: 'Pre-clearance information received', note: 'Not an arrival scan', place: 'Incheon, South Korea' }
-    ],
-    status: { DELIVERED: 'Delivered', OUT_FOR_DELIVERY: 'Out for delivery', IN_TRANSIT: 'In transit', PICKED_UP: 'Collected', REGISTERED: 'Registered', EXCEPTION: 'Exception', RETURNED: 'Returned', UNKNOWN: 'Checking', ARRIVED: 'Arrived', CUSTOMS: 'Customs / notice', IN_FLIGHT: 'In flight', GROUND: 'On ground' },
-    errors: {
-      NOT_FOUND: 'No tracking information found.', NEEDS_KEY: 'A LASTSCANNED_API_KEY is required for overseas carriers.', UNSUPPORTED: 'This carrier is not supported yet.',
-      UPSTREAM: 'The carrier server did not respond.', BAD_REQUEST: 'Please check the tracking number.', NETWORK: 'Could not reach the server.',
-      RATE_LIMITED: 'The carrier asked us to slow down for a moment.',
-      AWB_NOT_FOUND: 'No air cargo record found for this AWB.', AIRLINE_BLOCKED: 'The airline is temporarily blocking automated lookups.',
-      AWB_UNSUPPORTED: 'This airline AWB is not supported yet.', IS_FLIGHT: 'That is a flight number, not an AWB.',
-      AIR_BAD_INPUT: 'Enter an AWB (11 digits) or a flight number (KE082).', FLIGHT_NONE: 'No aircraft with this flight number is being observed.'
-    },
-    hints: {
-      NOT_FOUND: 'Check the number and its length — the carrier may not have collected the parcel yet.',
-      NEEDS_KEY: 'Add a lastscanned.com key as LASTSCANNED_API_KEY on Vercel to unlock Logen, FedEx, UPS, USPS, Cainiao, EMS and 551 carriers.',
-      UNSUPPORTED: 'Supported: CJ Logistics · Korea Post · Hanjin · Lotte · Logen · DHL · FedEx · UPS · USPS · Cainiao · EMS + 550 more worldwide',
-      UPSTREAM: 'Try again shortly, or check the carrier site directly.',
-      BAD_REQUEST: 'Hyphens, spaces and symbols are removed automatically.',
-      NETWORK: 'Check your connection and try again.',
-      RATE_LIMITED: 'Try again in a minute.',
-      AWB_NOT_FOUND: 'Check the AWB number. If this was a parcel number, pick its carrier and it will be looked up as a parcel.',
-      AIRLINE_BLOCKED: 'Korean Air requires a browser session for its cargo lookup. Open the airline link below, or try Asiana (988) or a flight number.',
-      AWB_UNSUPPORTED: 'Only Asiana (988) and Korean Air (180) cargo AWBs are looked up for now.',
-      IS_FLIGHT: 'Type the flight number in the search box and its aircraft appears on the globe.',
-      AIR_BAD_INPUT: 'e.g. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082',
-      FLIGHT_NONE: 'It may be on the ground or outside radar coverage. Check the flight number or try again shortly.'
-    },
-    openSite: 'Open the carrier site', again: 'Try again', empty: 'Enter a tracking number to see its journey.',
-    idle: 'Enter a tracking number and its journey appears here.', idleBadge: 'Idle',
-    updated: 'Updated', events: 'events', sampleNote: 'Sample data · not a live lookup', liveNote: 'Based on carrier scans',
-    privacyLink: 'Privacy', termsLink: 'Terms', noKey: 'See the sample without a DHL key', routeDomestic: 'Domestic route', notYet: 'Not looked up yet',
-    currentStatus: 'Current status', lastScan: 'Last scan', noTime: 'No scan time yet', historyFoot: 'Newest scan is shown first',
-    openGuide: 'Guide · how to look up a parcel and fix errors →',
-    guideTitle: 'When a tracking status makes no sense',
-    guideLead: 'Whether “customs clearance” is stuck, or why a tracking number returns nothing — what each overseas scan line means and what to do, on one page.',
-    guideAll: 'Read the full guide →', guideStatus: 'DHL · FedEx · UPS · AliExpress status meanings',
-    guideNotFound: 'Five reasons a tracking number returns nothing', guideRoute: 'How an overseas route is structured',
-    guideEdd: 'How the estimated delivery date is worked out', guideFaq: 'Frequently asked questions',
-    guideAir: 'Freighter radar & air cargo AWB lookup',
-    carrierAIR: 'Air cargo / flight (AWB · Flight)',
-    radarTitle: 'Live freighter radar', radarSub: 'Real aircraft flying this leg',
-    radarFlight: 'Live aircraft position', radarFlightSub: 'The aircraft on the flight number you entered',
-    radarNone: 'No freighters observed on this leg right now.',
-    radarNoCarrier: 'No aircraft of this carrier was observed, so nearby freighters are shown.',
-    radarUpdated: 'updated', radarError: 'Could not load live aircraft positions. Try again shortly.',
-    radarGround: 'on ground', radarAlt: 'alt', radarSpeed: 'speed', radarSeen: 's ago', radarNow: 'just now',
-    airAwb: 'Air cargo AWB', airFlight: 'Flight', airFlights: 'Flights', airRoute: 'Route',
-    airPieces: 'pieces', airWeight: 'weight', airNoEvents: 'No cargo scan records yet — the shipment may only be booked.',
-    airNote: 'This is an air cargo AWB result. If you meant a parcel, pick its carrier instead.',
-    airStages: ['Booked', 'Departed', 'Arrived', 'Customs / notice', 'Delivered'],
-    flightLive: 'Live aircraft position', flightCoord: 'Observed position', flightNoPlane: 'No aircraft with this flight number is being observed right now.',
-    noAircraft: 'No aircraft observed'
-  },
-  ja: {
-    dashboard: '荷物追跡', shipments: '使い方', demo: 'サンプル', live: 'リアルタイム',
-    title: '私の荷物、今どこ？', subtitle: '追跡番号ひとつで、荷物の旅を見渡そう。', scan: '配送会社のスキャン情報',
-    track: '荷物を探す', loading: '照会中…', my: '検索結果', local: '一度きりの検索・保存なし', notify: '追跡について',
-    journey: '配送の旅', satellite: '3D衛星地球儀', last: '最後に確認された場所', confirmed: '確認済みルート', planned: '予定ルート',
-    drag: 'ドラッグで回転・スクロールで拡大', history: '配送履歴', newest: '新しい順', transit: '輸送中',
-    historyNote: '提供された経路の例・時刻未確認', notconnected: '最終更新：API未接続',
-    progress: '配送状況', international: '国際輸送中', domestic: '国内配送中',
-    notice: '仁川の事前通関情報は、実際の到着を意味しません。', route: '国別の経路',
-    footer: '位置は配送スキャンに基づき、リアルタイムGPSではありません。', settings: 'グローバル設定',
-    settingNote: 'この画面は表示設定と自動更新のみを扱います。追跡番号と結果は保存されません。',
-    auto: '自動更新',
-    apiNote: '実際の追跡結果は配送会社のスキャン情報です。結果は15分間キャッシュされます。',
-    privacy: '再読み込みやタブを閉じると入力情報は消えます。',
-    placeholder: '追跡番号を入力', detect: '配送会社を自動検出', waiting: '配送会社の選択待ち',
-    edd: '配達予定',
-    carrierAuto: '配送会社を自動検出', carrierCJ: 'CJ大韓通運', carrierEPOST: '韓国郵便', carrierHANJIN: 'ハンジン', carrierLOTTE: 'ロッテ',
-    carrierLOGEN: 'ロジェン', carrierILYANG: 'イリャン', carrierDHL: 'DHL', carrierFEDEX: 'FedEx', carrierUPS: 'UPS', carrierUSPS: 'USPS',
-    carrierCAINIAO: 'AliExpress (Cainiao)', carrierEMS: '韓国郵便 EMS / 国際', carrierGLOBAL: 'その他グローバル (550+ 自動)',
-    stages: ['受付', '集荷', '国際輸送', '配達中', '配達完了'],
-    stagesDomestic: ['受付', '集荷', '輸送中', '配達中', '配達完了'],
-    sampleEvents: [
-      { title: '出発地を確認', note: '出発地', place: 'Sofia, Bulgaria' },
-      { title: '経由地を確認', note: '最終確認位置', place: 'Leipzig, Germany' },
-      { title: '事前通関情報を受信', note: '到着ではありません', place: 'Incheon, South Korea' }
-    ],
-    status: { DELIVERED: '配達完了', OUT_FOR_DELIVERY: '配達中', IN_TRANSIT: '輸送中', PICKED_UP: '集荷', REGISTERED: '受付', EXCEPTION: '例外', RETURNED: '返送', UNKNOWN: '確認中', ARRIVED: '到着', CUSTOMS: '通関・通知', IN_FLIGHT: '飛行中', GROUND: '地上' },
-    errors: {
-      NOT_FOUND: '追跡情報が見つかりません。', NEEDS_KEY: '海外配送会社には LASTSCANNED_API_KEY が必要です。', UNSUPPORTED: 'この配送会社はまだ未対応です。',
-      UPSTREAM: '配送会社のサーバーが応答しません。', BAD_REQUEST: '追跡番号を確認してください。', NETWORK: 'サーバーに接続できませんでした。',
-      RATE_LIMITED: '照会回数の上限に一時的に達しました。',
-      AWB_NOT_FOUND: '航空貨物の照会結果がありません。', AIRLINE_BLOCKED: '航空会社が自動照会を一時的に遮断しています。',
-      AWB_UNSUPPORTED: 'この航空会社のAWBはまだ未対応です。', IS_FLIGHT: 'AWBではなく便名です。',
-      AIR_BAD_INPUT: 'AWB（11桁）または便名（KE082）を入力してください。', FLIGHT_NONE: 'この便名の航空機は観測されていません。'
-    },
-    hints: {
-      NOT_FOUND: '番号と桁数を確認してください。まだ集荷前の可能性もあります。',
-      NEEDS_KEY: 'lastscanned.com のキーを Vercel の LASTSCANNED_API_KEY に設定すると、ロジェン・FedEx・UPS・USPS・Cainiao・EMS など551社が使えます。',
-      UNSUPPORTED: '対応：CJ大韓通運・韓国郵便・ハンジン・ロッテ・ロジェン・DHL・FedEx・UPS・USPS・Cainiao・EMS ＋ 世界550社以上',
-      UPSTREAM: 'しばらくしてから再度お試しください。',
-      BAD_REQUEST: 'ハイフン・空白・記号は自動で除去されます。',
-      NETWORK: '接続を確認して再度お試しください。',
-      RATE_LIMITED: '1分後に再度お試しください。',
-      AWB_NOT_FOUND: 'AWB番号を確認してください。宅配便の番号なら配送会社を選択すると宅配便として照会されます。',
-      AIRLINE_BLOCKED: '大韓航空はサーバー自動照会にセッション確認を求めます。下のリンクで直接照会するか、アシアナ(988)・便名照会をご利用ください。',
-      AWB_UNSUPPORTED: '現在はアシアナ(988)と大韓航空(180)の貨物AWBのみ照会できます。',
-      IS_FLIGHT: '便名は検索欄にそのまま入力すると地球儀に航空機が表示されます。',
-      AIR_BAD_INPUT: '例）988-12345675（アシアナ）・180-12345675（大韓航空）・KE082',
-      FLIGHT_NONE: '地上にあるか、レーダー範囲外の可能性があります。便名を確認するか、しばらくしてから再度お試しください。'
-    },
-    openSite: '配送会社サイトを開く', again: '再検索', empty: '追跡番号を入力すると配送履歴が表示されます。',
-    idle: '追跡番号を入力すると、配送の旅がここに表示されます。', idleBadge: '待機中',
-    updated: '最終更新', events: '件', sampleNote: 'サンプルデータ・実際の照会ではありません', liveNote: '配送会社スキャン基準',
-    privacyLink: 'プライバシー', termsLink: '利用規約', noKey: 'DHLキーなしでサンプルを見る', routeDomestic: '国内の経路', notYet: '照会前',
-    currentStatus: '現在の配送状況', lastScan: '最終スキャン', noTime: 'スキャン時刻なし', historyFoot: '最新のスキャンが上に表示されます',
-    openGuide: '使い方ガイド・照会方法とエラー対処 →',
-    guideTitle: '配送状況の表示がわからないとき',
-    guideLead: '「通関中」が止まっているのか、追跡番号がなぜ照会できないのか — 海外配送のスキャン文言の意味と対処法を1ページにまとめました。',
-    guideAll: 'ガイドをすべて見る →', guideStatus: 'DHL・FedEx・UPS・AliExpressの状況の意味',
-    guideNotFound: '追跡番号が照会できない5つの理由', guideRoute: '海外配送の経由地を理解する',
-    guideEdd: '配達予定日の計算方法', guideFaq: 'よくある質問',
-    guideAir: '貨物機レーダー・航空AWB照会',
-    carrierAIR: '航空貨物 / 便名 (AWB · Flight)',
-    radarTitle: 'リアルタイム貨物機レーダー', radarSub: 'この区間を飛行中の実際の航空機',
-    radarFlight: 'リアルタイム航空機位置', radarFlightSub: '入力した便名の実際の航空機',
-    radarNone: '現在この区間で観測された貨物機はありません。',
-    radarNoCarrier: 'この配送会社の貨物機は観測されず、近くの貨物機を表示しています。',
-    radarUpdated: '更新', radarError: '航空機の位置を取得できませんでした。しばらくしてから再度お試しください。',
-    radarGround: '地上', radarAlt: '高度', radarSpeed: '速度', radarSeen: '秒前', radarNow: 'たった今',
-    airAwb: '航空貨物AWB', airFlight: '便名', airFlights: '運航便名', airRoute: '区間',
-    airPieces: '個数', airWeight: '重量', airNoEvents: '貨物スキャン記録はまだありません。予約のみの可能性があります。',
-    airNote: 'AWBで照会した航空貨物です。宅配便の場合は配送会社を選択してください。',
-    airStages: ['受付', '出発', '到着', '通関・通知', '配達完了'],
-    flightLive: 'リアルタイム航空機位置', flightCoord: '観測座標', flightNoPlane: 'この便名の航空機は現在観測されていません。',
-    noAircraft: '観測された航空機なし'
-  }
+const I18N = window.WIMP_I18N || {
+  base: 'en', default: 'en', aliases: {},
+  languages: [{ code: 'en', native: 'English', english: 'English', locale: 'en-US' }],
+  strings: { en: {} }
 };
+const LANGS = I18N.languages;
+const LANG_CODES = LANGS.map((lang) => lang.code);
+const CJK = ['ko', 'ja', 'zh-CN', 'zh-TW'];
+
+/* Every dictionary is merged over the English base when the bundle is built,
+   so a thin translation degrades to English instead of showing a raw key. */
+function dictFor(code) {
+  return I18N.strings[code] || I18N.strings[I18N.base] || {};
+}
+
+function langInfo(code) {
+  return LANGS.find((lang) => lang.code === (code || state.lang)) || LANGS[0];
+}
+
+/* "de-AT" -> "de", "zh-Hant-HK" -> "zh-TW", "pt-BR" -> "pt" */
+function matchLanguage(tag) {
+  const raw = String(tag || '').trim().toLowerCase();
+  if (!raw) return '';
+  const exact = LANG_CODES.find((code) => code.toLowerCase() === raw);
+  if (exact) return exact;
+  const parts = raw.split('-');
+  for (let i = parts.length; i > 0; i -= 1) {
+    const prefix = parts.slice(0, i).join('-');
+    if (I18N.aliases && I18N.aliases[prefix]) return I18N.aliases[prefix];
+    const hit = LANG_CODES.find((code) => code.toLowerCase() === prefix);
+    if (hit) return hit;
+  }
+  return '';
+}
+
+function languageFromUrl() {
+  try {
+    return matchLanguage(new URLSearchParams(window.location.search).get('lang'));
+  } catch (err) {
+    return '';
+  }
+}
+
+/* ?lang= first, then the browser's own preference list, then the default. */
+function detectLanguage() {
+  const fromUrl = languageFromUrl();
+  if (fromUrl) return fromUrl;
+  const tags = Array.isArray(navigator.languages) && navigator.languages.length
+    ? navigator.languages
+    : [navigator.language];
+  for (const tag of tags) {
+    const hit = matchLanguage(tag);
+    if (hit) return hit;
+  }
+  return I18N.default || 'en';
+}
+
+/* The choice rides in the URL, so a shared or refreshed link keeps it.
+   Nothing is remembered in the browser itself — see privacy.html. */
+function syncLanguageUrl() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', state.lang);
+    window.history.replaceState(null, '', url);
+  } catch (err) { /* nothing to remember outside a real URL */ }
+}
+
+/* Guide pages read the same ?lang=, so their links carry the choice along.
+   Korean is the default, so its links stay clean for search engines. */
+function updateGuideLinks() {
+  document.querySelectorAll('a[href^="guide.html"]').forEach((link) => {
+    if (!link.dataset.baseHref) link.dataset.baseHref = link.getAttribute('href');
+    const parts = link.dataset.baseHref.split('#');
+    const hash = parts[1] ? '#' + parts[1] : '';
+    const query = state.lang === 'ko' ? '' : '?lang=' + encodeURIComponent(state.lang);
+    link.setAttribute('href', parts[0] + query + hash);
+  });
+}
+
 
 /* ------------------------------------------------------------------ *
  * State
  * ------------------------------------------------------------------ */
 
 const state = {
-  lang: 'ko',
+  lang: detectLanguage(),
   number: '',
   carrier: 'auto',
   view: null,
@@ -295,8 +144,67 @@ const state = {
   planeToken: 0
 };
 
-const t = () => strings[state.lang];
+const t = () => dictFor(state.lang);
 const isKo = () => state.lang === 'ko';
+/* Korean, Japanese and Chinese write a count without a space: 3건, 3件. */
+const joinsCount = () => !CJK.includes(state.lang);
+
+/* The carrier, airline and airport tables ship a Korean name next to a
+   romanised one. Readers outside Korean get the romanised one, and the
+   names already on screen are rewritten when the language changes. */
+const AIRLINE_EN = {
+  OZ: 'Asiana Airlines', KE: 'Korean Air',
+  KAL: 'Korean Air', AAR: 'Asiana Airlines', CKK: 'China Cargo Airlines', CAO: 'Air China Cargo',
+  CYZ: 'China Postal Airlines', CPA: 'Cathay Pacific', GTI: 'Atlas Air', CLX: 'Cargolux',
+  GEC: 'Lufthansa Cargo', SQC: 'Singapore Airlines Cargo', BOX: 'Aerologic', SVA: 'Saudia Cargo',
+  QTR: 'Qatar Airways Cargo', UAE: 'Emirates SkyCargo'
+};
+
+function romanise(text) {
+  return String(text || '').replace(/\b[A-Z]{3,}\b/g, (word) => word[0] + word.slice(1).toLowerCase());
+}
+
+function airlineLabel(info) {
+  if (!info) return '';
+  const code = String(info.code || '').toUpperCase();
+  if (isKo()) return info.name || info.label || info.nameEn || '';
+  return info.nameEn || AIRLINE_EN[code] || info.label || info.name || '';
+}
+
+function carrierLabel(code, fallback) {
+  const key = code ? 'carrier' + String(code).toUpperCase() : '';
+  const label = key ? t()[key] : '';
+  return typeof label === 'string' ? label : (fallback || code || '');
+}
+
+/* A cargo stop carries both names; a Korean reader wants the city, everyone
+   else the romanised airport name. */
+function placeName(place) {
+  if (!place) return '';
+  if (isKo()) return place.city || place.name || place.iata || '';
+  return romanise(place.name || place.city || place.iata || '');
+}
+
+function localizeNames() {
+  /* An error keeps its code, so its wording follows a later language switch too. */
+  if (state.error && state.error.code) {
+    const s = t();
+    state.error.title = s.errors[state.error.code] || state.error.apiMessage || s.errors.UPSTREAM;
+    state.error.hint = s.hints[state.error.code] || state.error.apiHint || '';
+  }
+  const view = state.view;
+  if (!view) return;
+  if (view.kind === 'awb') {
+    view.carrierName = airlineLabel(view.awb && view.awb.airline) || t().airAwb;
+    view.points.forEach((point) => { point.name = placeName(point.names) || point.code; });
+    view.events.forEach((ev) => { if (ev.location) ev.location.name = placeName(ev.location.names) || ev.location.code; });
+    if (view.points.length) view.latestLocation = pair(view.points[view.points.length - 1]);
+  } else if (view.kind === 'flight') {
+    view.carrierName = airlineLabel(view.operator) || t().flightLive;
+  } else {
+    view.carrierName = carrierLabel(view.carrierCode, view.carrierNameRaw || view.carrierName);
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * Time formatting
@@ -306,7 +214,7 @@ function formatTime(iso) {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  const locale = state.lang === 'ko' ? 'ko-KR' : state.lang === 'ja' ? 'ja-JP' : 'en-GB';
+  const locale = state.lang === 'en' ? 'en-GB' : (langInfo().locale || 'en-GB');
   try {
     return new Intl.DateTimeFormat(locale, {
       timeZone: 'Asia/Seoul',
@@ -322,7 +230,7 @@ function formatDay(dateText) {
   if (!dateText) return '';
   const date = new Date(`${String(dateText).slice(0, 10)}T00:00:00+09:00`);
   if (Number.isNaN(date.getTime())) return '';
-  const locale = state.lang === 'ko' ? 'ko-KR' : state.lang === 'ja' ? 'ja-JP' : 'en-US';
+  const locale = state.lang === 'en' ? 'en-US' : (langInfo().locale || 'en-US');
   const month = state.lang === 'en' ? 'short' : 'long';
   try {
     return new Intl.DateTimeFormat(locale, { timeZone: 'Asia/Seoul', month, day: 'numeric' }).format(date);
@@ -333,7 +241,7 @@ function formatDay(dateText) {
 
 function clockNow() {
   try {
-    return new Intl.DateTimeFormat(isKo() ? 'ko-KR' : 'en-GB', {
+    return new Intl.DateTimeFormat(state.lang === 'en' ? 'en-GB' : (langInfo().locale || 'en-GB'), {
       timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false
     }).format(new Date());
   } catch {
@@ -441,6 +349,7 @@ function buildDataset(api, demo) {
     demo,
     carrierCode: api.carrier ? api.carrier.code : state.carrier,
     carrierName: api.carrier ? api.carrier.name : state.carrier,
+    carrierNameRaw: api.carrier ? api.carrier.name : state.carrier,
     carrierSite: api.carrier ? api.carrier.site : '',
     number: api.number || state.number,
     statusCode,
@@ -496,10 +405,7 @@ function speedText(p) {
 function seenText(sec) {
   if (sec == null) return '';
   if (sec < 3) return t().radarNow;
-  const lang = state.lang;
-  if (lang === 'ko') return `${Math.round(sec)}초 전`;
-  if (lang === 'ja') return `${Math.round(sec)}秒前`;
-  return `${Math.round(sec)}s ago`;
+  return `${Math.round(sec)}${t().radarSeen}`;
 }
 
 function coordText(p) {
@@ -549,7 +455,7 @@ function buildAwbDataset(payload) {
     if (last && Math.abs(last.lat - lat) < 0.01 && Math.abs(last.lng - lng) < 0.01) return last;
     const point = {
       lat, lng,
-      name: stop.city || iata, detail: iata,
+      name: placeName(stop) || iata, names: { city: stop.city, name: stop.name, iata }, detail: iata,
       code: iata, country: stop.country || '', countryEn: stop.countryEn || '', countryCode: stop.countryCode || '',
       firstEvent: null, lastEvent: null
     };
@@ -570,7 +476,8 @@ function buildAwbDataset(payload) {
       statusCode: ev.status || 'IN_TRANSIT',
       location: ev.place
         ? {
-            name: ev.place.name || ev.place.iata, city: ev.place.city || '', code: ev.place.iata || '',
+            name: placeName(ev.place) || ev.place.iata, names: { city: ev.place.city, name: ev.place.name, iata: ev.place.iata },
+            city: ev.place.city || '', code: ev.place.iata || '',
             country: ev.place.country || '', countryEn: ev.place.countryEn || '', countryCode: ev.place.countryCode || '',
             lat: ev.place.lat, lng: ev.place.lng
           }
@@ -644,7 +551,7 @@ function buildFlightDataset(payload, requested) {
   const events = planes.map((p) => ({
     time: null,
     timeLabel: seenText(p.seenSec),
-    title: `${p.callsign || p.hex}${p.operator ? ' · ' + p.operator.label : ''}`,
+    title: `${p.callsign || p.hex}${p.operator ? ' · ' + airlineLabel(p.operator) : ''}`,
     note: [p.aircraftType, altText(p), speedText(p)].filter(Boolean).join(' · '),
     statusCode: p.onGround ? 'GROUND' : 'IN_FLIGHT',
     location: { name: coordText(p), city: '', code: p.callsign || '', country: '', countryEn: '', countryCode: '', lat: p.lat, lng: p.lon },
@@ -657,7 +564,8 @@ function buildFlightDataset(payload, requested) {
     demo: false,
     number: label,
     carrierCode: 'AIR',
-    carrierName: first && first.operator ? first.operator.label : t().flightLive,
+    carrierName: airlineLabel(first && first.operator) || t().flightLive,
+    operator: first && first.operator,
     carrierSite: '',
     statusCode: first ? (first.onGround ? 'GROUND' : 'IN_FLIGHT') : 'UNKNOWN',
     statusLabel: statusLabel(first ? (first.onGround ? 'GROUND' : 'IN_FLIGHT') : 'UNKNOWN'),
@@ -689,7 +597,7 @@ function planeMarkers() {
 }
 
 function planeTooltip(p) {
-  return [p.callsign || p.hex, p.operator && p.operator.label, p.aircraftType, altText(p), speedText(p), seenText(p.seenSec)]
+  return [p.callsign || p.hex, airlineLabel(p.operator), p.aircraftType, altText(p), speedText(p), seenText(p.seenSec)]
     .filter(Boolean)
     .join(' · ');
 }
@@ -700,7 +608,7 @@ function focusPlane(p) {
   const info = $('#marker-info');
   if (info) {
     info.hidden = false;
-    info.textContent = `${p.callsign || p.hex}${p.operator ? ' · ' + p.operator.label : ''} — ${[p.aircraftType, altText(p), speedText(p)].filter(Boolean).join(' · ')}`;
+    info.textContent = `${p.callsign || p.hex}${p.operator ? ' · ' + airlineLabel(p.operator) : ''} — ${[p.aircraftType, altText(p), speedText(p)].filter(Boolean).join(' · ')}`;
   }
 }
 
@@ -851,7 +759,7 @@ function radarForView(view) {
   if (!view || view.kind !== 'parcel') return null;
   if (!view.international || view.delivered) return null;
   const point = view.points[view.points.length - 1];
-  const params = { carrier: view.carrierCode || 'GLOBAL', mode: 'carrier', carrierName: view.carrierName || '' };
+  const params = { carrier: view.carrierCode || 'GLOBAL', mode: 'carrier', carrierName: carrierLabel(view.carrierCode, view.carrierNameRaw || view.carrierName) };
   if (point && Number.isFinite(point.lat)) {
     params.lat = point.lat.toFixed(3);
     params.lon = point.lng.toFixed(3);
@@ -1254,7 +1162,12 @@ function softwareGlobe(host) {
 
 function render() {
   const s = t();
+  const lang = langInfo();
+  localizeNames();
   document.documentElement.lang = state.lang;
+  document.documentElement.dir = lang.dir || 'ltr';
+  updateLanguageControl(lang);
+  updateGuideLinks();
   document.querySelectorAll('[data-i]').forEach((el) => {
     const value = s[el.dataset.i];
     if (typeof value === 'string') el.textContent = value;
@@ -1307,11 +1220,11 @@ function renderParcels() {
   if (state.error) {
     small.textContent = state.error.title;
   } else if (state.view) {
-    const count = `${state.view.events.length}${isKo() || state.lang === 'ja' ? s.events : ' ' + s.events}`;
+    const count = `${state.view.events.length}${joinsCount() ? ' ' : ''}${s.events}`;
     if (state.view.kind === 'awb') {
       const awb = state.view.awb || {};
       small.textContent = [
-        awb.airline ? awb.airline.name : s.airAwb,
+        airlineLabel(awb.airline) || s.airAwb,
         awb.origin && awb.destination ? `${awb.origin.iata} → ${awb.destination.iata}` : '',
         state.view.latestDetail,
         awb.flights && awb.flights.length ? `${s.airFlights} ${awb.flights.map((f) => f.no).join(' ')}` : ''
@@ -1500,7 +1413,7 @@ function renderCountries() {
     const code = document.createElement('b');
     code.textContent = country.code || '—';
     const city = document.createElement('small');
-    city.textContent = country.city + (country.planned ? (isKo() ? ' (예정)' : ' (planned)') : '');
+    city.textContent = country.city + (country.planned ? ` (${s.plannedTag})` : '');
     node.append(flag, code, city);
     wrap.append(node);
   });
@@ -1538,7 +1451,7 @@ function renderMapStatus() {
   if (state.error) {
     updated.textContent = '—';
   } else if (view) {
-    updated.textContent = `${s.updated} ${clockNow()}${view.cached ? ' · cache' : ''}`;
+    updated.textContent = `${s.updated} ${clockNow()}${view.cached ? ` · ${s.cachedLabel}` : ''}`;
   } else {
     updated.textContent = s.notYet;
   }
@@ -1573,8 +1486,11 @@ function errorFor(payload) {
   return {
     code,
     title: s.errors[code] || (payload && payload.message) || s.errors.UPSTREAM,
-    hint: (payload && payload.hint) || s.hints[code] || '',
-    site: payload && payload.carrier ? payload.carrier.site : ''
+    hint: s.hints[code] || (payload && payload.hint) || '',
+    site: payload && payload.carrier ? payload.carrier.site : '',
+    /* Kept untranslated as a last resort and to re-word the box after a switch. */
+    apiMessage: (payload && payload.message) || '',
+    apiHint: (payload && payload.hint) || ''
   };
 }
 
@@ -1702,7 +1618,7 @@ async function lookupFlight(value, carrier) {
     if (!payload.planes || !payload.planes.length) {
       // 200 with zero aircraft is an answer, not a broken connection: mark it so the
       // progress panel says “no aircraft observed” instead of “API not connected”.
-      state.error = { ...errorFor({ code: 'FLIGHT_NONE', hint: payload.message }), apiOk: true };
+      state.error = { ...errorFor({ code: 'FLIGHT_NONE' }), apiOk: true };
       state.number = value;
       state.carrier = 'AIR';
       return;
@@ -1727,7 +1643,7 @@ function submitSearch(event) {
   if (event) event.preventDefault();
   const raw = sanitizeField($('#number'));
   if (raw.length < 5) {
-    toast(isKo() ? '송장번호는 영문·숫자 5~60자로 입력하세요.' : 'Use 5-60 letters or digits.');
+    toast(t().badNumber);
     return;
   }
   const number = raw.replace(/-/g, '').toUpperCase();
@@ -1739,11 +1655,136 @@ function submitSearch(event) {
  * Events
  * ------------------------------------------------------------------ */
 
-$('#language').onchange = (e) => {
-  state.lang = e.target.value;
-  render();
+/* ------------------------------------------------------------------ *
+ * Language dropdown
+ *   Nineteen native names do not fit a native <select>, so the list is a
+ *   listbox panel anchored to the header button: it scrolls on its own and
+ *   never leaves the viewport, on desktop or at 390px.
+ * ------------------------------------------------------------------ */
+
+const langRoot = $('#lang');
+const langButton = $('#lang-button');
+const langMenu = $('#lang-menu');
+const langList = $('#lang-list');
+let langOpen = false;
+let langFocus = 0;
+
+function buildLanguageList() {
+  if (!langList) return;
+  langList.replaceChildren();
+  LANGS.forEach((lang) => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'lang-option';
+    option.dataset.lang = lang.code;
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', 'false');
+    option.setAttribute('lang', lang.code);
+    option.dir = lang.dir || 'ltr';
+
+    const native = document.createElement('span');
+    native.className = 'lang-native';
+    native.textContent = lang.native;
+
+    const english = document.createElement('span');
+    english.className = 'lang-english';
+    english.textContent = lang.english;
+
+    option.append(native, english);
+    option.onclick = () => chooseLanguage(lang.code, true);
+    langList.append(option);
+  });
+}
+
+function updateLanguageControl(info) {
+  if (langButton) {
+    const current = $('#lang-current');
+    if (current) {
+      current.textContent = info.native;
+      current.lang = info.code;
+    }
+    langButton.setAttribute('aria-label', `${t().langButton}: ${info.native}`);
+    langButton.setAttribute('aria-expanded', langOpen ? 'true' : 'false');
+  }
+  if (!langList) return;
+  [...langList.children].forEach((option) => {
+    const on = option.dataset.lang === info.code;
+    option.classList.toggle('active', on);
+    option.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+
+function openLanguages() {
+  if (!langMenu || langOpen) return;
+  langOpen = true;
+  langMenu.hidden = false;
+  if (langRoot) langRoot.classList.add('open');
+  if (langButton) langButton.setAttribute('aria-expanded', 'true');
+  const options = [...langList.children];
+  langFocus = Math.max(0, options.findIndex((option) => option.dataset.lang === state.lang));
+  const active = options[langFocus];
+  if (active) {
+    if (active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
+    active.focus({ preventScroll: true });
+  }
+}
+
+function closeLanguages(restoreFocus) {
+  if (!langMenu || !langOpen) return;
+  langOpen = false;
+  langMenu.hidden = true;
+  if (langRoot) langRoot.classList.remove('open');
+  if (langButton) {
+    langButton.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) langButton.focus();
+  }
+}
+
+function moveLanguageFocus(step) {
+  const options = [...langList.children];
+  if (!options.length) return;
+  langFocus = (langFocus + step + options.length) % options.length;
+  options[langFocus].focus();
+}
+
+function chooseLanguage(code, restoreFocus) {
+  closeLanguages(false);
+  if (!LANG_CODES.includes(code)) return;
+  const changed = code !== state.lang;
+  state.lang = code;
+  syncLanguageUrl();
+  if (changed) render();
+  else updateLanguageControl(langInfo());
   if (state.view) focusPoint(state.view.points.length - 1);
-};
+  if (restoreFocus && langButton) langButton.focus();
+}
+
+if (langButton) {
+  langButton.onclick = () => (langOpen ? closeLanguages(true) : openLanguages());
+  langButton.onkeydown = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openLanguages();
+    }
+  };
+}
+if (langMenu) {
+  langMenu.onclick = (e) => { if (e.target === langMenu) closeLanguages(true); };
+  langMenu.onkeydown = (e) => {
+    const options = [...langList.children];
+    if (e.key === 'Escape') { e.preventDefault(); closeLanguages(true); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); moveLanguageFocus(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveLanguageFocus(-1); }
+    else if (e.key === 'Home' && options[0]) { e.preventDefault(); options[0].focus(); }
+    else if (e.key === 'End' && options.length) { e.preventDefault(); options[options.length - 1].focus(); }
+  };
+}
+document.addEventListener('click', (e) => {
+  if (langOpen && langRoot && !langRoot.contains(e.target)) closeLanguages(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && langOpen) closeLanguages(true);
+});
 
 $('#search').onsubmit = submitSearch;
 
@@ -1808,6 +1849,7 @@ $('#reset').onclick = () => {
  * Boot
  * ------------------------------------------------------------------ */
 
+buildLanguageList();
 initGlobe();
 state.view = null;
 state.number = '';

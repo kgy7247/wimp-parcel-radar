@@ -1,0 +1,35 @@
+{
+  "base": "en",
+  "default": "en",
+  "order": [
+    { "code": "ko", "native": "한국어", "english": "Korean", "locale": "ko-KR" },
+    { "code": "en", "native": "English", "english": "English", "locale": "en-US" },
+    { "code": "ja", "native": "日本語", "english": "Japanese", "locale": "ja-JP" },
+    { "code": "zh-CN", "native": "简体中文", "english": "Chinese (Simplified)", "locale": "zh-CN" },
+    { "code": "zh-TW", "native": "繁體中文", "english": "Chinese (Traditional)", "locale": "zh-TW" },
+    { "code": "es", "native": "Español", "english": "Spanish", "locale": "es-ES" },
+    { "code": "fr", "native": "Français", "english": "French", "locale": "fr-FR" },
+    { "code": "de", "native": "Deutsch", "english": "German", "locale": "de-DE" },
+    { "code": "pt", "native": "Português", "english": "Portuguese", "locale": "pt-BR" },
+    { "code": "it", "native": "Italiano", "english": "Italian", "locale": "it-IT" },
+    { "code": "ru", "native": "Русский", "english": "Russian", "locale": "ru-RU" },
+    { "code": "ar", "native": "العربية", "english": "Arabic", "locale": "ar", "dir": "rtl" },
+    { "code": "vi", "native": "Tiếng Việt", "english": "Vietnamese", "locale": "vi-VN" },
+    { "code": "th", "native": "ภาษาไทย", "english": "Thai", "locale": "th-TH" },
+    { "code": "id", "native": "Bahasa Indonesia", "english": "Indonesian", "locale": "id-ID" },
+    { "code": "hi", "native": "हिन्दी", "english": "Hindi", "locale": "hi-IN" },
+    { "code": "tr", "native": "Türkçe", "english": "Turkish", "locale": "tr-TR" },
+    { "code": "nl", "native": "Nederlands", "english": "Dutch", "locale": "nl-NL" },
+    { "code": "pl", "native": "Polski", "english": "Polish", "locale": "pl-PL" }
+  ],
+  "aliases": {
+    "zh": "zh-CN",
+    "zh-hans": "zh-CN",
+    "zh-sg": "zh-CN",
+    "zh-my": "zh-CN",
+    "zh-hant": "zh-TW",
+    "zh-hk": "zh-TW",
+    "zh-mo": "zh-TW",
+    "in": "id"
+  }
+}

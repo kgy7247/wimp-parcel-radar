@@ -22,6 +22,7 @@ const ROOT = join(__dirname, '..');
 const PUB = join(ROOT, 'public');
 const read = (file) => readFileSync(join(PUB, file), 'utf8');
 const appJs = read('app.js');
+const i18nJs = read('i18n.js');
 const apiJs = readFileSync(join(ROOT, 'api', 'track.js'), 'utf8');
 const ADSENSE = 'pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7205132235653329';
 
@@ -172,14 +173,16 @@ virtualConsole.on('jsdomError', (err) => {
 let mode = 'cj';
 let fetched = [];
 
-function buildDom() {
+function buildDom(url = 'https://www.wimp911.com/', browserLanguage = 'ko-KR') {
   const html = read('index.html').replace(/<script[\s\S]*?<\/script>/g, '');
   return new JSDOM(html, {
-    url: 'https://www.wimp911.com/',
+    url,
     pretendToBeVisual: true,
     runScripts: 'outside-only',
     virtualConsole,
     beforeParse(window) {
+      Object.defineProperty(window.navigator, 'language', { value: browserLanguage, configurable: true });
+      Object.defineProperty(window.navigator, 'languages', { value: [browserLanguage], configurable: true });
       const ctx = new Proxy({}, {
         get: (t, k) => {
           if (k === 'createRadialGradient' || k === 'createLinearGradient') return () => ({ addColorStop() {} });
@@ -209,9 +212,16 @@ function buildDom() {
   });
 }
 
-const dom = buildDom();
+/* index.html loads i18n.js and then app.js; the harness evaluates them the same way. */
+function mount(url, browserLanguage) {
+  const instance = buildDom(url, browserLanguage);
+  instance.window.eval(i18nJs);
+  instance.window.eval(appJs);
+  return instance;
+}
+
+const dom = mount();
 const { window } = dom;
-window.eval(appJs);
 const document = window.document;
 const $ = (s) => document.querySelector(s);
 const before = (a, b) => Boolean(a && b && (a.compareDocumentPosition(b) & window.Node.DOCUMENT_POSITION_FOLLOWING));
@@ -316,22 +326,111 @@ await test('error: strip keeps its place and shows the failure', async () => {
   mode = 'cj';
 });
 
-await test('language switch relabels the strip and the guide link label', async () => {
+function langOptions() {
+  return [...document.querySelectorAll('#lang-list .lang-option')];
+}
+
+function pickLang(code) {
+  if ($('#lang-menu').hidden) $('#lang-button').dispatchEvent(new window.Event('click', { bubbles: true }));
+  const option = langOptions().find((o) => o.dataset.lang === code);
+  assert.ok(option, 'option ' + code + ' exists');
+  option.dispatchEvent(new window.Event('click', { bubbles: true }));
+}
+
+await test('language: the dropdown lists 19 languages by native name, no native <select>', async () => {
+  assert.equal($('#language'), null, 'the old select is gone');
+  $('#lang-button').dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal($('#lang-menu').hidden, false, 'the panel opens');
+  assert.equal($('#lang-button').getAttribute('aria-expanded'), 'true');
+  const options = langOptions();
+  assert.equal(options.length, 19);
+  assert.deepEqual(options.slice(0, 3).map((o) => o.dataset.lang), ['ko', 'en', 'ja']);
+  const natives = options.map((o) => o.querySelector('.lang-native').textContent);
+  assert.equal(new Set(natives).size, natives.length, 'native names are unique');
+  for (const name of ['한국어', 'English', '日本語', '简体中文', '繁體中文', 'Español', 'Français', 'Deutsch', 'Português', 'Italiano', 'Русский', 'العربية', 'Tiếng Việt', 'ภาษาไทย', 'Bahasa Indonesia', 'हिन्दी', 'Türkçe', 'Nederlands', 'Polski']) {
+    assert.ok(natives.includes(name), 'dropdown shows ' + name);
+  }
+  assert.equal(options.find((o) => o.dataset.lang === 'ko').getAttribute('aria-selected'), 'true', 'current language marked');
+  $('#lang-button').dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal($('#lang-menu').hidden, true, 'the trigger closes it again');
+});
+
+await test('language: English relabels the strip, the count and the guide links', async () => {
   $('#number').value = '1234567890';
   submit();
   await tick(80);
-  $('#language').value = 'en';
-  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  pickLang('en');
+  assert.equal($('#lang-current').textContent, 'English');
   assert.equal($('#guide-link').textContent, 'How it works');
   assert.equal($('.result-label').textContent, 'Current status');
   assert.equal($('.result-head .map-status small').textContent, 'LAST CONFIRMED LOCATION');
   assert.equal($('#last-time').textContent, '21 Nov, 12:42');
-  $('#language').value = 'ja';
-  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  assert.equal(document.documentElement.lang, 'en');
+  assert.equal(window.location.search, '?lang=en');
+  assert.equal($('#guide-link').getAttribute('href'), 'guide.html?lang=en');
+  assert.equal($('#notify').getAttribute('href'), 'guide.html?lang=en#how');
+  assert.match($('#parcels').textContent, /3 events/, 'a space before the count in English');
+  pickLang('ja');
   assert.equal($('.result-label').textContent, '現在の配送状況');
-  $('#language').value = 'ko';
-  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  assert.match($('#parcels').textContent, /3件/, 'no space before the count in Japanese');
+  pickLang('ko');
   assert.equal($('.result-label').textContent, '현재 배송 상태');
+  assert.equal($('#guide-link').getAttribute('href'), 'guide.html', 'Korean links stay clean');
+  assert.equal(window.location.search, '?lang=ko');
+});
+
+await test('language: Arabic flips the page to RTL and back to LTR', async () => {
+  pickLang('ar');
+  assert.equal(document.documentElement.dir, 'rtl');
+  assert.equal(document.documentElement.lang, 'ar');
+  assert.equal($('.result-label').textContent, 'الحالة الحالية');
+  pickLang('ko');
+  assert.equal(document.documentElement.dir, 'ltr');
+});
+
+await test('language: ?lang=fr decides the first paint without any stored preference', async () => {
+  const fr = mount('https://www.wimp911.com/?lang=fr');
+  const doc = fr.window.document;
+  assert.equal(doc.documentElement.lang, 'fr');
+  assert.equal(doc.querySelector('.result-label').textContent, 'Statut actuel');
+  assert.equal(doc.querySelector('#lang-current').textContent, 'Français');
+  assert.equal(doc.querySelector('#guide-link').getAttribute('href'), 'guide.html?lang=fr');
+  assert.equal(fr.window.localStorage.length, 0, 'nothing written to browser storage');
+  fr.window.close();
+});
+
+await test('language: the browser preference decides on its own, unknown ones fall back to English', async () => {
+  const de = mount('https://www.wimp911.com/', 'de-AT');
+  assert.equal(de.window.document.documentElement.lang, 'de');
+  assert.equal(de.window.document.querySelector('.result-label').textContent, 'Aktueller Status');
+  de.window.close();
+  const zh = mount('https://www.wimp911.com/', 'zh-Hant-HK');
+  assert.equal(zh.window.document.documentElement.lang, 'zh-TW');
+  zh.window.close();
+  const sv = mount('https://www.wimp911.com/', 'sv-SE');
+  assert.equal(sv.window.document.documentElement.lang, 'en');
+  sv.window.close();
+});
+
+await test('language: every one of the 19 dictionaries fills the whole UI', async () => {
+  const hangul = /[\uac00-\ud7a3]/;
+  const codes = langOptions().map((o) => o.dataset.lang);
+  const labels = [...document.querySelectorAll('[data-i]')].map((el) => el.dataset.i);
+  for (const code of codes) {
+    pickLang(code);
+    assert.equal(document.documentElement.lang, code);
+    for (const el of document.querySelectorAll('[data-i]')) {
+      const text = el.textContent.trim();
+      assert.ok(text, `${code}: data-i="${el.dataset.i}" is empty`);
+      assert.notEqual(text, el.dataset.i, `${code}: shows the raw key ${el.dataset.i}`);
+      if (!['ko', 'ja', 'zh-CN', 'zh-TW'].includes(code)) {
+        assert.ok(!hangul.test(text), `${code}: data-i="${el.dataset.i}" still shows Korean: ${text}`);
+      }
+    }
+    assert.ok($('#number').placeholder.trim(), `${code}: placeholder is empty`);
+  }
+  assert.equal(labels.length > 40, true, 'the dictionary covers the whole page');
+  pickLang('ko');
 });
 
 await test('app.js never touches browser storage (the privacy page says so)', async () => {
@@ -433,7 +532,7 @@ await test('awb: 988-12345675 renders the shipment, its flights and live aircraf
   assert.equal($('#parcels .parcel strong').textContent, '988-12345675');
   assert.equal($('.history-summary .badge').textContent, '통관·수령 통지');
   assert.equal($('#events').querySelectorAll('.event').length, 4);
-  assert.equal($('#events .event small').textContent, '2026-11-27 08:40 · INCHEON');
+  assert.equal($('#events .event small').textContent, '2026-11-27 08:40 · 인천');
   assert.ok($('#location').textContent.includes('인천'));
   assert.equal(document.querySelectorAll('#steps .step').length, 5);
   assert.equal($('#steps .step.current').textContent.includes('통관·통지'), true);
@@ -489,11 +588,9 @@ await test('flight: an answered lookup with no aircraft says “관측된 항공
   assert.ok(!accent.textContent.includes('API 미연결'), 'a 200 answer is not called a broken API');
   assert.ok(fetched.some((u) => u.includes('api/plane?cs=KE9999')), 'the flight endpoint was asked');
 
-  $('#language').value = 'en';
-  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  pickLang('en');
   assert.equal($('.bottom .panel-title .accent').textContent, 'No aircraft observed');
-  $('#language').value = 'ko';
-  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  pickLang('ko');
   mode = 'cj';
 });
 
@@ -507,11 +604,9 @@ await test('flight: a failed aircraft feed still says “최종 갱신: API 미�
   const accent = $('.bottom .panel-title .accent');
   assert.ok($('#events .error-box'));
   assert.equal(accent.textContent, '최종 갱신: API 미연결');
-  $('#language').value = 'en';
-  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  pickLang('en');
   assert.equal($('.bottom .panel-title .accent').textContent, 'Last updated: API not connected');
-  $('#language').value = 'ko';
-  $('#language').dispatchEvent(new window.Event('change', { bubbles: true }));
+  pickLang('ko');
   mode = 'cj';
 });
 
@@ -564,6 +659,43 @@ await test('guide.html explains the radar and AWB lookup', async () => {
 await test('index links the air cargo section from the guide teaser', async () => {
   const links = [...document.querySelectorAll('a[href^="guide.html"]')].map((a) => a.getAttribute('href'));
   assert.ok(links.includes('guide.html#aircargo'));
+});
+
+await test('names: airline and airport labels follow the chosen language', async () => {
+  mode = 'awb';
+  pickLang('en');
+  $('#number').value = '98812345675';
+  $('#carrier').value = 'auto';
+  submit();
+  await tick(80);
+  assert.equal($('#location').textContent, 'Incheon, South Korea');
+  assert.ok($('#parcels').textContent.includes('Asiana Airlines'), 'airline in romanised form');
+  assert.ok(!/[\uac00-\ud7a3]/.test($('#parcels').textContent), 'no Korean left in the parcel row');
+  assert.ok(!/[\uac00-\ud7a3]/.test($('#location').textContent), 'no Korean left in the location');
+  pickLang('ko');
+  assert.equal($('#location').textContent, '인천, 대한민국');
+  assert.ok($('#parcels').textContent.includes('아시아나항공'), 'Korean airline name in Korean');
+  pickLang('ko');
+  mode = 'cj';
+});
+
+await test('flight: an unobserved flight number is explained in the chosen language', async () => {
+  mode = 'plane-none';
+  pickLang('ko');
+  $('#number').value = 'KE9999';
+  $('#carrier').value = 'auto';
+  submit();
+  await tick(120);
+  const box = $('#events .error-box');
+  assert.ok(box, 'an error box is shown');
+  assert.equal(box.querySelector('h3').textContent, '이 편명의 항공기가 관측되지 않습니다.');
+  assert.match(box.querySelector('p').textContent, /레이더/);
+  pickLang('de');
+  const deBox = $('#events .error-box');
+  assert.equal(deBox.querySelector('h3').textContent, 'Mit dieser Flugnummer wird kein Flugzeug beobachtet.');
+  assert.ok(!/[\uac00-\ud7a3]/.test(deBox.textContent), 'no Korean hint left in German');
+  pickLang('ko');
+  mode = 'cj';
 });
 
 await test('no runtime jsdom errors', async () => {
