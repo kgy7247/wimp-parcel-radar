@@ -323,6 +323,7 @@ await test('error: strip keeps its place and shows the failure', async () => {
   assert.equal($('.history-summary .badge').textContent, '—');
   assert.equal($('#location').textContent, '—');
   assert.equal($('.map-status').classList.contains('is-error'), true);
+  assert.equal($('.bottom .panel-title .accent').textContent, '조회된 배송 정보가 없습니다.', 'an answer is not called a broken API');
   mode = 'cj';
 });
 

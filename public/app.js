@@ -1373,7 +1373,7 @@ function renderSteps() {
         : s.domestic
     : state.error
       ? state.error.apiOk
-        ? s.noAircraft
+        ? (state.error.code === 'FLIGHT_NONE' ? s.noAircraft : state.error.title)
         : s.notconnected
       : s.idleBadge;
   accent.classList.toggle('done', Boolean(view && view.delivered));
@@ -1496,7 +1496,9 @@ function errorFor(payload) {
     site: payload && payload.carrier ? payload.carrier.site : '',
     /* Kept untranslated as a last resort and to re-word the box after a switch. */
     apiMessage: (payload && payload.message) || '',
-    apiHint: (payload && payload.hint) || ''
+    apiHint: (payload && payload.hint) || '',
+    /* "Our API answered" differs from "the lookup pipeline is down". */
+    apiOk: !['UPSTREAM', 'TIMEOUT', 'NETWORK', 'RATE_LIMITED'].includes(code)
   };
 }
 
