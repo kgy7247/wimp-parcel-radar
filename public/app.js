@@ -112,7 +112,7 @@ function syncLanguageUrl() {
 /* Guide pages read the same ?lang=, so their links carry the choice along.
    Korean is the default, so its links stay clean for search engines. */
 function updateGuideLinks() {
-  document.querySelectorAll('a[href^="guide.html"]').forEach((link) => {
+  document.querySelectorAll('a[href^="guide"]').forEach((link) => {
     if (!link.dataset.baseHref) link.dataset.baseHref = link.getAttribute('href');
     const parts = link.dataset.baseHref.split('#');
     const hash = parts[1] ? '#' + parts[1] : '';
@@ -752,9 +752,86 @@ function frameRoute() {
   globe.pointOfView({ lat: center.lat, lng: center.lng, altitude: routeViewAltitude(stops, center) }, 900);
 }
 
+/* globe.min.js is ~1.9MB. It is not in the document, so the first paint
+   (and a phone's first transfer) is not blocked on it. The script is fetched
+   after first paint once the map is on screen, or as soon as a lookup starts. */
+let globePromise = null;
+
+function ensureGlobe() {
+  if (globe || globeBroken) return Promise.resolve(globe);
+  if (typeof Globe === 'function') {
+    initGlobe();
+    return Promise.resolve(globe);
+  }
+  if (!globePromise) {
+    globePromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'globe.min.js';
+      script.async = true;
+      script.dataset.globe = '1';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('globe'));
+      document.head.appendChild(script);
+    }).then(() => {
+      initGlobe();
+      if (state.view) {
+        renderGlobe(state.view);
+        if (state.mapMode !== 'flat') frameRoute();
+      } else if (globe && globe.pointOfView) {
+        globe.pointOfView({ lat: 30, lng: 60, altitude: 1.95 }, 0);
+      }
+      return globe;
+    }).catch(() => {
+      globeBroken = true;
+      if (!globe) globe = softwareGlobe($('#globe'));
+      return globe;
+    });
+  }
+  return globePromise;
+}
+
+function scheduleGlobeLoad() {
+  const panel = $('#map-panel');
+  const link = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const slow = Boolean(link && (link.saveData || /^(slow-)?2g$/.test(link.effectiveType || '')));
+  const start = () => { ensureGlobe(); };
+  const afterPaint = (fn) => {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => requestAnimationFrame(fn));
+    else setTimeout(fn, 0);
+  };
+  afterPaint(() => {
+    if (typeof IntersectionObserver === 'function' && panel) {
+      const io = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        io.disconnect();
+        if (slow) setTimeout(start, 400);
+        else start();
+      }, { rootMargin: slow ? '0px' : '160px' });
+      io.observe(panel);
+      return;
+    }
+    if (slow) return;
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(start, { timeout: 1500 });
+    else setTimeout(start, 400);
+  });
+}
+
+function bootGlobe() {
+  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  /* jsdom has no network for the library; keep the canvas fallback synchronous. */
+  if (/jsdom/i.test(ua) || typeof Globe === 'function') {
+    initGlobe();
+    if (globe && globe.pointOfView) globe.pointOfView({ lat: 30, lng: 60, altitude: 1.95 }, 0);
+    return;
+  }
+  scheduleGlobeLoad();
+}
+
 function initGlobe() {
   const container = $('#globe');
   if (!container) return;
+  const placeholder = container.querySelector('.globe-placeholder');
+  if (placeholder) placeholder.hidden = true;
   try {
     if (typeof Globe !== 'function') throw new Error('globe.gl missing');
     globe = Globe()(container)
@@ -1949,7 +2026,7 @@ function render() {
   if ($('#carrier').options[0]) $('#carrier').options[0].text = s.detect;
   const badge = $('#mode-badge');
   badge.hidden = !state.view;
-  badge.textContent = state.view && !state.view.demo ? s.live : s.demo;
+  badge.textContent = !state.view ? '' : (state.view.demo ? s.demo : s.live);
   badge.classList.toggle('live', Boolean(state.view && !state.view.demo));
 
   renderParcels();
@@ -2147,8 +2224,8 @@ function renderSteps() {
   if (state.error) summary.textContent = state.error.title;
   else if (view && view.demo) summary.textContent = s.historyNote;
   else if (view) summary.textContent = `${view.carrierName} · ${s.liveNote}`;
-  else summary.textContent = '';
-  summary.style.display = view || state.error ? '' : 'none';
+  else summary.textContent = s.empty;
+  summary.style.display = '';
 
   const accent = $('.panel-title .accent');
   /* “Not connected” is for a missing key; a carrier outage says what it is. */
@@ -2371,6 +2448,7 @@ function submitSearch(event) {
   }
   const number = raw.replace(/-/g, '').toUpperCase();
   const carrier = $('#carrier').value;
+  ensureGlobe();
   lookup(number, carrier, { force: true });
 }
 
@@ -2540,7 +2618,7 @@ if (numberField) {
 }
 
 $('#settings').onclick = () => $('#modal').showModal();
-/* “이용 안내” and “조회 안내” are links to /guide.html — they must not open the settings dialog. */
+/* “이용 안내” and “조회 안내” are links to /guide — they must not open the settings dialog. */
 $('#refresh').onclick = () => {
   if (!state.number) { toast(t().empty); return; }
   lookup(state.number, state.carrier);
@@ -2601,13 +2679,12 @@ if (mapSwitch) {
  * ------------------------------------------------------------------ */
 
 buildLanguageList();
-initGlobe();
+bootGlobe();
 initFlatMap();
 state.view = null;
 state.number = '';
 state.carrier = 'auto';
 render();
-if (globe) globe.pointOfView({ lat: 30, lng: 60, altitude: 1.95 }, 0);
 
 /* Small read-only hook for the 2D view's state — used by the UI tests and by
    support when a report says “the flat map shows nothing”. */

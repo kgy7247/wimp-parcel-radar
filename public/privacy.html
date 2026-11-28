@@ -7,8 +7,11 @@
 <title>개인정보처리방침 · WIMP</title>
 <meta name="description" content="WIMP(Where Is My Parcel?)의 개인정보처리방침 — 운송장 번호를 서버에 저장하지 않는 구조, 15분 메모리 캐시, 브라우저에 아무것도 남기지 않는 조회 방식, 제3자 전송 범위, 쿠키와 광고에 대한 안내.">
 <meta name="robots" content="index,follow">
-<link rel="canonical" href="https://www.wimp911.com/privacy.html">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080d13'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23b7f373' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23b7f373'/%3E%3C/svg%3E">
+<link rel="canonical" href="https://www.wimp911.com/privacy">
+<meta property="og:url" content="https://www.wimp911.com/privacy">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080d13'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23b7f373' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23b7f373'/%3E%3C/svg%3E" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="style.css">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7205132235653329" crossorigin="anonymous"></script>
 <style>
@@ -37,7 +40,7 @@
   <div class="top">
     <a href="./">◉ WIMP <span class="muted">/ parcel tracker</span></a>
     <span>
-      <a class="back" href="guide.html">이용 안내</a> <span class="muted">·</span>
+      <a class="back" href="guide">이용 안내</a> <span class="muted">·</span>
       <a class="back" href="./">← 조회 화면으로</a>
     </span>
   </div>
@@ -128,7 +131,7 @@
   <p>내용이 바뀌면 이 페이지에 개정일과 함께 게시합니다. 실제 동작이 달라지는 변경(예: 새로운 조회처 추가)은 문구에 먼저 반영합니다.</p>
 
   <h2>8. 문의</h2>
-  <p>개인정보 처리에 관한 문의는 <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub 저장소 이슈</a>로 남겨 주세요. 서비스 이용 방법은 <a href="guide.html">이용 안내</a>에 정리되어 있습니다.</p>
+  <p>개인정보 처리에 관한 문의는 <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub 저장소 이슈</a>로 남겨 주세요. 서비스 이용 방법은 <a href="guide">이용 안내</a>에 정리되어 있습니다.</p>
 
   <hr style="border:0;border-top:1px solid #222b35;margin:44px 0 26px">
 
@@ -136,9 +139,9 @@
   <p>WIMP looks up parcel tracking numbers on the carrier's public tracking pages and through the lastscanned.com aggregation API. <strong>We do not store your tracking number or the results on our server.</strong> The number is used only to perform the lookup, and a response is held in server memory for at most 15 minutes as a cache (up to 400 entries per instance) before it expires. Vercel's CDN may cache a response for up to 60 seconds.</p>
   <p>The tracking number is sent to the relevant carrier (CJ Logistics, Korea Post, Hanjin, Lotte Global Logistics, DHL), and to lastscanned.com for the other 550+ carriers; city names alone are sent to OpenStreetMap Nominatim to resolve map coordinates. Hosting logs (IP address, user agent, timestamp) are processed by Vercel Inc. under its standard log policy.</p>
   <p>Anonymous visit statistics (page, referrer, country, device and browser type) are collected with Vercel Web Analytics, which sets no cookies and does not store personal data or an IP address; your tracking number is never part of it. The service sets no cookies of its own and uses no local storage: the number you type lives in page memory only and disappears when you reload or close the tab. If third-party advertising (Google AdSense) is displayed, the ad provider may set cookies — you can opt out at <a href="https://adssettings.google.com" target="_blank" rel="noopener">adssettings.google.com</a>.</p>
-  <p>Contact: <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub issues</a>. Usage guide (Korean): <a href="guide.html">guide.html</a>.</p>
+  <p>Contact: <a href="https://github.com/kgy7247/wimp-parcel-radar/issues" target="_blank" rel="noopener">GitHub issues</a>. Usage guide (Korean): <a href="guide">guide</a>.</p>
 
-  <p class="meta" style="margin-top:36px"><a href="terms.html">이용약관</a> · <a href="guide.html">이용 안내</a> · <a href="./">WIMP 홈</a></p>
+  <p class="meta" style="margin-top:36px"><a href="terms">이용약관</a> · <a href="guide">이용 안내</a> · <a href="./">WIMP 홈</a></p>
 </main>
 </body>
 </html>

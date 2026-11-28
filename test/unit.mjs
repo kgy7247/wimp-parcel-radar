@@ -488,9 +488,101 @@ await test('country: the country named inside the scan text wins over the old KR
   assert.equal(countryFromText('KOELN, DE'), 'DE');
   assert.equal(countryFromText('UNITED STATES'), 'US');
   assert.equal(makeLocation('ROISSY CHARLES DE GAULLE CEDEX, FRANCE').countryCode, 'FR');
-  assert.equal(makeLocation('PADUCAH, KENTUCKY').countryCode, 'KR', 'unknown until the geocoder answers');
-  assert.equal(makeLocation('PADUCAH, KENTUCKY').countryUncertain, true);
+  assert.equal(makeLocation('PADUCAH, KENTUCKY').countryCode, 'US', 'the state name is the United States');
+  assert.equal(makeLocation('PADUCAH, KENTUCKY').countryUncertain, false);
+  assert.ok(makeLocation('PADUCAH, KENTUCKY').lng < 0);
   assert.equal(makeLocation('대전동부').countryCode, 'KR');
+});
+
+await test('country: US state abbreviations are not ISO countries', async () => {
+  const { makeLocation, countryFromText, preferUSContext } = handler._internal;
+  const plainfield = makeLocation('Plainfield, IN');
+  assert.equal(plainfield.countryCode, 'US');
+  assert.equal(plainfield.countryEn, 'United States');
+  assert.equal(plainfield.countryUncertain, false);
+  assert.ok(plainfield.lng < 0 && plainfield.lat > 25, 'country centre is the US, not India');
+
+  assert.equal(makeLocation('Mumbai, IN').countryCode, 'IN', 'a known Indian city keeps India');
+  assert.equal(countryFromText('IN'), 'IN', 'a bare IN is the country');
+  assert.equal(makeLocation('IN').countryCode, 'IN');
+  assert.equal(makeLocation('Mumbai', { countryCode: 'IN' }).countryCode, 'IN', 'Indian context');
+  assert.equal(makeLocation('Seoul, KR').countryCode, 'KR');
+  assert.equal(makeLocation('Seoul KR').countryCode, 'KR');
+  assert.equal(makeLocation('Cincinnati, OH').countryCode, 'US');
+  const columbus = makeLocation('Columbus, OH');
+  assert.equal(columbus.countryCode, 'US');
+  assert.equal(columbus.countryUncertain, false, 'OH used to fall through to uncertain KR');
+  assert.ok(columbus.lng < 0);
+  assert.equal(makeLocation('KOELN, DE').countryCode, 'DE');
+  assert.equal(makeLocation('Leipzig, DE').countryCode, 'DE');
+  assert.equal(makeLocation('Dover, DE', { carrier: 'USPS' }).countryCode, 'US');
+  assert.equal(makeLocation('San Jose, CA').countryCode, 'US');
+  assert.equal(makeLocation('Toronto, CA').countryCode, 'CA');
+  assert.equal(makeLocation('San Juan, PR').countryCode, 'US');
+  assert.equal(makeLocation('Washington, DC').countryCode, 'US');
+
+  assert.equal(makeLocation('Hockessin, DE').countryCode, 'DE', 'an unknown ", DE" stays Germany until a US context exists');
+  const events = [
+    { location: makeLocation('LEIPZIG, DE') },
+    { location: makeLocation('Hockessin, DE') },
+    { location: makeLocation('CINCINNATI, OH') },
+  ];
+  preferUSContext(events, 'DHL');
+  assert.equal(events[0].location.countryCode, 'DE', 'a known German city stays Germany');
+  assert.equal(events[1].location.countryCode, 'US', 'Delaware once another stop is in the US');
+  assert.equal(events[2].location.countryCode, 'US');
+
+  const bare = makeLocation('Plainfield', { carrier: 'USPS' });
+  assert.equal(bare.countryCode, 'US');
+  assert.equal(bare.countryUncertain, true, 'the geocoder may still correct a bare city');
+});
+
+await test('DHL: US cities are not Korea, and Seoul stays Korea', async () => {
+  stub({
+    'api-eu.dhl.com/track/shipments': {
+      shipments: [{
+        id: '9990001112',
+        events: [
+          { timestamp: '2026-11-20T12:00:00Z', location: { address: { addressLocality: 'Cincinnati', addressRegion: 'OH' } }, statusCode: 'transit', status: 'Processed at CINCINNATI' },
+          { timestamp: '2026-11-21T12:00:00Z', location: { address: { addressLocality: 'Plainfield', addressRegion: 'IN' } }, statusCode: 'transit', status: 'Processed at PLAINFIELD' },
+          { timestamp: '2026-11-22T12:00:00Z', location: { address: { addressLocality: 'Seoul', countryCode: 'KR' } }, statusCode: 'transit', status: 'Arrived at SEOUL' },
+        ],
+      }],
+    },
+  });
+  process.env.DHL_API_KEY = 'test-key-123';
+  const out = await call('9990001112', 'DHL');
+  delete process.env.DHL_API_KEY;
+  assert.equal(out.status, 200, JSON.stringify(out.body.error || out.body));
+  assert.deepEqual(out.body.events.map((e) => e.location.countryCode), ['US', 'US', 'KR']);
+  assert.ok(out.body.events[0].location.lng < 0, 'Cincinnati is not plotted in Korea');
+  assert.ok(out.body.events[1].location.lng < 0, 'Plainfield, IN is not plotted in India');
+  assert.equal(out.body.events[1].location.countryUncertain, false);
+  assert.ok(!calls.some((c) => /countrycodes=in\b/i.test(c.url)), 'geocoder is not locked to India');
+});
+
+await test('lastscanned: USPS Plainfield, IN is the United States', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'api.lastscanned.com/v1/track/9400111899223344556677': lastscannedJson({
+        carrier: 'usps',
+        trackingNumber: '9400111899223344556677',
+        status: 'in_transit',
+        statusDescription: 'In transit',
+        estimatedDelivery: null,
+        events: [
+          { timestamp: '2026-11-21T15:00:00Z', localTime: null, status: 'in_transit', description: 'Departed', location: 'INDIANAPOLIS, IN', code: null },
+          { timestamp: '2026-11-20T15:00:00Z', localTime: null, status: 'in_transit', description: 'Arrived', location: 'PLAINFIELD, IN', code: null },
+        ],
+      }),
+    });
+    const out = await call('9400111899223344556677', 'USPS');
+    assert.equal(out.status, 200, JSON.stringify(out.body.error || out.body));
+    assert.equal(out.body.carrier.code, 'USPS');
+    assert.deepEqual(out.body.events.map((e) => e.location.countryCode), ['US', 'US']);
+    assert.ok(out.body.events.every((e) => e.location.lng < 0));
+    assert.ok(!calls.some((c) => /countrycodes=in\b|,\s*India\b/i.test(decodeURIComponent(c.url))));
+  });
 });
 
 await test('lastscanned: UPS delivered, EDD normalised, events oldest-first', async () => {
