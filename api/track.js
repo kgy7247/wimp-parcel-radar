@@ -600,6 +600,98 @@ function lookupGeo(name) {
   return null;
 }
 
+/* USPS-style "City, XX". These two letters are a state or territory, not an
+   ISO country — except when the same pair is also a country we actually ship
+   to (IN India, CA Canada, DE Germany, ID Indonesia). */
+const US_STATE_ABBR = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+  MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+  MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire',
+  NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina',
+  ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania',
+  RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee',
+  TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington',
+  WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming', DC: 'District of Columbia',
+  AS: 'American Samoa', GU: 'Guam', MP: 'Northern Mariana Islands',
+  PR: 'Puerto Rico', VI: 'US Virgin Islands', UM: 'US Minor Outlying Islands',
+};
+const US_STATE_NAMES = {};
+for (const [abbr, name] of Object.entries(US_STATE_ABBR)) {
+  US_STATE_NAMES[name.toUpperCase()] = abbr;
+}
+/* Abbreviations that are also ISO codes in COUNTRY. */
+const STATE_ISO_CLASH = { CA: 'CA', DE: 'DE', ID: 'ID', IN: 'IN' };
+/* "Mumbai, IN" is India. "Leipzig, DE" is Germany. A city in this list keeps
+   the ISO country even on a US carrier. */
+const CLASH_CITY = {
+  IN: ['MUMBAI', 'BOMBAY', 'DELHI', 'NEW DELHI', 'KOLKATA', 'CALCUTTA', 'CHENNAI', 'MADRAS', 'BENGALURU', 'BANGALORE', 'HYDERABAD', 'AHMEDABAD', 'PUNE', 'JAIPUR', 'LUCKNOW', 'SURAT', 'KANPUR', 'NAGPUR', 'INDORE', 'THANE', 'BHOPAL', 'PATNA', 'VADODARA', 'AGRA', 'NASHIK', 'RAJKOT', 'VARANASI', 'SRINAGAR', 'AMRITSAR', 'PRAYAGRAJ', 'ALLAHABAD', 'RANCHI', 'COIMBATORE', 'JABALPUR', 'GWALIOR', 'VIJAYAWADA', 'JODHPUR', 'MADURAI', 'RAIPUR', 'CHANDIGARH', 'GUWAHATI', 'MYSORE', 'MYSURU', 'GURGAON', 'GURUGRAM', 'NOIDA', 'KOCHI', 'COCHIN', 'INDIA'],
+  DE: ['BERLIN', 'MUNICH', 'MUNCHEN', 'MUENCHEN', 'FRANKFURT', 'HAMBURG', 'COLOGNE', 'KOLN', 'KOELN', 'STUTTGART', 'DUSSELDORF', 'DUESSELDORF', 'LEIPZIG', 'DRESDEN', 'HANNOVER', 'HANOVER', 'NUREMBERG', 'NURNBERG', 'NUERNBERG', 'BREMEN', 'BONN', 'DORTMUND', 'ESSEN', 'MANNHEIM', 'KARLSRUHE', 'AUGSBURG', 'WIESBADEN', 'HEIDELBERG', 'DARMSTADT', 'FREIBURG', 'KIEL', 'ERFURT', 'MAINZ', 'ROSTOCK', 'KASSEL', 'DITZINGEN', 'GERMANY', 'DEUTSCHLAND'],
+  CA: ['TORONTO', 'MONTREAL', 'VANCOUVER', 'CALGARY', 'OTTAWA', 'EDMONTON', 'WINNIPEG', 'QUEBEC', 'HAMILTON', 'MISSISSAUGA', 'BRAMPTON', 'SURREY', 'HALIFAX', 'SASKATOON', 'REGINA', 'CANADA'],
+  ID: ['JAKARTA', 'SURABAYA', 'BANDUNG', 'MEDAN', 'SEMARANG', 'MAKASSAR', 'PALEMBANG', 'DENPASAR', 'YOGYAKARTA', 'BALI', 'BEKASI', 'TANGERANG', 'DEPOK', 'INDONESIA'],
+};
+/* A handful of real cities whose state code collides, so "Dover, DE" is
+   Delaware without needing the rest of the route to be American. */
+const US_CITY_WHEN_CLASH = {
+  DE: ['DOVER', 'WILMINGTON', 'NEWARK', 'MIDDLETOWN', 'GEORGETOWN', 'SMYRNA', 'SEAFORD', 'MILFORD', 'NEW CASTLE'],
+  ID: ['BOISE', 'MERIDIAN', 'NAMPA', 'IDAHO FALLS', 'POCATELLO', 'CALDWELL', 'TWIN FALLS', 'LEWISTON'],
+};
+const US_CARRIERS = new Set(['USPS', 'FEDEX', 'UPS']);
+
+function carrierIsUS(carrier) {
+  return US_CARRIERS.has(String(carrier || '').toUpperCase());
+}
+
+function placeKey(text) {
+  return String(text || '').toUpperCase().replace(/\./g, '').replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function cityMatchesList(city, list) {
+  const norm = placeKey(city);
+  if (!norm || !list) return false;
+  return list.some((name) => {
+    const n = placeKey(name);
+    return n && (norm === n || norm.startsWith(n + ' ') || norm.endsWith(' ' + n));
+  });
+}
+
+/** "Plainfield, IN", "Cincinnati OH", "Paducah, Kentucky". A bare "IN" is not. */
+function usStateInText(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+  const stripped = raw.replace(/[,\s]+(?:USA|U\.S\.A\.|U\.S\.|UNITED STATES|US)$/i, '').trim();
+  const abbr = stripped.match(/^(.+?)[\s,./-]+([A-Za-z]{2})\.?$/);
+  if (abbr) {
+    const city = abbr[1].trim();
+    const code = abbr[2].toUpperCase();
+    if (city && US_STATE_ABBR[code] && !/^[A-Za-z]{2}$/.test(city)) return { city, abbr: code };
+  }
+  const full = stripped.match(/^(.+?)(?:,\s*|\s+)([A-Za-z][A-Za-z .'-]{3,})$/);
+  if (full) {
+    const city = full[1].trim();
+    const code = US_STATE_NAMES[placeKey(full[2])];
+    if (city && code) return { city, abbr: code };
+  }
+  return null;
+}
+
+function stateMeansUS(parsed, options) {
+  if (!parsed) return false;
+  const clash = STATE_ISO_CLASH[parsed.abbr];
+  if (!clash) return true;
+  if (cityMatchesList(parsed.city, CLASH_CITY[parsed.abbr])) return false;
+  const opts = options || {};
+  if (carrierIsUS(opts.carrier) || opts.usContext) return true;
+  if (cityMatchesList(parsed.city, US_CITY_WHEN_CLASH[parsed.abbr])) return true;
+  /* Indiana and California are how parcel scans write the state, once a
+     known foreign city ("Mumbai", "Toronto") has been set aside. Germany's
+     ", DE" and Indonesia's ", ID" stay countries unless the carrier or the
+     rest of the route is American — European scans use DE constantly. */
+  return parsed.abbr === 'IN' || parsed.abbr === 'CA';
+}
+
 /** Build a location object for one carrier location string. */
 function makeLocation(name, opts) {
   const options = opts || {};
@@ -623,12 +715,26 @@ function makeLocation(name, opts) {
   }
 
   /* A UPS scan says “ROISSY CDG, FRANCE”; the old default of KR painted
-     every unrecognised overseas terminal with a Korean flag. Read the
-     country out of the text first, then the carrier hint, and only then
-     fall back — a Korean branch string is the only thing left. */
-  const hint = String(options.countryCode || '').toUpperCase();
-  const fromText = countryFromText(cleanName);
-  const cc = (hint && COUNTRY[hint] ? hint : '') || fromText || 'KR';
+     every unrecognised overseas terminal with a Korean flag. Read a US
+     state out of "City, XX" before trusting a 2-letter country hint —
+     "Plainfield, IN" is Indiana, not India. */
+  const hintRaw = String(options.countryCode || '').toUpperCase();
+  const hint = COUNTRY[hintRaw] ? hintRaw : '';
+  const fromText = countryFromText(cleanName, options);
+  const asUS = stateMeansUS(usStateInText(cleanName), options);
+  const hangul = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cleanName);
+  let cc = '';
+  let uncertain = false;
+  if (asUS) cc = 'US';
+  else if (hint) cc = hint;
+  else if (fromText) cc = fromText;
+  else if ((carrierIsUS(options.carrier) || options.usContext) && !hangul) {
+    cc = 'US';
+    uncertain = true;
+  } else {
+    cc = 'KR';
+    uncertain = true;
+  }
   const country = COUNTRY[cc] || COUNTRY.KR;
   return {
     name: cleanName,
@@ -642,7 +748,7 @@ function makeLocation(name, opts) {
     precision: 'country',
     needsGeocode: true,
     /* No hint and no country in the text: let the geocoder decide the country too. */
-    countryUncertain: !(hint && COUNTRY[hint]) && !fromText,
+    countryUncertain: uncertain,
   };
 }
 
@@ -660,17 +766,54 @@ const COUNTRY_ALIASES = {
   NZ: ['New Zealand'], KZ: ['Kazakhstan'], UZ: ['Uzbekistan'],
 };
 
-/** “ROISSY CDG, FRANCE”, “…, DE”, “(JP)” → the ISO code, when the text names one. */
-function countryFromText(text) {
-  const raw = String(text || '');
+/**
+ * “ROISSY CDG, FRANCE”, “Seoul, KR”, “Plainfield, IN”, a bare “IN”.
+ * options.carrier / options.usContext disambiguate state codes that are
+ * also countries (DE, ID) once the rest of the route is in the US.
+ */
+function countryFromText(text, options) {
+  const raw = String(text || '').trim();
   if (!raw) return '';
-  const tail = raw.trim().match(/(?:^|[\s,(\-])([A-Z]{2})[)\].]?\s*$/);
-  if (tail && COUNTRY[tail[1]]) return tail[1];
   const padded = ` ${raw.toLowerCase().replace(/[^a-z0-9\uac00-\ud7a3]+/g, ' ')} `;
   for (const [cc, aliases] of Object.entries(COUNTRY_ALIASES)) {
     if (aliases.some((alias) => padded.includes(` ${alias.toLowerCase()} `))) return cc;
   }
+  /* "IN" or "KR" alone is the country. It is not "City, IN". */
+  const bare = raw.match(/^\(?([A-Z]{2})\)?$/);
+  if (bare && COUNTRY[bare[1]]) return bare[1];
+  const state = usStateInText(raw);
+  if (state) {
+    if (stateMeansUS(state, options)) return 'US';
+    const clash = STATE_ISO_CLASH[state.abbr];
+    if (clash && COUNTRY[clash]) return clash;
+  }
+  const tail = raw.match(/(?:^|[\s,(\-])([A-Z]{2})[)\].]?\s*$/);
+  if (tail && COUNTRY[tail[1]] && !(state && state.abbr === tail[1])) return tail[1];
   return '';
+}
+
+/**
+ * A second pass, once every scan exists. "Dover, DE" on a USPS parcel — or
+ * on a DHL parcel whose other stops are already in the US — is Delaware.
+ * A known foreign city ("Leipzig, DE", "Mumbai, IN") is left alone, and a
+ * bare city is assumed American only when the carrier itself is USPS/FedEx/UPS.
+ */
+function preferUSContext(events, carrier) {
+  if (!Array.isArray(events) || !events.length) return;
+  const routeHasUS = events.some((ev) => ev && ev.location && ev.location.countryCode === 'US' && !ev.location.countryUncertain);
+  const usContext = carrierIsUS(carrier) || routeHasUS;
+  if (!usContext) return;
+  for (const ev of events) {
+    const loc = ev && ev.location;
+    if (!loc || loc.precision === 'hub' || !loc.name) continue;
+    if (/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(loc.name)) continue;
+    const state = usStateInText(loc.name);
+    const stateNowUS = state && stateMeansUS(state, { carrier, usContext: true });
+    const bareOnUSCarrier = carrierIsUS(carrier) && loc.countryUncertain && loc.countryCode !== 'US';
+    if (!stateNowUS && !bareOnUSCarrier) continue;
+    const next = makeLocation(loc.name, { carrier, usContext: true });
+    if (next) Object.assign(loc, next);
+  }
 }
 
 
@@ -692,7 +835,11 @@ function geocodeRemote(location) {
     if (wait > 0) await sleep(wait);
     lastGeocodeAt = Date.now();
     const korean = certain && location.countryCode === 'KR';
-    const q = certain ? `${location.name}, ${korean ? '대한민국' : (location.countryEn || location.countryCode)}` : location.name;
+    /* An uncertain US guess still searches in the United States, but the
+       geocoder's own country is allowed to replace it (see `certain`). */
+    const q = certain
+      ? `${location.name}, ${korean ? '대한민국' : (location.countryEn || location.countryCode)}`
+      : (location.countryCode === 'US' ? `${location.name}, United States` : location.name);
     const url =
       'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1' +
       (korean ? '&countrycodes=kr' : '') +
@@ -1389,15 +1536,24 @@ async function trackDHL(number) {
   const events = (shipment.events || []).map((ev) => {
     const addr = (ev.location && ev.location.address) || {};
     /* The event's own location string usually names the country; do not
-default a US or French event to Germany. */
-    const place = addr.addressLocality || (ev.location && ev.location.address && ev.location.address.countryCode) || '';
-    const cc = (addr.countryCode || '').toUpperCase();
+       default a US or French event to Germany — or to Korea when the only
+       hint is a US state ("Cincinnati, OH", "Plainfield, IN"). */
+    const locality = cleanText(addr.addressLocality || '');
+    const region = cleanText(addr.addressRegion || '');
+    const cc = String(addr.countryCode || '').toUpperCase();
+    const regionShown = region && (locality.toUpperCase() === region.toUpperCase()
+      || locality.toUpperCase().endsWith(' ' + region.toUpperCase())
+      || locality.toUpperCase().endsWith(', ' + region.toUpperCase()));
+    let place = locality;
+    if (region && !regionShown) place = place ? `${place}, ${region}` : region;
+    if (!place) place = cc;
+    const hint = COUNTRY[cc] ? cc : '';
     return {
       time: isoToKst(ev.timestamp),
       status: statusOf(dhlStatus(ev.statusCode, ev.status)),
       description: maskPersonal(ev.status || ''),
       scan: ev.status || '',
-      location: makeLocation(place, { countryCode: cc }),
+      location: place ? makeLocation(place, { countryCode: hint || undefined, carrier: 'DHL' }) : null,
     };
   });
 
@@ -1511,14 +1667,17 @@ async function trackLastscanned(number, carrierId) {
 
   const declared = lastscannedStatus(payload.status);
   const rawEvents = Array.isArray(payload.events) ? payload.events : [];
+  const resolvedCarrier = carrierForLastscanned(payload.carrier || carrierId);
+  const carrierCode = resolvedCarrier ? resolvedCarrier.code : '';
 
   // lastscanned returns newest first; the rest of the server works oldest first.
+  // The trailing "IN" in "PLAINFIELD, IN" is a state, so it is not passed
+  // through as an ISO country hint. countryFromText reads the whole string.
   const events = rawEvents
     .slice()
     .reverse()
     .map((ev) => {
       const place = cleanText(ev.location || '');
-      const ccMatch = place.match(/(?:,\s*|\s)([A-Z]{2})$/);
       const statusCode = lastscannedStatus(ev.status) || 'UNKNOWN';
       const local = ev.localTime ? String(ev.localTime) : '';
       return {
@@ -1526,7 +1685,7 @@ async function trackLastscanned(number, carrierId) {
         status: statusOf(statusCode),
         description: maskPersonal(ev.description || ''),
         scan: cleanText(ev.description || '') || STATUS_LABEL[statusCode],
-        location: place ? makeLocation(place, { countryCode: ccMatch ? ccMatch[1] : undefined }) : null,
+        location: place ? makeLocation(place, { carrier: carrierCode }) : null,
       };
     });
 
@@ -1548,7 +1707,7 @@ async function trackLastscanned(number, carrierId) {
     events,
     source: 'lastscanned',
     upstreamCarrier: payload.carrier || carrierId || null,
-    carrier: carrierForLastscanned(payload.carrier || carrierId),
+    carrier: resolvedCarrier,
     declaredStatus: declared,
     destination: payload.destination || null,
     estimatedDelivery: estimatedDate(payload.estimatedDelivery, [payload.estimatedDeliveryAt]),
@@ -1785,18 +1944,23 @@ function routeCountries(points, visits) {
  * ------------------------------------------------------------------ */
 
 /** lastscanned `{city,state,country}`, DHL `{address:{addressLocality,countryCode}}` or a plain string. */
-function destinationLocation(raw) {
+function destinationLocation(raw, opts) {
   if (!raw) return null;
-  if (typeof raw === 'string') return makeLocation(raw);
+  const options = opts || {};
+  if (typeof raw === 'string') return makeLocation(raw, options);
   /* Already resolved (and maybe geocoded) by the handler. */
   if (Number.isFinite(raw.lat) && Number.isFinite(raw.lng)) return raw;
   const address = raw.address || raw;
   const city =
     address.addressLocality || address.city || address.name || raw.city || raw.name || '';
+  const region = address.addressRegion || address.state || raw.state || '';
+  const cityLine = [city, region].filter(Boolean).join(', ');
   const cc = String(address.countryCode || raw.countryCode || raw.country || '').toUpperCase();
   const hint = COUNTRY[cc] ? cc : '';
-  if (city) return makeLocation(city, hint ? { countryCode: hint } : undefined);
-  return hint ? makeLocation(COUNTRY[hint].nameEn, { countryCode: hint }) : null;
+  const next = { ...options };
+  if (hint) next.countryCode = hint;
+  if (cityLine) return makeLocation(cityLine, next);
+  return hint ? makeLocation(COUNTRY[hint].nameEn, next) : null;
 }
 
 function sameSpot(a, b) {
@@ -2103,6 +2267,8 @@ async function handler(req, res) {
 
     try {
       const result = await runStep(step, number);
+      const carrierCode = (result.carrier && result.carrier.code) || step.carrier || '';
+      preferUSContext(result.events, carrierCode);
 
       // Fill in coordinates for locations the built-in hub table did not know.
       const stillTime = Date.now() - startedAt < 5000;
@@ -2133,7 +2299,12 @@ async function handler(req, res) {
       /* The destination is often a city the hub table does not know
          (“SEOUL” is fine, a suburb is not); give it one lookup too, so the
          planned leg ends on the town and not on the country's centre. */
-      let destination = destinationLocation(result.destination);
+      let destination = destinationLocation(result.destination, {
+        carrier: carrierCode,
+        usContext:
+          carrierIsUS(carrierCode) ||
+          (result.events || []).some((ev) => ev.location && ev.location.countryCode === 'US' && !ev.location.countryUncertain),
+      });
       if (destination && destination.needsGeocode && Date.now() - startedAt < 5000) {
         const geo = await geocodeRemote(destination);
         if (geo && Number.isFinite(geo.lat)) destination = { ...destination, ...geo };
@@ -2274,6 +2445,7 @@ module.exports._internal = {
   isCustomsScan,
   locationKey,
   countryFromText,
+  preferUSContext,
   errorMeta,
   makeLocation,
   lookupGeo,

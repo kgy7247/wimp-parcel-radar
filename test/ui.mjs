@@ -245,13 +245,25 @@ await test('idle: empty state, no default parcel, nothing fetched on load', asyn
   assert.equal($('#count').textContent, '0건');
   assert.equal($('#parcels').style.display, 'none');
   assert.equal(fetched.length, 0, 'no API call before the user asks');
+  const html = read('index.html');
+  for (const phrase of ['API 미연결', '예시 데이터', '제공된 경로 기반 예시', '스캔 시각 미확인']) {
+    assert.ok(!html.includes(phrase), 'static HTML still ships ' + phrase);
+    assert.ok(!document.body.textContent.includes(phrase), 'idle screen still shows ' + phrase);
+  }
+  assert.match($('.history-summary p').textContent, /송장번호/);
+  assert.equal($('#updated').textContent, '조회 전');
+  assert.equal($('#mode-badge').hidden, true);
+  assert.equal($('#mode-badge').textContent.trim(), '');
+  assert.ok(!html.includes('src="globe.min.js"'), 'globe.min.js is not on the first load');
+  assert.ok(html.includes('globe-placeholder'));
+  assert.ok(/script\.src = 'globe\.min\.js'/.test(appJs), 'the library is loaded on demand');
 });
 
 await test('이용 안내: header entry is a link to guide.html', async () => {
   const link = $('#guide-link');
   assert.ok(link, 'guide link exists');
   assert.equal(link.tagName, 'A');
-  assert.equal(link.getAttribute('href'), 'guide.html');
+  assert.equal(link.getAttribute('href'), 'guide');
   assert.equal(link.textContent, '이용 안내');
 });
 
@@ -274,7 +286,7 @@ await test('⚙ button alone opens the settings dialog', async () => {
 await test('“조회 안내” in the result bar also links to the guide, not to settings', async () => {
   const notify = $('#notify');
   assert.equal(notify.tagName, 'A');
-  assert.equal(notify.getAttribute('href'), 'guide.html#how');
+  assert.equal(notify.getAttribute('href'), 'guide#how');
   $('#modal').open = false;
   notify.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
   assert.equal($('#modal').open, false);
@@ -374,15 +386,15 @@ await test('language: English relabels the strip, the count and the guide links'
   assert.equal($('#last-time').textContent, '21 Nov, 12:42');
   assert.equal(document.documentElement.lang, 'en');
   assert.equal(window.location.search, '?lang=en');
-  assert.equal($('#guide-link').getAttribute('href'), 'guide.html?lang=en');
-  assert.equal($('#notify').getAttribute('href'), 'guide.html?lang=en#how');
+  assert.equal($('#guide-link').getAttribute('href'), 'guide?lang=en');
+  assert.equal($('#notify').getAttribute('href'), 'guide?lang=en#how');
   assert.match($('#parcels').textContent, /3 events/, 'a space before the count in English');
   pickLang('ja');
   assert.equal($('.result-label').textContent, '現在の配送状況');
   assert.match($('#parcels').textContent, /3件/, 'no space before the count in Japanese');
   pickLang('ko');
   assert.equal($('.result-label').textContent, '현재 배송 상태');
-  assert.equal($('#guide-link').getAttribute('href'), 'guide.html', 'Korean links stay clean');
+  assert.equal($('#guide-link').getAttribute('href'), 'guide', 'Korean links stay clean');
   assert.equal(window.location.search, '?lang=ko');
 });
 
@@ -401,7 +413,7 @@ await test('language: ?lang=fr decides the first paint without any stored prefer
   assert.equal(doc.documentElement.lang, 'fr');
   assert.equal(doc.querySelector('.result-label').textContent, 'Statut actuel');
   assert.equal(doc.querySelector('#lang-current').textContent, 'Français');
-  assert.equal(doc.querySelector('#guide-link').getAttribute('href'), 'guide.html?lang=fr');
+  assert.equal(doc.querySelector('#guide-link').getAttribute('href'), 'guide?lang=fr');
   assert.equal(fr.window.localStorage.length, 0, 'nothing written to browser storage');
   fr.window.close();
 });
@@ -455,7 +467,7 @@ await test('app.js never touches browser storage (the privacy page says so)', as
 await test('guide.html: AdSense tag, canonical and rich content sections', async () => {
   const guide = read('guide.html');
   assert.ok(guide.includes(ADSENSE), 'AdSense script on the guide page');
-  assert.ok(guide.includes('<link rel="canonical" href="https://www.wimp911.com/guide.html">'));
+  assert.ok(guide.includes('<link rel="canonical" href="https://www.wimp911.com/guide">'));
   assert.ok(guide.includes('<html lang="ko">'));
   for (const id of ['how', 'carriers', 'status', 'not-found', 'route', 'edd', 'privacy', 'faq']) {
     assert.ok(guide.includes(`id="${id}"`), 'section #' + id);
@@ -483,19 +495,19 @@ await test('guide.html: FAQ structured data matches the visible questions', asyn
 });
 
 await test('index links the guide from the header, result bar, teaser and footer', async () => {
-  const links = [...document.querySelectorAll('a[href^="guide.html"]')].map((a) => a.getAttribute('href'));
-  assert.ok(links.includes('guide.html'), 'plain guide link');
-  assert.ok(links.includes('guide.html#how'), 'how-to anchor');
-  assert.ok(links.includes('guide.html#status'), 'status anchor');
-  assert.ok(links.includes('guide.html#not-found'), 'not-found anchor');
-  assert.ok(links.includes('guide.html#faq'), 'faq anchor');
-  assert.ok($('.footer-legal a[href="guide.html"]'), 'footer link');
+  const links = [...document.querySelectorAll('a[href^="guide"]')].map((a) => a.getAttribute('href'));
+  assert.ok(links.includes('guide'), 'plain guide link');
+  assert.ok(links.includes('guide#how'), 'how-to anchor');
+  assert.ok(links.includes('guide#status'), 'status anchor');
+  assert.ok(links.includes('guide#not-found'), 'not-found anchor');
+  assert.ok(links.includes('guide#faq'), 'faq anchor');
+  assert.ok($('.footer-legal a[href="guide"]'), 'footer link');
 });
 
 await test('sitemap.xml lists the guide page', async () => {
   const sitemap = read('sitemap.xml');
-  assert.ok(sitemap.includes('<loc>https://www.wimp911.com/guide.html</loc>'));
-  assert.ok(/<loc>https:\/\/www\.wimp911\.com\/guide\.html<\/loc>\s*<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/.test(sitemap));
+  assert.ok(sitemap.includes('<loc>https://www.wimp911.com/guide</loc>'));
+  assert.ok(/<loc>https:\/\/www\.wimp911\.com\/guide<\/loc>\s*<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/.test(sitemap));
 });
 
 await test('privacy.html describes the implementation, not a database', async () => {
@@ -506,7 +518,7 @@ await test('privacy.html describes the implementation, not a database', async ()
   assert.ok(privacy.includes('lastscanned.com'), 'the aggregation API that receives the number is disclosed');
   assert.ok(privacy.includes('OpenStreetMap'), 'geocoding recipient disclosed');
   assert.ok(!/언어 설정<\/td>/.test(privacy), 'no longer claims a language preference is stored');
-  assert.ok(privacy.includes('guide.html'), 'links to the guide');
+  assert.ok(privacy.includes('href="guide"'), 'links to the guide');
 });
 
 await test('every published page carries the AdSense client and a canonical URL', async () => {

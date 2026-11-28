@@ -3,6 +3,14 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "^wimp911\\.com$" }],
+      "destination": "https://www.wimp911.com/:path*",
+      "permanent": true
+    }
+  ],
   "functions": {
     "api/track.js": {
       "maxDuration": 10,
