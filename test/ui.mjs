@@ -428,6 +428,13 @@ await test('language: every one of the 19 dictionaries fills the whole UI', asyn
       }
     }
     assert.ok($('#number').placeholder.trim(), `${code}: placeholder is empty`);
+    for (const el of document.querySelectorAll('[data-i-aria]')) {
+      const label = (el.getAttribute('aria-label') || '').trim();
+      assert.ok(label, `${code}: aria-label on ${el.id || el.className} is empty`);
+      if (!['ko', 'ja', 'zh-CN', 'zh-TW'].includes(code)) {
+        assert.ok(!hangul.test(label), `${code}: aria-label still Korean: ${label}`);
+      }
+    }
   }
   assert.equal(labels.length > 40, true, 'the dictionary covers the whole page');
   pickLang('ko');

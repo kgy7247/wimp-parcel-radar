@@ -1172,6 +1172,11 @@ function render() {
     const value = s[el.dataset.i];
     if (typeof value === 'string') el.textContent = value;
   });
+  /* Screen-reader labels follow the same dictionary. */
+  document.querySelectorAll('[data-i-aria]').forEach((el) => {
+    const value = s[el.dataset.iAria];
+    if (typeof value === 'string') el.setAttribute('aria-label', value);
+  });
   $('#number').placeholder = s.placeholder;
   if ($('#carrier').options[0]) $('#carrier').options[0].text = s.detect;
   const badge = $('#mode-badge');

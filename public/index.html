@@ -48,7 +48,7 @@
         <div class="lang-list" id="lang-list"></div>
       </div>
     </div>
-    <button class="avatar" id="settings" aria-label="Settings">⚙</button>
+    <button class="avatar" id="settings" aria-label="Settings" data-i-aria="settings">⚙</button>
   </div>
 </header>
 
@@ -64,7 +64,7 @@
 
   <form id="search" autocomplete="off">
     <span class="search-icon">⌕</span>
-    <input id="number" placeholder="송장번호를 입력하세요" aria-label="Tracking number" required maxlength="60" value="" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false">
+    <input id="number" placeholder="송장번호를 입력하세요" aria-label="Tracking number" data-i-aria="placeholder" required maxlength="60" value="" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false">
     <select id="carrier" aria-label="Carrier">
       <option value="auto" data-i="carrierAuto">배송사 자동 인식</option>
       <option value="CJ" data-i="carrierCJ">CJ대한통운</option>
@@ -92,7 +92,7 @@
   <div id="parcels"></div>
 
   <!-- 상태 우선: 현재 상태·도착 예정 → 마지막 확인 위치·시각 → 3D 지구본·타임라인 -->
-  <section class="result-head" id="result-head" aria-label="현재 배송 상태">
+  <section class="result-head" id="result-head" aria-label="현재 배송 상태" data-i-aria="currentStatus">
     <div class="result-cell history-summary">
       <small class="result-label" data-i="currentStatus">현재 배송 상태</small>
       <div class="summary-row"><span class="badge" data-i="transit">이동 중</span><span class="edd" id="edd" hidden></span></div>
@@ -129,7 +129,7 @@
     <aside class="history">
       <div class="history-head"><h2 data-i="history">배송 이력</h2><span class="chip" data-i="newest">최신순</span></div>
       <div id="events"></div>
-      <div class="history-bottom"><span data-i="historyFoot">최신 스캔이 가장 위에 표시됩니다</span><button id="refresh" aria-label="Refresh">⟳</button></div>
+      <div class="history-bottom"><span data-i="historyFoot">최신 스캔이 가장 위에 표시됩니다</span><button id="refresh" aria-label="Refresh" data-i-aria="again">⟳</button></div>
     </aside>
 
     <div class="radar" id="radar" hidden aria-live="polite">
