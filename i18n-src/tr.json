@@ -109,7 +109,9 @@
     "AWB_UNSUPPORTED": "Bu havayolu AWB’si henüz desteklenmiyor.",
     "IS_FLIGHT": "Bu bir AWB değil, uçuş numarası.",
     "AIR_BAD_INPUT": "Bir AWB (11 hane) veya uçuş numarası (KE082) girin.",
-    "FLIGHT_NONE": "Bu uçuş numarasına ait bir uçak gözlenmiyor."
+    "FLIGHT_NONE": "Bu uçuş numarasına ait bir uçak gözlenmiyor.",
+    "TIMEOUT": "Taşıyıcı sorgusu çok uzun sürdü.",
+    "METHOD_NOT_ALLOWED": "Bu istek yöntemi desteklenmiyor."
   },
   "hints": {
     "NOT_FOUND": "Numarayı ve hane sayısını kontrol edin — taşıyıcı kargoyu henüz almamış olabilir.",
@@ -124,7 +126,9 @@
     "AWB_UNSUPPORTED": "Şimdilik yalnızca Asiana (988) ve Korean Air (180) kargo AWB’leri sorgulanıyor.",
     "IS_FLIGHT": "Uçuş numarasını arama alanına yazın, uçağı kürede görünsün.",
     "AIR_BAD_INPUT": "örn. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Uçak yerde ya da radar kapsamı dışında olabilir. Uçuş numarasını kontrol edin veya birazdan tekrar deneyin."
+    "FLIGHT_NONE": "Uçak yerde ya da radar kapsamı dışında olabilir. Uçuş numarasını kontrol edin veya birazdan tekrar deneyin.",
+    "TIMEOUT": "Birazdan tekrar deneyin ya da doğrudan taşıyıcının sitesine bakın.",
+    "METHOD_NOT_ALLOWED": "Birazdan tekrar deneyin ya da doğrudan taşıyıcının sitesine bakın."
   },
   "openSite": "Taşıyıcı sitesini aç",
   "again": "Tekrar sorgula",

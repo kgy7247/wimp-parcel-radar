@@ -189,8 +189,9 @@ function localizeNames() {
   /* An error keeps its code, so its wording follows a later language switch too. */
   if (state.error && state.error.code) {
     const s = t();
-    state.error.title = s.errors[state.error.code] || state.error.apiMessage || s.errors.UPSTREAM;
-    state.error.hint = s.hints[state.error.code] || state.error.apiHint || '';
+    /* The API's own wording is Korean, so it is only a fallback inside Korean. */
+    state.error.title = s.errors[state.error.code] || (isKo() ? state.error.apiMessage : '') || s.errors.UPSTREAM;
+    state.error.hint = s.hints[state.error.code] || (isKo() ? state.error.apiHint : '') || '';
   }
   const view = state.view;
   if (!view) return;
@@ -1490,8 +1491,8 @@ function errorFor(payload) {
   const code = (payload && payload.code) || 'UPSTREAM';
   return {
     code,
-    title: s.errors[code] || (payload && payload.message) || s.errors.UPSTREAM,
-    hint: s.hints[code] || (payload && payload.hint) || '',
+    title: s.errors[code] || (isKo() ? (payload && payload.message) : '') || s.errors.UPSTREAM,
+    hint: s.hints[code] || (isKo() ? (payload && payload.hint) : '') || '',
     site: payload && payload.carrier ? payload.carrier.site : '',
     /* Kept untranslated as a last resort and to re-word the box after a switch. */
     apiMessage: (payload && payload.message) || '',

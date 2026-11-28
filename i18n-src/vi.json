@@ -109,7 +109,9 @@
     "AWB_UNSUPPORTED": "AWB của hãng hàng không này chưa được hỗ trợ.",
     "IS_FLIGHT": "Đó là số hiệu chuyến bay, không phải AWB.",
     "AIR_BAD_INPUT": "Nhập AWB (11 số) hoặc số hiệu chuyến bay (KE082).",
-    "FLIGHT_NONE": "Không quan sát thấy máy bay nào với số hiệu chuyến bay này."
+    "FLIGHT_NONE": "Không quan sát thấy máy bay nào với số hiệu chuyến bay này.",
+    "TIMEOUT": "Tra cứu hãng vận chuyển mất quá nhiều thời gian.",
+    "METHOD_NOT_ALLOWED": "Phương thức yêu cầu này không được hỗ trợ."
   },
   "hints": {
     "NOT_FOUND": "Kiểm tra mã và số ký tự — có thể hãng vận chuyển chưa nhận kiện hàng.",
@@ -124,7 +126,9 @@
     "AWB_UNSUPPORTED": "Hiện chỉ tra được AWB hàng hóa của Asiana (988) và Korean Air (180).",
     "IS_FLIGHT": "Nhập số hiệu chuyến bay vào ô tìm kiếm, máy bay sẽ hiện trên địa cầu.",
     "AIR_BAD_INPUT": "ví dụ 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Máy bay có thể đang ở mặt đất hoặc ngoài vùng radar. Kiểm tra số hiệu chuyến bay hoặc thử lại sau giây lát."
+    "FLIGHT_NONE": "Máy bay có thể đang ở mặt đất hoặc ngoài vùng radar. Kiểm tra số hiệu chuyến bay hoặc thử lại sau giây lát.",
+    "TIMEOUT": "Thử lại sau giây lát hoặc kiểm tra trực tiếp trên trang của hãng vận chuyển.",
+    "METHOD_NOT_ALLOWED": "Thử lại sau giây lát hoặc kiểm tra trực tiếp trên trang của hãng vận chuyển."
   },
   "openSite": "Mở trang hãng vận chuyển",
   "again": "Tra cứu lại",

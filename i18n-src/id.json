@@ -109,7 +109,9 @@
     "AWB_UNSUPPORTED": "AWB maskapai ini belum didukung.",
     "IS_FLIGHT": "Itu nomor penerbangan, bukan AWB.",
     "AIR_BAD_INPUT": "Masukkan AWB (11 digit) atau nomor penerbangan (KE082).",
-    "FLIGHT_NONE": "Tidak ada pesawat dengan nomor penerbangan ini yang teramati."
+    "FLIGHT_NONE": "Tidak ada pesawat dengan nomor penerbangan ini yang teramati.",
+    "TIMEOUT": "Pencarian ke kurir terlalu lama.",
+    "METHOD_NOT_ALLOWED": "Metode permintaan ini tidak didukung."
   },
   "hints": {
     "NOT_FOUND": "Periksa nomor dan jumlah digitnya — kurir mungkin belum menerima paket.",
@@ -124,7 +126,9 @@
     "AWB_UNSUPPORTED": "Saat ini hanya AWB kargo Asiana (988) dan Korean Air (180) yang dicari.",
     "IS_FLIGHT": "Ketik nomor penerbangan di kolom pencarian dan pesawatnya muncul di globe.",
     "AIR_BAD_INPUT": "mis. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Pesawat mungkin di darat atau di luar jangkauan radar. Periksa nomor penerbangan atau coba lagi sebentar."
+    "FLIGHT_NONE": "Pesawat mungkin di darat atau di luar jangkauan radar. Periksa nomor penerbangan atau coba lagi sebentar.",
+    "TIMEOUT": "Coba lagi sebentar atau periksa langsung situs kurir.",
+    "METHOD_NOT_ALLOWED": "Coba lagi sebentar atau periksa langsung situs kurir."
   },
   "openSite": "Buka situs kurir",
   "again": "Cari lagi",

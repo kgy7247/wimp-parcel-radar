@@ -109,7 +109,9 @@
     "AWB_UNSUPPORTED": "Deze AWB van de luchtvaartmaatschappij wordt nog niet ondersteund.",
     "IS_FLIGHT": "Dat is een vluchtnummer, geen AWB.",
     "AIR_BAD_INPUT": "Voer een AWB (11 cijfers) of een vluchtnummer (KE082) in.",
-    "FLIGHT_NONE": "Er wordt geen vliegtuig met dit vluchtnummer waargenomen."
+    "FLIGHT_NONE": "Er wordt geen vliegtuig met dit vluchtnummer waargenomen.",
+    "TIMEOUT": "Het opzoeken bij de vervoerder duurde te lang.",
+    "METHOD_NOT_ALLOWED": "Deze aanvraagmethode wordt niet ondersteund."
   },
   "hints": {
     "NOT_FOUND": "Controleer het nummer en de lengte — misschien heeft de vervoerder het pakket nog niet opgehaald.",
@@ -124,7 +126,9 @@
     "AWB_UNSUPPORTED": "Voorlopig worden alleen vracht-AWB’s van Asiana (988) en Korean Air (180) opgezocht.",
     "IS_FLIGHT": "Typ het vluchtnummer in het zoekveld en het vliegtuig verschijnt op de globe.",
     "AIR_BAD_INPUT": "bv. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Het vliegtuig staat misschien aan de grond of buiten het radarbereik. Controleer het vluchtnummer of probeer het zo opnieuw."
+    "FLIGHT_NONE": "Het vliegtuig staat misschien aan de grond of buiten het radarbereik. Controleer het vluchtnummer of probeer het zo opnieuw.",
+    "TIMEOUT": "Probeer het zo opnieuw of kijk direct op de site van de vervoerder.",
+    "METHOD_NOT_ALLOWED": "Probeer het zo opnieuw of kijk direct op de site van de vervoerder."
   },
   "openSite": "Site van de vervoerder openen",
   "again": "Opnieuw zoeken",

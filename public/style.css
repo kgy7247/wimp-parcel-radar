@@ -194,3 +194,9 @@ body{font-family:'DM Sans','Noto Sans KR','Noto Sans JP','Noto Sans SC','Noto Sa
   .lang-menu{width:min(300px,calc(100vw - 24px));max-height:min(70vh,430px)}
   .lang-option{padding:11px 9px}
 }
+
+/* Long languages (de/ru/pl) wrap the result bar under the count on phones */
+@media(max-width:760px){
+  .sectionline{flex-wrap:wrap;row-gap:6px;align-items:baseline}
+  .sectionline .sub{flex:1 1 100%;text-align:start}
+}

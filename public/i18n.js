@@ -242,7 +242,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "아직 지원하지 않는 항공사 AWB입니다.",
     "IS_FLIGHT": "AWB가 아니라 편명입니다.",
     "AIR_BAD_INPUT": "AWB(11자리) 또는 편명(KE082)을 입력해 주세요.",
-    "FLIGHT_NONE": "이 편명의 항공기가 관측되지 않습니다."
+    "FLIGHT_NONE": "이 편명의 항공기가 관측되지 않습니다.",
+    "TIMEOUT": "배송 조회 응답이 너무 늦습니다.",
+    "METHOD_NOT_ALLOWED": "지원하지 않는 요청 방식입니다."
    },
    "hints": {
     "NOT_FOUND": "송장번호와 자릿수를 확인하거나, 택배사가 아직 상품을 인수하지 않았을 수 있습니다.",
@@ -257,7 +259,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "지금은 아시아나(988)와 대한항공(180) 화물 AWB만 조회됩니다.",
     "IS_FLIGHT": "편명은 검색창에 그대로 입력하면 지구본에 항공기 위치가 표시됩니다.",
     "AIR_BAD_INPUT": "예) 988-12345675 (아시아나) · 180-12345675 (대한항공) · KE082",
-    "FLIGHT_NONE": "지상에 있거나 레이더 범위 밖일 수 있습니다. 편명을 확인하거나 잠시 후 다시 시도해 주세요."
+    "FLIGHT_NONE": "지상에 있거나 레이더 범위 밖일 수 있습니다. 편명을 확인하거나 잠시 후 다시 시도해 주세요.",
+    "TIMEOUT": "잠시 후 다시 시도하거나 택배사 사이트에서 직접 확인해 주세요.",
+    "METHOD_NOT_ALLOWED": "잠시 후 다시 시도하거나 택배사 사이트에서 직접 확인해 주세요."
    },
    "openSite": "택배사 사이트에서 보기",
    "again": "다시 조회",
@@ -438,7 +442,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "This airline AWB is not supported yet.",
     "IS_FLIGHT": "That is a flight number, not an AWB.",
     "AIR_BAD_INPUT": "Enter an AWB (11 digits) or a flight number (KE082).",
-    "FLIGHT_NONE": "No aircraft with this flight number is being observed."
+    "FLIGHT_NONE": "No aircraft with this flight number is being observed.",
+    "TIMEOUT": "The carrier lookup took too long.",
+    "METHOD_NOT_ALLOWED": "This endpoint only accepts GET requests."
    },
    "hints": {
     "NOT_FOUND": "Check the number and its length — the carrier may not have collected the parcel yet.",
@@ -453,7 +459,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Only Asiana (988) and Korean Air (180) cargo AWBs are looked up for now.",
     "IS_FLIGHT": "Type the flight number in the search box and its aircraft appears on the globe.",
     "AIR_BAD_INPUT": "e.g. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "It may be on the ground or outside radar coverage. Check the flight number or try again shortly."
+    "FLIGHT_NONE": "It may be on the ground or outside radar coverage. Check the flight number or try again shortly.",
+    "TIMEOUT": "Try again shortly, or check the carrier site directly.",
+    "METHOD_NOT_ALLOWED": "Try again shortly, or check the carrier site directly."
    },
    "openSite": "Open the carrier site",
    "again": "Try again",
@@ -634,7 +642,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "この航空会社のAWBはまだ未対応です。",
     "IS_FLIGHT": "AWBではなく便名です。",
     "AIR_BAD_INPUT": "AWB（11桁）または便名（KE082）を入力してください。",
-    "FLIGHT_NONE": "この便名の航空機は観測されていません。"
+    "FLIGHT_NONE": "この便名の航空機は観測されていません。",
+    "TIMEOUT": "照会の応答が遅すぎます。",
+    "METHOD_NOT_ALLOWED": "対応していないリクエスト方法です。"
    },
    "hints": {
     "NOT_FOUND": "番号と桁数を確認してください。まだ集荷前の可能性もあります。",
@@ -649,7 +659,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "現在はアシアナ(988)と大韓航空(180)の貨物AWBのみ照会できます。",
     "IS_FLIGHT": "便名は検索欄にそのまま入力すると地球儀に航空機が表示されます。",
     "AIR_BAD_INPUT": "例）988-12345675（アシアナ）・180-12345675（大韓航空）・KE082",
-    "FLIGHT_NONE": "地上にあるか、レーダー範囲外の可能性があります。便名を確認するか、しばらくしてから再度お試しください。"
+    "FLIGHT_NONE": "地上にあるか、レーダー範囲外の可能性があります。便名を確認するか、しばらくしてから再度お試しください。",
+    "TIMEOUT": "しばらくしてから再度お試しください。",
+    "METHOD_NOT_ALLOWED": "しばらくしてから再度お試しください。"
    },
    "openSite": "配送会社サイトを開く",
    "again": "再検索",
@@ -830,7 +842,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "暂不支持该航空公司的 AWB。",
     "IS_FLIGHT": "这是航班号，不是 AWB。",
     "AIR_BAD_INPUT": "请输入 AWB（11 位数字）或航班号（KE082）。",
-    "FLIGHT_NONE": "未观测到该航班号的飞机。"
+    "FLIGHT_NONE": "未观测到该航班号的飞机。",
+    "TIMEOUT": "物流查询响应超时。",
+    "METHOD_NOT_ALLOWED": "不支持该请求方式。"
    },
    "hints": {
     "NOT_FOUND": "请检查号码与位数，物流公司可能尚未揽收包裹。",
@@ -845,7 +859,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "目前仅支持韩亚（988）和大韩航空（180）的货运 AWB。",
     "IS_FLIGHT": "把航班号直接输入搜索框，飞机就会显示在地球上。",
     "AIR_BAD_INPUT": "例）988-12345675（韩亚）· 180-12345675（大韩航空）· KE082",
-    "FLIGHT_NONE": "飞机可能在地面或雷达范围之外。请核对航班号或稍后重试。"
+    "FLIGHT_NONE": "飞机可能在地面或雷达范围之外。请核对航班号或稍后重试。",
+    "TIMEOUT": "请稍后重试，或直接到物流公司网站查询。",
+    "METHOD_NOT_ALLOWED": "请稍后重试，或直接到物流公司网站查询。"
    },
    "openSite": "打开物流公司网站",
    "again": "重新查询",
@@ -1026,7 +1042,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "尚未支援此航空公司的 AWB。",
     "IS_FLIGHT": "這是航班編號，不是 AWB。",
     "AIR_BAD_INPUT": "請輸入 AWB（11 位數字）或航班編號（KE082）。",
-    "FLIGHT_NONE": "未觀測到這個航班編號的飛機。"
+    "FLIGHT_NONE": "未觀測到這個航班編號的飛機。",
+    "TIMEOUT": "物流查詢回應逾時。",
+    "METHOD_NOT_ALLOWED": "不支援此請求方式。"
    },
    "hints": {
     "NOT_FOUND": "請確認號碼與位數，物流公司可能還沒收件。",
@@ -1041,7 +1059,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "目前僅支援韓亞（988）與大韓航空（180）的貨運 AWB。",
     "IS_FLIGHT": "把航班編號直接輸入搜尋框，飛機就會顯示在地球上。",
     "AIR_BAD_INPUT": "例）988-12345675（韓亞）· 180-12345675（大韓航空）· KE082",
-    "FLIGHT_NONE": "飛機可能在地面或雷達範圍之外。請確認航班編號或稍後再試。"
+    "FLIGHT_NONE": "飛機可能在地面或雷達範圍之外。請確認航班編號或稍後再試。",
+    "TIMEOUT": "請稍後再試，或直接到物流公司網站查詢。",
+    "METHOD_NOT_ALLOWED": "請稍後再試，或直接到物流公司網站查詢。"
    },
    "openSite": "開啟物流公司網站",
    "again": "重新查詢",
@@ -1222,7 +1242,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Este AWB de aerolínea aún no está disponible.",
     "IS_FLIGHT": "Eso es un número de vuelo, no un AWB.",
     "AIR_BAD_INPUT": "Introduce un AWB (11 dígitos) o un número de vuelo (KE082).",
-    "FLIGHT_NONE": "No se observa ningún avión con este número de vuelo."
+    "FLIGHT_NONE": "No se observa ningún avión con este número de vuelo.",
+    "TIMEOUT": "La consulta al transportista tardó demasiado.",
+    "METHOD_NOT_ALLOWED": "Este método de solicitud no está admitido."
    },
    "hints": {
     "NOT_FOUND": "Revisa el número y su longitud: puede que el transportista todavía no haya recogido el paquete.",
@@ -1237,7 +1259,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Por ahora solo se consultan AWBs de carga de Asiana (988) y Korean Air (180).",
     "IS_FLIGHT": "Escribe el número de vuelo en el buscador y su avión aparecerá en el globo.",
     "AIR_BAD_INPUT": "p. ej. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Puede estar en tierra o fuera de la cobertura del radar. Revisa el número de vuelo o inténtalo en un momento."
+    "FLIGHT_NONE": "Puede estar en tierra o fuera de la cobertura del radar. Revisa el número de vuelo o inténtalo en un momento.",
+    "TIMEOUT": "Inténtalo de nuevo en un momento o consulta directamente la web del transportista.",
+    "METHOD_NOT_ALLOWED": "Inténtalo de nuevo en un momento o consulta directamente la web del transportista."
    },
    "openSite": "Abrir la web del transportista",
    "again": "Consultar de nuevo",
@@ -1418,7 +1442,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Ce LTA de compagnie n’est pas encore pris en charge.",
     "IS_FLIGHT": "C’est un numéro de vol, pas un LTA.",
     "AIR_BAD_INPUT": "Saisissez un LTA (11 chiffres) ou un numéro de vol (KE082).",
-    "FLIGHT_NONE": "Aucun avion avec ce numéro de vol n’est observé."
+    "FLIGHT_NONE": "Aucun avion avec ce numéro de vol n’est observé.",
+    "TIMEOUT": "La recherche auprès du transporteur a pris trop de temps.",
+    "METHOD_NOT_ALLOWED": "Cette méthode de requête n’est pas prise en charge."
    },
    "hints": {
     "NOT_FOUND": "Vérifiez le numéro et sa longueur : le transporteur n’a peut-être pas encore pris en charge le colis.",
@@ -1433,7 +1459,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Seuls les LTA fret d’Asiana (988) et de Korean Air (180) sont consultables pour l’instant.",
     "IS_FLIGHT": "Saisissez le numéro de vol dans le champ de recherche et son avion apparaîtra sur le globe.",
     "AIR_BAD_INPUT": "ex. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "L’avion est peut-être au sol ou hors de portée du radar. Vérifiez le numéro de vol ou réessayez dans un instant."
+    "FLIGHT_NONE": "L’avion est peut-être au sol ou hors de portée du radar. Vérifiez le numéro de vol ou réessayez dans un instant.",
+    "TIMEOUT": "Réessayez dans un instant ou consultez directement le site du transporteur.",
+    "METHOD_NOT_ALLOWED": "Réessayez dans un instant ou consultez directement le site du transporteur."
    },
    "openSite": "Ouvrir le site du transporteur",
    "again": "Relancer la recherche",
@@ -1614,7 +1642,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Dieser Airline-AWB wird noch nicht unterstützt.",
     "IS_FLIGHT": "Das ist eine Flugnummer, kein AWB.",
     "AIR_BAD_INPUT": "Geben Sie einen AWB (11 Ziffern) oder eine Flugnummer (KE082) ein.",
-    "FLIGHT_NONE": "Mit dieser Flugnummer wird kein Flugzeug beobachtet."
+    "FLIGHT_NONE": "Mit dieser Flugnummer wird kein Flugzeug beobachtet.",
+    "TIMEOUT": "Die Abfrage beim Zusteller hat zu lange gedauert.",
+    "METHOD_NOT_ALLOWED": "Diese Anfragemethode wird nicht unterstützt."
    },
    "hints": {
     "NOT_FOUND": "Prüfen Sie die Nummer und ihre Länge – vielleicht hat der Zusteller das Paket noch nicht abgeholt.",
@@ -1629,7 +1659,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Derzeit werden nur Fracht-AWBs von Asiana (988) und Korean Air (180) abgefragt.",
     "IS_FLIGHT": "Geben Sie die Flugnummer ins Suchfeld ein, dann erscheint das Flugzeug auf dem Globus.",
     "AIR_BAD_INPUT": "z. B. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Vielleicht steht es am Boden oder außerhalb der Radarreichweite. Prüfen Sie die Flugnummer oder versuchen Sie es gleich erneut."
+    "FLIGHT_NONE": "Vielleicht steht es am Boden oder außerhalb der Radarreichweite. Prüfen Sie die Flugnummer oder versuchen Sie es gleich erneut.",
+    "TIMEOUT": "Versuchen Sie es gleich noch einmal oder prüfen Sie direkt die Seite des Zustellers.",
+    "METHOD_NOT_ALLOWED": "Versuchen Sie es gleich noch einmal oder prüfen Sie direkt die Seite des Zustellers."
    },
    "openSite": "Zusteller-Website öffnen",
    "again": "Erneut suchen",
@@ -1810,7 +1842,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Este AWB de companhia aérea ainda não é suportado.",
     "IS_FLIGHT": "Isso é um número de voo, não um AWB.",
     "AIR_BAD_INPUT": "Digite um AWB (11 dígitos) ou um número de voo (KE082).",
-    "FLIGHT_NONE": "Nenhuma aeronave com este número de voo está sendo observada."
+    "FLIGHT_NONE": "Nenhuma aeronave com este número de voo está sendo observada.",
+    "TIMEOUT": "A consulta à transportadora demorou demais.",
+    "METHOD_NOT_ALLOWED": "Este método de requisição não é suportado."
    },
    "hints": {
     "NOT_FOUND": "Confira o número e a quantidade de dígitos — a transportadora pode ainda não ter recebido o pacote.",
@@ -1825,7 +1859,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Por enquanto só AWBs de carga da Asiana (988) e da Korean Air (180) são consultados.",
     "IS_FLIGHT": "Digite o número do voo na busca e a aeronave aparece no globo.",
     "AIR_BAD_INPUT": "ex.: 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Pode estar em solo ou fora do alcance do radar. Confira o número do voo ou tente em instantes."
+    "FLIGHT_NONE": "Pode estar em solo ou fora do alcance do radar. Confira o número do voo ou tente em instantes.",
+    "TIMEOUT": "Tente novamente em instantes ou consulte direto o site da transportadora.",
+    "METHOD_NOT_ALLOWED": "Tente novamente em instantes ou consulte direto o site da transportadora."
    },
    "openSite": "Abrir o site da transportadora",
    "again": "Consultar de novo",
@@ -2006,7 +2042,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Questo AWB della compagnia non è ancora supportato.",
     "IS_FLIGHT": "È un numero di volo, non un AWB.",
     "AIR_BAD_INPUT": "Inserisci un AWB (11 cifre) o un numero di volo (KE082).",
-    "FLIGHT_NONE": "Nessun aeromobile con questo numero di volo è sotto osservazione."
+    "FLIGHT_NONE": "Nessun aeromobile con questo numero di volo è sotto osservazione.",
+    "TIMEOUT": "La ricerca presso il corriere ha impiegato troppo tempo.",
+    "METHOD_NOT_ALLOWED": "Metodo di richiesta non supportato."
    },
    "hints": {
     "NOT_FOUND": "Controlla il numero e la sua lunghezza: il corriere potrebbe non aver ancora preso in carico il pacco.",
@@ -2021,7 +2059,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Per ora vengono cercati solo gli AWB cargo di Asiana (988) e Korean Air (180).",
     "IS_FLIGHT": "Scrivi il numero di volo nella ricerca e il suo aeromobile comparirà sul globo.",
     "AIR_BAD_INPUT": "es. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Potrebbe essere a terra o fuori dalla copertura radar. Controlla il numero di volo o riprova tra poco."
+    "FLIGHT_NONE": "Potrebbe essere a terra o fuori dalla copertura radar. Controlla il numero di volo o riprova tra poco.",
+    "TIMEOUT": "Riprova tra poco oppure controlla direttamente il sito del corriere.",
+    "METHOD_NOT_ALLOWED": "Riprova tra poco oppure controlla direttamente il sito del corriere."
    },
    "openSite": "Apri il sito del corriere",
    "again": "Cerca di nuovo",
@@ -2202,7 +2242,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "AWB этой авиакомпании пока не поддерживается.",
     "IS_FLIGHT": "Это номер рейса, а не AWB.",
     "AIR_BAD_INPUT": "Введите AWB (11 цифр) или номер рейса (KE082).",
-    "FLIGHT_NONE": "Самолёт с таким номером рейса не наблюдается."
+    "FLIGHT_NONE": "Самолёт с таким номером рейса не наблюдается.",
+    "TIMEOUT": "Запрос к перевозчику занял слишком много времени.",
+    "METHOD_NOT_ALLOWED": "Этот метод запроса не поддерживается."
    },
    "hints": {
     "NOT_FOUND": "Проверьте номер и количество знаков — возможно, перевозчик ещё не принял посылку.",
@@ -2217,7 +2259,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Сейчас поддерживаются только грузовые AWB Asiana (988) и Korean Air (180).",
     "IS_FLIGHT": "Введите номер рейса в поиск, и самолёт появится на глобусе.",
     "AIR_BAD_INPUT": "напр. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Возможно, самолёт на земле или вне зоны радара. Проверьте номер рейса или повторите чуть позже."
+    "FLIGHT_NONE": "Возможно, самолёт на земле или вне зоны радара. Проверьте номер рейса или повторите чуть позже.",
+    "TIMEOUT": "Повторите запрос чуть позже или проверьте на сайте перевозчика.",
+    "METHOD_NOT_ALLOWED": "Повторите запрос чуть позже или проверьте на сайте перевозчика."
    },
    "openSite": "Открыть сайт перевозчика",
    "again": "Искать снова",
@@ -2398,7 +2442,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "الـ AWB لشركة الطيران هذه غير مدعوم بعد.",
     "IS_FLIGHT": "هذا رقم رحلة، لا AWB.",
     "AIR_BAD_INPUT": "أدخل AWB (١١ رقمًا) أو رقم رحلة (KE082).",
-    "FLIGHT_NONE": "لا تُرصد أي طائرة بهذا رقم الرحلة."
+    "FLIGHT_NONE": "لا تُرصد أي طائرة بهذا رقم الرحلة.",
+    "TIMEOUT": "استغرق استعلام شركة الشحن وقتًا طويلًا.",
+    "METHOD_NOT_ALLOWED": "طريقة الطلب هذه غير مدعومة."
    },
    "hints": {
     "NOT_FOUND": "تحقق من الرقم وعدد خاناته — ربما لم تستلم شركة الشحن الطرد بعد.",
@@ -2413,7 +2459,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "حاليًا تُبحث فقط شحنات AWB لشركتي Asiana (988) وKorean Air (180).",
     "IS_FLIGHT": "اكتب رقم الرحلة في خانة البحث لتظهر طائرتها على الكرة الأرضية.",
     "AIR_BAD_INPUT": "مثال: 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "قد تكون على الأرض أو خارج نطاق الرادار. تحقق من رقم الرحلة أو أعد المحاولة بعد قليل."
+    "FLIGHT_NONE": "قد تكون على الأرض أو خارج نطاق الرادار. تحقق من رقم الرحلة أو أعد المحاولة بعد قليل.",
+    "TIMEOUT": "أعد المحاولة بعد قليل أو تحقق مباشرة من موقع شركة الشحن.",
+    "METHOD_NOT_ALLOWED": "أعد المحاولة بعد قليل أو تحقق مباشرة من موقع شركة الشحن."
    },
    "openSite": "افتح موقع شركة الشحن",
    "again": "ابحث مرة أخرى",
@@ -2594,7 +2642,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "AWB của hãng hàng không này chưa được hỗ trợ.",
     "IS_FLIGHT": "Đó là số hiệu chuyến bay, không phải AWB.",
     "AIR_BAD_INPUT": "Nhập AWB (11 số) hoặc số hiệu chuyến bay (KE082).",
-    "FLIGHT_NONE": "Không quan sát thấy máy bay nào với số hiệu chuyến bay này."
+    "FLIGHT_NONE": "Không quan sát thấy máy bay nào với số hiệu chuyến bay này.",
+    "TIMEOUT": "Tra cứu hãng vận chuyển mất quá nhiều thời gian.",
+    "METHOD_NOT_ALLOWED": "Phương thức yêu cầu này không được hỗ trợ."
    },
    "hints": {
     "NOT_FOUND": "Kiểm tra mã và số ký tự — có thể hãng vận chuyển chưa nhận kiện hàng.",
@@ -2609,7 +2659,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Hiện chỉ tra được AWB hàng hóa của Asiana (988) và Korean Air (180).",
     "IS_FLIGHT": "Nhập số hiệu chuyến bay vào ô tìm kiếm, máy bay sẽ hiện trên địa cầu.",
     "AIR_BAD_INPUT": "ví dụ 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Máy bay có thể đang ở mặt đất hoặc ngoài vùng radar. Kiểm tra số hiệu chuyến bay hoặc thử lại sau giây lát."
+    "FLIGHT_NONE": "Máy bay có thể đang ở mặt đất hoặc ngoài vùng radar. Kiểm tra số hiệu chuyến bay hoặc thử lại sau giây lát.",
+    "TIMEOUT": "Thử lại sau giây lát hoặc kiểm tra trực tiếp trên trang của hãng vận chuyển.",
+    "METHOD_NOT_ALLOWED": "Thử lại sau giây lát hoặc kiểm tra trực tiếp trên trang của hãng vận chuyển."
    },
    "openSite": "Mở trang hãng vận chuyển",
    "again": "Tra cứu lại",
@@ -2790,7 +2842,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "ยังไม่รองรับ AWB ของสายการบินนี้",
     "IS_FLIGHT": "นั่นคือเลขเที่ยวบิน ไม่ใช่ AWB",
     "AIR_BAD_INPUT": "กรอก AWB (11 หลัก) หรือเลขเที่ยวบิน (KE082)",
-    "FLIGHT_NONE": "ไม่พบเครื่องบินที่ใช้เลขเที่ยวบินนี้"
+    "FLIGHT_NONE": "ไม่พบเครื่องบินที่ใช้เลขเที่ยวบินนี้",
+    "TIMEOUT": "การค้นหากับขนส่งใช้เวลานานเกินไป",
+    "METHOD_NOT_ALLOWED": "ไม่รองรับวิธีการร้องขอแบบนี้"
    },
    "hints": {
     "NOT_FOUND": "ตรวจสอบเลขและจำนวนหลัก ขนส่งอาจยังไม่รับพัสดุ",
@@ -2805,7 +2859,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "ขณะนี้ค้นได้เฉพาะ AWB สินค้าของ Asiana (988) และ Korean Air (180)",
     "IS_FLIGHT": "พิมพ์เลขเที่ยวบินในช่องค้นหา แล้วเครื่องบินจะปรากฏบนลูกโลก",
     "AIR_BAD_INPUT": "เช่น 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "เครื่องบินอาจอยู่บนพื้นหรืออยู่นอกขอบเขตเรดาร์ ตรวจสอบเลขเที่ยวบินหรือลองใหม่ภายหลัง"
+    "FLIGHT_NONE": "เครื่องบินอาจอยู่บนพื้นหรืออยู่นอกขอบเขตเรดาร์ ตรวจสอบเลขเที่ยวบินหรือลองใหม่ภายหลัง",
+    "TIMEOUT": "ลองอีกครั้งในอีกสักครู่ หรือตรวจสอบที่เว็บของขนส่งโดยตรง",
+    "METHOD_NOT_ALLOWED": "ลองอีกครั้งในอีกสักครู่ หรือตรวจสอบที่เว็บของขนส่งโดยตรง"
    },
    "openSite": "เปิดเว็บของขนส่ง",
    "again": "ค้นหาอีกครั้ง",
@@ -2986,7 +3042,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "AWB maskapai ini belum didukung.",
     "IS_FLIGHT": "Itu nomor penerbangan, bukan AWB.",
     "AIR_BAD_INPUT": "Masukkan AWB (11 digit) atau nomor penerbangan (KE082).",
-    "FLIGHT_NONE": "Tidak ada pesawat dengan nomor penerbangan ini yang teramati."
+    "FLIGHT_NONE": "Tidak ada pesawat dengan nomor penerbangan ini yang teramati.",
+    "TIMEOUT": "Pencarian ke kurir terlalu lama.",
+    "METHOD_NOT_ALLOWED": "Metode permintaan ini tidak didukung."
    },
    "hints": {
     "NOT_FOUND": "Periksa nomor dan jumlah digitnya — kurir mungkin belum menerima paket.",
@@ -3001,7 +3059,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Saat ini hanya AWB kargo Asiana (988) dan Korean Air (180) yang dicari.",
     "IS_FLIGHT": "Ketik nomor penerbangan di kolom pencarian dan pesawatnya muncul di globe.",
     "AIR_BAD_INPUT": "mis. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Pesawat mungkin di darat atau di luar jangkauan radar. Periksa nomor penerbangan atau coba lagi sebentar."
+    "FLIGHT_NONE": "Pesawat mungkin di darat atau di luar jangkauan radar. Periksa nomor penerbangan atau coba lagi sebentar.",
+    "TIMEOUT": "Coba lagi sebentar atau periksa langsung situs kurir.",
+    "METHOD_NOT_ALLOWED": "Coba lagi sebentar atau periksa langsung situs kurir."
    },
    "openSite": "Buka situs kurir",
    "again": "Cari lagi",
@@ -3182,7 +3242,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "इस एयरलाइन का AWB अभी समर्थित नहीं है।",
     "IS_FLIGHT": "यह उड़ान संख्या है, AWB नहीं।",
     "AIR_BAD_INPUT": "AWB (11 अंक) या उड़ान संख्या (KE082) डालें।",
-    "FLIGHT_NONE": "इस उड़ान संख्या वाला कोई विमान नहीं दिख रहा।"
+    "FLIGHT_NONE": "इस उड़ान संख्या वाला कोई विमान नहीं दिख रहा।",
+    "TIMEOUT": "कूरियर से जवाब आने में बहुत समय लगा।",
+    "METHOD_NOT_ALLOWED": "यह अनुरोध विधि समर्थित नहीं है।"
    },
    "hints": {
     "NOT_FOUND": "नंबर और उसके अंकों की संख्या जाँचें — हो सकता है कूरियर ने पार्सल अभी न लिया हो।",
@@ -3197,7 +3259,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "अभी केवल Asiana (988) और Korean Air (180) के कार्गो AWB खोजे जाते हैं।",
     "IS_FLIGHT": "उड़ान संख्या सर्च बॉक्स में लिखें, विमान ग्लोब पर दिख जाएगा।",
     "AIR_BAD_INPUT": "जैसे 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "विमान ज़मीन पर या रडार की सीमा से बाहर हो सकता है। उड़ान संख्या जाँचें या थोड़ी देर बाद कोशिश करें।"
+    "FLIGHT_NONE": "विमान ज़मीन पर या रडार की सीमा से बाहर हो सकता है। उड़ान संख्या जाँचें या थोड़ी देर बाद कोशिश करें।",
+    "TIMEOUT": "थोड़ी देर बाद फिर कोशिश करें या सीधे कूरियर की साइट देखें।",
+    "METHOD_NOT_ALLOWED": "थोड़ी देर बाद फिर कोशिश करें या सीधे कूरियर की साइट देखें।"
    },
    "openSite": "कूरियर की साइट खोलें",
    "again": "फिर खोजें",
@@ -3378,7 +3442,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Bu havayolu AWB’si henüz desteklenmiyor.",
     "IS_FLIGHT": "Bu bir AWB değil, uçuş numarası.",
     "AIR_BAD_INPUT": "Bir AWB (11 hane) veya uçuş numarası (KE082) girin.",
-    "FLIGHT_NONE": "Bu uçuş numarasına ait bir uçak gözlenmiyor."
+    "FLIGHT_NONE": "Bu uçuş numarasına ait bir uçak gözlenmiyor.",
+    "TIMEOUT": "Taşıyıcı sorgusu çok uzun sürdü.",
+    "METHOD_NOT_ALLOWED": "Bu istek yöntemi desteklenmiyor."
    },
    "hints": {
     "NOT_FOUND": "Numarayı ve hane sayısını kontrol edin — taşıyıcı kargoyu henüz almamış olabilir.",
@@ -3393,7 +3459,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Şimdilik yalnızca Asiana (988) ve Korean Air (180) kargo AWB’leri sorgulanıyor.",
     "IS_FLIGHT": "Uçuş numarasını arama alanına yazın, uçağı kürede görünsün.",
     "AIR_BAD_INPUT": "örn. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Uçak yerde ya da radar kapsamı dışında olabilir. Uçuş numarasını kontrol edin veya birazdan tekrar deneyin."
+    "FLIGHT_NONE": "Uçak yerde ya da radar kapsamı dışında olabilir. Uçuş numarasını kontrol edin veya birazdan tekrar deneyin.",
+    "TIMEOUT": "Birazdan tekrar deneyin ya da doğrudan taşıyıcının sitesine bakın.",
+    "METHOD_NOT_ALLOWED": "Birazdan tekrar deneyin ya da doğrudan taşıyıcının sitesine bakın."
    },
    "openSite": "Taşıyıcı sitesini aç",
    "again": "Tekrar sorgula",
@@ -3574,7 +3642,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Deze AWB van de luchtvaartmaatschappij wordt nog niet ondersteund.",
     "IS_FLIGHT": "Dat is een vluchtnummer, geen AWB.",
     "AIR_BAD_INPUT": "Voer een AWB (11 cijfers) of een vluchtnummer (KE082) in.",
-    "FLIGHT_NONE": "Er wordt geen vliegtuig met dit vluchtnummer waargenomen."
+    "FLIGHT_NONE": "Er wordt geen vliegtuig met dit vluchtnummer waargenomen.",
+    "TIMEOUT": "Het opzoeken bij de vervoerder duurde te lang.",
+    "METHOD_NOT_ALLOWED": "Deze aanvraagmethode wordt niet ondersteund."
    },
    "hints": {
     "NOT_FOUND": "Controleer het nummer en de lengte — misschien heeft de vervoerder het pakket nog niet opgehaald.",
@@ -3589,7 +3659,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Voorlopig worden alleen vracht-AWB’s van Asiana (988) en Korean Air (180) opgezocht.",
     "IS_FLIGHT": "Typ het vluchtnummer in het zoekveld en het vliegtuig verschijnt op de globe.",
     "AIR_BAD_INPUT": "bv. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Het vliegtuig staat misschien aan de grond of buiten het radarbereik. Controleer het vluchtnummer of probeer het zo opnieuw."
+    "FLIGHT_NONE": "Het vliegtuig staat misschien aan de grond of buiten het radarbereik. Controleer het vluchtnummer of probeer het zo opnieuw.",
+    "TIMEOUT": "Probeer het zo opnieuw of kijk direct op de site van de vervoerder.",
+    "METHOD_NOT_ALLOWED": "Probeer het zo opnieuw of kijk direct op de site van de vervoerder."
    },
    "openSite": "Site van de vervoerder openen",
    "again": "Opnieuw zoeken",
@@ -3770,7 +3842,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Ten AWB linii lotniczej nie jest jeszcze obsługiwany.",
     "IS_FLIGHT": "To numer lotu, a nie AWB.",
     "AIR_BAD_INPUT": "Wpisz AWB (11 cyfr) lub numer lotu (KE082).",
-    "FLIGHT_NONE": "Nie obserwuje się samolotu o tym numerze lotu."
+    "FLIGHT_NONE": "Nie obserwuje się samolotu o tym numerze lotu.",
+    "TIMEOUT": "Zapytanie do przewoźnika trwało zbyt długo.",
+    "METHOD_NOT_ALLOWED": "Ta metoda żądania nie jest obsługiwana."
    },
    "hints": {
     "NOT_FOUND": "Sprawdź numer i jego długość — przewoźnik mógł jeszcze nie odebrać paczki.",
@@ -3785,7 +3859,9 @@ window.WIMP_I18N = {
     "AWB_UNSUPPORTED": "Na razie wyszukiwane są tylko AWB ładunkowe Asiana (988) i Korean Air (180).",
     "IS_FLIGHT": "Wpisz numer lotu w wyszukiwarkę, a samolot pojawi się na globusie.",
     "AIR_BAD_INPUT": "np. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Może być na ziemi lub poza zasięgiem radaru. Sprawdź numer lotu lub spróbuj za chwilę."
+    "FLIGHT_NONE": "Może być na ziemi lub poza zasięgiem radaru. Sprawdź numer lotu lub spróbuj za chwilę.",
+    "TIMEOUT": "Spróbuj ponownie za chwilę lub sprawdź bezpośrednio na stronie przewoźnika.",
+    "METHOD_NOT_ALLOWED": "Spróbuj ponownie za chwilę lub sprawdź bezpośrednio na stronie przewoźnika."
    },
    "openSite": "Otwórz stronę przewoźnika",
    "again": "Sprawdź ponownie",

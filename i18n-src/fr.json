@@ -109,7 +109,9 @@
     "AWB_UNSUPPORTED": "Ce LTA de compagnie n’est pas encore pris en charge.",
     "IS_FLIGHT": "C’est un numéro de vol, pas un LTA.",
     "AIR_BAD_INPUT": "Saisissez un LTA (11 chiffres) ou un numéro de vol (KE082).",
-    "FLIGHT_NONE": "Aucun avion avec ce numéro de vol n’est observé."
+    "FLIGHT_NONE": "Aucun avion avec ce numéro de vol n’est observé.",
+    "TIMEOUT": "La recherche auprès du transporteur a pris trop de temps.",
+    "METHOD_NOT_ALLOWED": "Cette méthode de requête n’est pas prise en charge."
   },
   "hints": {
     "NOT_FOUND": "Vérifiez le numéro et sa longueur : le transporteur n’a peut-être pas encore pris en charge le colis.",
@@ -124,7 +126,9 @@
     "AWB_UNSUPPORTED": "Seuls les LTA fret d’Asiana (988) et de Korean Air (180) sont consultables pour l’instant.",
     "IS_FLIGHT": "Saisissez le numéro de vol dans le champ de recherche et son avion apparaîtra sur le globe.",
     "AIR_BAD_INPUT": "ex. 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "L’avion est peut-être au sol ou hors de portée du radar. Vérifiez le numéro de vol ou réessayez dans un instant."
+    "FLIGHT_NONE": "L’avion est peut-être au sol ou hors de portée du radar. Vérifiez le numéro de vol ou réessayez dans un instant.",
+    "TIMEOUT": "Réessayez dans un instant ou consultez directement le site du transporteur.",
+    "METHOD_NOT_ALLOWED": "Réessayez dans un instant ou consultez directement le site du transporteur."
   },
   "openSite": "Ouvrir le site du transporteur",
   "again": "Relancer la recherche",

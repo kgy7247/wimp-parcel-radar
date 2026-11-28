@@ -109,7 +109,9 @@
     "AWB_UNSUPPORTED": "Este AWB de companhia aérea ainda não é suportado.",
     "IS_FLIGHT": "Isso é um número de voo, não um AWB.",
     "AIR_BAD_INPUT": "Digite um AWB (11 dígitos) ou um número de voo (KE082).",
-    "FLIGHT_NONE": "Nenhuma aeronave com este número de voo está sendo observada."
+    "FLIGHT_NONE": "Nenhuma aeronave com este número de voo está sendo observada.",
+    "TIMEOUT": "A consulta à transportadora demorou demais.",
+    "METHOD_NOT_ALLOWED": "Este método de requisição não é suportado."
   },
   "hints": {
     "NOT_FOUND": "Confira o número e a quantidade de dígitos — a transportadora pode ainda não ter recebido o pacote.",
@@ -124,7 +126,9 @@
     "AWB_UNSUPPORTED": "Por enquanto só AWBs de carga da Asiana (988) e da Korean Air (180) são consultados.",
     "IS_FLIGHT": "Digite o número do voo na busca e a aeronave aparece no globo.",
     "AIR_BAD_INPUT": "ex.: 988-12345675 (Asiana) · 180-12345675 (Korean Air) · KE082",
-    "FLIGHT_NONE": "Pode estar em solo ou fora do alcance do radar. Confira o número do voo ou tente em instantes."
+    "FLIGHT_NONE": "Pode estar em solo ou fora do alcance do radar. Confira o número do voo ou tente em instantes.",
+    "TIMEOUT": "Tente novamente em instantes ou consulte direto o site da transportadora.",
+    "METHOD_NOT_ALLOWED": "Tente novamente em instantes ou consulte direto o site da transportadora."
   },
   "openSite": "Abrir o site da transportadora",
   "again": "Consultar de novo",
