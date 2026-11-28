@@ -190,3 +190,10 @@ body{font-family:'DM Sans','Noto Sans KR','Noto Sans JP','Noto Sans SC','Noto Sa
   #flat-tip{max-width:200px;font-size:11px;padding:7px 9px}
 }
 @media(prefers-reduced-motion:reduce){#flat-pulse{animation:none;opacity:.75}}
+
+/* Long language labels on a narrow phone: the switch drops under the title
+   instead of pushing past the panel edge. */
+@media(max-width:760px){
+  .map-top{flex-wrap:wrap;row-gap:8px}
+  .map-switch{margin-inline-start:auto}
+}
