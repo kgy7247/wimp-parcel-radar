@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#080d13">
 <title>WIMP — Where Is My Parcel? · 택배 배송조회</title>
-<meta name="description" content="운송장 번호 하나로 국내 택배(CJ대한통운·우체국·한진·롯데·로젠)와 전 세계 550개 이상 택배사(DHL·FedEx·UPS·USPS·Cainiao·EMS) 배송을 3D 위성 지구본에서 확인하세요. 마지막 스캔 위치, 도착 예정일, 국가별 이동 경로를 한눈에 보여줍니다.">
+<meta name="description" content="운송장 번호 하나로 국내 택배(CJ대한통운·우체국·한진·롯데·로젠)와 전 세계 550개 이상 택배사(DHL·FedEx·UPS·USPS·Cainiao·EMS) 배송을 3D 지구본과 2D 평면 세계지도에서 확인하세요. 마지막 스캔 위치, 도착 예정일, 국가별 이동 경로를 한눈에 보여줍니다.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.wimp911.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="WIMP — Where Is My Parcel?">
 <meta property="og:title" content="WIMP — 내 택배, 지금 어디쯤?">
-<meta property="og:description" content="운송장 번호로 국내 택배와 DHL 배송을 3D 지구본 위에서 추적하세요. 배송 이력, 진행 단계, 국가별 경로까지 한 번에.">
+<meta property="og:description" content="운송장 번호로 국내 택배와 DHL 배송을 3D 지구본과 2D 평면 지도에서 추적하세요. 배송 이력, 진행 단계, 국가별 경로까지 한 번에.">
 <meta property="og:url" content="https://www.wimp911.com/">
 <meta property="og:image" content="https://www.wimp911.com/og-cover.png">
 <meta property="og:locale" content="ko_KR">
@@ -19,14 +19,14 @@
 <meta property="og:locale:alternate" content="ja_JP">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="WIMP — 내 택배, 지금 어디쯤?">
-<meta name="twitter:description" content="운송장 번호 하나로 국내 택배·DHL 배송을 3D 위성 지구본에서 확인하세요.">
+<meta name="twitter:description" content="운송장 번호 하나로 국내 택배·DHL 배송을 3D 지구본과 2D 평면 지도에서 확인하세요.">
 <meta name="twitter:image" content="https://www.wimp911.com/og-cover.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080d13'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23b7f373' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23b7f373'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="style.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"WIMP — Where Is My Parcel?","url":"https://www.wimp911.com/","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","inLanguage":["ko","en","ja","zh-CN","zh-TW","es","fr","de","pt","it","ru","ar","vi","th","id","hi","tr","nl","pl"],"description":"운송장 번호로 국내 택배와 DHL 배송 현황을 3D 위성 지구본에서 확인하는 무료 배송조회 서비스.","offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"}}
+{"@context":"https://schema.org","@type":"WebApplication","name":"WIMP — Where Is My Parcel?","url":"https://www.wimp911.com/","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","inLanguage":["ko","en","ja","zh-CN","zh-TW","es","fr","de","pt","it","ru","ar","vi","th","id","hi","tr","nl","pl"],"description":"운송장 번호로 국내 택배와 DHL 배송 현황을 3D 지구본과 2D 평면 지도에서 확인하는 무료 배송조회 서비스.","offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"}}
 </script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7205132235653329" crossorigin="anonymous"></script>
 <!-- Vercel Web Analytics — 쿠키를 쓰지 않는 익명 방문 집계 -->
@@ -115,15 +115,23 @@
     <section class="map-panel" id="map-panel" aria-busy="false">
       <div class="map-top">
         <div><span class="eyebrow" dir="ltr">GLOBAL SHIPMENT MAP</span><h2 data-i="journey">배송 여정</h2></div>
-        <span class="chip">◉ <span data-i="satellite">3D 위성 지구본</span></span>
+        <div class="map-switch" id="map-switch" role="group" aria-label="지도 보기 전환" data-i-aria="mapView">
+          <button type="button" class="map-switch-btn" id="view-globe" data-view="globe" aria-pressed="true"><span aria-hidden="true">◉</span><span data-i="viewGlobe">3D 지구본</span></button>
+          <button type="button" class="map-switch-btn" id="view-flat" data-view="flat" aria-pressed="false"><span aria-hidden="true">▭</span><span data-i="viewMap">2D 평면 지도</span></button>
+        </div>
       </div>
       <div id="globe"></div>
+      <div id="flat-map" aria-hidden="true">
+        <canvas id="flat-canvas" aria-hidden="true"></canvas>
+        <span id="flat-pulse" hidden></span>
+        <div id="flat-tip" role="tooltip" hidden><b id="flat-tip-title"></b><span id="flat-tip-body"></span></div>
+      </div>
       <div id="idle-note" class="idle-note"><span aria-hidden="true">◇</span><p data-i="idle">송장번호를 입력하면 배송 여정이 여기에 표시됩니다.</p></div>
       <div id="loading" hidden><span class="spinner" aria-hidden="true"></span><span data-i="loading">배송 조회 중…</span></div>
       <div class="map-controls"><button id="plus" aria-label="Zoom in">＋</button><button id="minus" aria-label="Zoom out">−</button><button id="reset" aria-label="Reset view">⌖</button></div>
       <div id="marker-info" hidden></div>
       <div class="legend"><span><i></i><span data-i="confirmed">확인된 경로</span></span><span id="legend-planned"><i class="dashed"></i><span data-i="planned">예정 경로</span></span></div>
-      <div class="map-foot"><span data-i="drag">드래그하여 회전 · 스크롤하여 확대</span><span dir="ltr">Earth imagery · NASA</span></div>
+      <div class="map-foot"><span id="map-hint" data-i="drag">드래그하여 회전 · 스크롤하여 확대</span><span dir="ltr" id="map-credit">Earth imagery · NASA</span></div>
     </section>
 
     <aside class="history">

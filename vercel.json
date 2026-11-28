@@ -48,6 +48,15 @@
           "value": "public, max-age=604800, immutable"
         }
       ]
+    },
+    {
+      "source": "/world-110m.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, immutable"
+        }
+      ]
     }
   ]
 }

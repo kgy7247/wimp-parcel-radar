@@ -1,13 +1,13 @@
 # ◉ WIMP — Where Is My Parcel?
 
-운송장 번호 하나로 **국내 택배와 전 세계 550개 이상 택배사 배송**을 3D 위성 지구본 위에서 확인하는 무료 배송조회 웹앱입니다.
+운송장 번호 하나로 **국내 택배와 전 세계 550개 이상 택배사 배송**을 3D 위성 지구본과 2D 평면 세계지도 위에서 확인하는 무료 배송조회 웹앱입니다.
 Vercel 무료 플랜에서 바로 배포되며, 서버리스 함수(`api/track.js`)가 택배사 공개 조회 결과를 가져와 좌표·경로·진행 단계·도착 예정일로 정규화합니다.
 
 - **하이브리드 라우팅**: 키 없이 동작하는 국내 직연동(CJ·우체국·한진·롯데)을 먼저 시도하고, 실패하거나 차단되면 lastscanned로 자동 폴백. 로젠·일양·DHL·FedEx·UPS·USPS·Cainiao·EMS 등 나머지 545개사는 lastscanned 한 줄(`LASTSCANNED_API_KEY`)로 조회합니다.
 - **예상 도착일(EDD)**: 택배사가 준 `estimatedDelivery`/`estimatedTimeOfDelivery`를 한국 시간 기준 날짜로 정규화해 `estimatedDelivery` 로 내려주고, 화면에는 `도착 예정 · 12월 1일` 배지로 표시합니다.
 - **최신 스캔 우선 상태**: 과거에 `배달완료`가 한 번이라도 있으면 완료로 고정하지 않고, 가장 최신 스캔의 상태를 따릅니다(재배송·정정·반송 반영).
 
-- 프론트엔드: 정적 HTML/CSS/JS + globe.gl(3D 지구본, 캔버스 폴백 포함), 한국어·영어·일본어
+- 프론트엔드: 정적 HTML/CSS/JS + globe.gl(3D 지구본, 캔버스 폴백 포함) + 로컬 벡터 2D 평면 지도(타일 서버 없음), 19개 언어
 - 백엔드: Vercel Node.js Serverless Function, **의존성 0개** (npm install 없음)
 - 저장 없음: 입력한 운송장 번호와 조회 결과를 서버에 남기지 않습니다 (메모리 15분 캐시만)
 - 입력 정리: `#number` 입력창은 타이핑·붙여넣기 모두에서 하이픈(`-`)·공백·한글·특수문자를 즉시 버리고 **영문·숫자(A–Z a–z 0–9)만** 남깁니다(`1234-5678-90123` → `1234567890123`). 폼 제출 시 한 번 더 정리합니다.
@@ -119,9 +119,10 @@ lastscanned가 DHL을 포함하므로 보통은 필요하지 않습니다. DHL �
 ### 화면 구조 (2026-11 개편)
 
 - 헤더의 **이용 안내**는 `guide.html` 로 이동하는 링크이고, 설정 모달은 **⚙ 버튼만** 엽니다.
-- 조회 결과는 **현재 상태·도착 예정 → 마지막 확인 위치·마지막 스캔 → 3D 지구본 → 상세 이력** 순서로 배치됩니다(`#result-head` 가 `.workspace` 앞).
+- 조회 결과는 **현재 상태·도착 예정 → 마지막 확인 위치·마지막 스캔 → 지도 → 상세 이력** 순서로 배치됩니다(`#result-head` 가 `.workspace` 앞).
+- 지도 상단의 **3D 지구본 | 2D 평면 지도** 전환 버튼으로 같은 조회 결과를 두 투영으로 봅니다. 2D 평면 지도는 `world-110m.json`(Natural Earth 1:110m, 108KB) 한 파일을 한 번 받아 캔버스로 그리므로 타일 서버·추가 이미지 요청이 없고, 확대해도 경계가 흐려지지 않습니다. 두 뷰는 같은 뷰 모델(지점·경로·마지막 확인 위치)을 읽기 때문에 전환해도 재조회가 없습니다.
 - `guide.html` 은 배송 상태 뜻, 조회가 안 될 때의 5가지 이유, 해외배송 경유지, 도착 예정일 계산, FAQ 를 담은 독립 콘텐츠 페이지이며 `FAQPage` 구조화 데이터를 포함합니다.
-- **제품 범위는 택배 조회 하나입니다.** 항공 화물(AWB)·편명 조회와 실시간 화물기 레이더는 2026-11-28 제거했습니다(1분 폴링·외부 ADS-B 의존으로 무겁고 실제 적중률이 낮았음). 지구본에는 택배 스캔 경로만 그립니다.
+- **제품 범위는 택배 조회 하나입니다.** 항공 화물(AWB)·편명 조회와 실시간 화물기 레이더는 2026-11-28 제거했습니다(1분 폴링·외부 ADS-B 의존으로 무겁고 실제 적중률이 낮았음). 지도에는 택배 스캔 경로만 그립니다.
 
 ---
 
@@ -220,11 +221,12 @@ npm run i18n:check    # 생성 파일이 최신인지 확인 (테스트에 포�
 │   └── track.js            # 택배 조회 (의존성 0)
 ├── public/
 │   ├── index.html          # 화면 + SEO/OG/JSON-LD 메타
-│   ├── app.js              # UI·3D 지구본·API 연동 (언어 선택·이름 현지화)
+│   ├── app.js              # UI·3D 지구본·2D 평면 지도·API 연동 (언어 선택·이름 현지화)
 │   ├── i18n.js             # 언어팩 (i18n-src 에서 생성, 19개 언어)
 │   ├── style.css           # 원본 디자인 유지 + 로딩·에러·법적 링크 스타일
 │   ├── globe.min.js        # globe.gl 2.46.2 (MIT)
 │   ├── earth.jpg           # NASA Earth imagery
+│   ├── world-110m.json     # Natural Earth 1:110m 국경·해안선 (public domain, 2D 평면 지도용)
 │   ├── guide.html          # 이용 안내 (조회 방법·배송 상태 뜻·FAQ, AdSense용 콘텐츠)
 │   ├── privacy.html        # 개인정보처리방침
 │   ├── terms.html          # 이용약관
@@ -258,5 +260,6 @@ npm run i18n:check    # 생성 파일이 최신인지 확인 (테스트에 포�
 
 - 3D 지구본: [globe.gl](https://github.com/vasturiano/globe.gl) (MIT)
 - 지구 이미지: NASA Earth imagery (public domain)
+- 2D 평면 지도 해안선·국경: [Natural Earth](https://www.naturalearthdata.com/) 1:110m (public domain) — [world-atlas](https://github.com/topojson/world-atlas) TopoJSON, 타일 서버 없이 로컬에서 렌더
 - 택배 정보: 각 택배사 공개 조회 페이지, DHL Shipment Tracking API, [lastscanned](https://www.lastscanned.com/) (551개 택배사 단일 스키마)
 - 지도 좌표 보완: © OpenStreetMap contributors (ODbL)

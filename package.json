@@ -2,7 +2,7 @@
   "name": "wimp-parcel-radar",
   "version": "1.0.0",
   "private": true,
-  "description": "WIMP — Where Is My Parcel? 실시간 택배 배송조회 (3D 지구본 + Vercel serverless API)",
+  "description": "WIMP — Where Is My Parcel? 실시간 택배 배송조회 (3D 지구본 · 2D 평면 지도 + Vercel serverless API)",
   "scripts": {
     "test": "node scripts/build-i18n.mjs --check && node test/unit.mjs && node test/ui.mjs",
     "test:unit": "node test/unit.mjs",

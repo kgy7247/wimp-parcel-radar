@@ -138,6 +138,27 @@ const DHL_RESPONSE = {
   meta: { source: 'lastscanned', cached: false, demo: false, fetchedAt: '2026-11-28T01:00:00.000Z' }
 };
 
+/* A miniature TopoJSON stands in for public/world-110m.json: quantized,
+   delta-encoded arcs, one Polygon and one MultiPolygon — the same shapes the
+   decoder has to handle, without a 107 KB fixture in the test. */
+const WORLD_FIXTURE = {
+  type: 'Topology',
+  transform: { scale: [0.0001, 0.0001], translate: [124, 33] },
+  objects: {
+    countries: {
+      type: 'GeometryCollection',
+      geometries: [
+        { type: 'Polygon', arcs: [[0]], properties: { name: 'Fixtureland' } },
+        { type: 'MultiPolygon', arcs: [[[1]]], properties: { name: 'Fixtureisle' } }
+      ]
+    }
+  },
+  arcs: [
+    [[0, 0], [130000, 0], [0, 80000], [-130000, 0], [0, -80000]],
+    [[0, 0], [40000, 0], [0, 40000], [-40000, 0], [0, -40000]]
+  ]
+};
+
 const domErrors = [];
 const virtualConsole = new VirtualConsole();
 virtualConsole.on('jsdomError', (err) => {
@@ -168,6 +189,7 @@ function buildDom(url = 'https://www.wimp911.com/', browserLanguage = 'ko-KR') {
         set: () => true
       });
       window.HTMLCanvasElement.prototype.getContext = () => ctx;
+      window.WIMP_WORLD = WORLD_FIXTURE;
       window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
       window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
       window.HTMLDialogElement.prototype.close = function () { this.open = false; };
@@ -654,6 +676,93 @@ await test('error: “the carrier is down” and “no such shipment” read dif
   assert.ok(box);
   assert.match(box.querySelector('p').textContent, /다시 시도/);
   mode = 'cj';
+});
+
+/* ------------------------------------------------------------------ *
+ * 3D globe ↔ 2D flat map
+ * ------------------------------------------------------------------ */
+
+await test('map switch: the panel offers 3D globe and 2D map, globe by default', async () => {
+  pickLang('ko');
+  const group = $('#map-switch');
+  assert.ok(group, 'switch exists');
+  assert.equal(group.getAttribute('role'), 'group');
+  assert.equal(group.getAttribute('aria-label'), '지도 보기 전환');
+  assert.ok(group.closest('.map-top'), 'the switch sits at the top of the map panel');
+  assert.equal($('#view-globe').getAttribute('aria-pressed'), 'true');
+  assert.equal($('#view-flat').getAttribute('aria-pressed'), 'false');
+  assert.ok($('#view-globe').textContent.includes('3D 지구본'));
+  assert.ok($('#view-flat').textContent.includes('2D 평면 지도'));
+  assert.equal($('#map-panel').dataset.map, 'globe');
+  assert.equal($('#flat-map').getAttribute('aria-hidden'), 'true');
+});
+
+await test('map switch: 2D keeps the current lookup, its route and its timeline', async () => {
+  mode = 'dhl';
+  $('#number').value = '1234567895';
+  submit();
+  await tick(120);
+  const events = $('#events').querySelectorAll('.event').length;
+  const location = $('#location').textContent;
+  const lookups = fetched.filter((url) => url.includes('api/track')).length;
+  assert.equal(events, 2);
+
+  $('#view-flat').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal($('#map-panel').dataset.map, 'flat');
+  assert.equal($('#view-flat').getAttribute('aria-pressed'), 'true');
+  assert.equal($('#view-globe').getAttribute('aria-pressed'), 'false');
+  assert.equal($('#flat-map').getAttribute('aria-hidden'), 'false');
+  assert.equal($('#globe').getAttribute('aria-hidden'), 'true');
+  assert.equal($('#location').textContent, location, 'the status strip did not move');
+  assert.equal($('#events').querySelectorAll('.event').length, events, 'timeline kept');
+  assert.equal(fetched.filter((url) => url.includes('api/track')).length, lookups, 'no second lookup');
+  assert.ok(!fetched.some((url) => url.includes('world-110m.json')), 'the coastline file is not re-fetched when a topology is supplied');
+
+  const state2d = window.WIMP_MAP;
+  assert.equal(state2d.mode, 'flat');
+  assert.equal(state2d.points, 2, 'both stops reached the 2D renderer');
+  assert.equal(state2d.arcs, 1, 'the route arc reached the 2D renderer');
+  assert.equal(state2d.world, 2, 'coastlines decoded from the topology');
+  assert.ok($('#flat-canvas').width > 0, 'the canvas has a backing store');
+  assert.ok(state2d.camera.scale > 0);
+
+  $('#view-globe').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal($('#map-panel').dataset.map, 'globe');
+  assert.equal(window.WIMP_MAP.mode, 'globe');
+  assert.equal($('#flat-map').getAttribute('aria-hidden'), 'true');
+  assert.equal($('#location').textContent, location, 'switching back changes nothing');
+  mode = 'cj';
+});
+
+await test('map switch: both labels and the hint follow the language', async () => {
+  $('#view-flat').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal($('#map-hint').textContent, '드래그하여 이동 · 스크롤하여 확대');
+  assert.equal($('#map-credit').textContent, 'Map data · Natural Earth');
+  pickLang('en');
+  assert.ok($('#view-globe').textContent.includes('3D globe'));
+  assert.ok($('#view-flat').textContent.includes('2D map'));
+  assert.equal($('#map-switch').getAttribute('aria-label'), 'Map view');
+  assert.equal($('#map-hint').textContent, 'Drag to pan · Scroll to zoom');
+  pickLang('ja');
+  assert.ok($('#view-flat').textContent.includes('2D平面地図'));
+  pickLang('ar');
+  assert.ok($('#view-flat').textContent.includes('2D'));
+  pickLang('ko');
+  $('#view-globe').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal($('#map-hint').textContent, '드래그하여 회전 · 스크롤하여 확대');
+  assert.equal($('#map-credit').textContent, 'Earth imagery · NASA');
+});
+
+await test('map: the 2D view ships local vector coastlines, not a tile server', async () => {
+  const html = read('index.html');
+  const topoText = read('world-110m.json');
+  const topo = JSON.parse(topoText);
+  assert.equal(topo.type, 'Topology');
+  assert.ok(topo.objects.countries.geometries.length > 100, 'a real world atlas');
+  assert.ok(topoText.length < 200 * 1024, 'light enough to ship (' + topoText.length + ' bytes)');
+  assert.ok(appJs.includes('world-110m.json'), 'the app reads the local file');
+  assert.ok(!appJs.includes('mapbox.com') && !appJs.includes('openstreetmap.org/tiles'), 'no third-party tile host');
+  assert.ok(!html.includes('leaflet') && !html.includes('mapbox'), 'no map library tag');
 });
 
 await test('no runtime jsdom errors', async () => {

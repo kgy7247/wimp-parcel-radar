@@ -130,6 +130,8 @@ const state = {
   lang: detectLanguage(),
   number: '',
   carrier: 'auto',
+  /* 'globe' or 'flat' — two projections of the same view model. */
+  mapMode: 'globe',
   view: null,
   loading: false,
   error: null,
@@ -790,6 +792,23 @@ function focusPoint(index) {
   if (!Number.isFinite(view.points[index].lat) || !Number.isFinite(view.points[index].lng)) return;
   state.selected = index;
   const point = view.points[index];
+  if (state.mapMode === 'flat') {
+    /* 2D: centre the stop, keep the current zoom unless it is wider than a
+       region — the same intent as the globe's altitude step. */
+    flat.selected = index;
+    const target = Math.max(flat.scale, Math.min(flat.maxScale, flat.minScale * 11, Math.min(flat.w, flat.h) / 16));
+    flat.scale = target;
+    flat.lon = point.lng;
+    flat.lat = point.lat;
+    wrapFlatLon();
+    clampFlatLat();
+    drawFlat();
+    showFlatTip(index);
+    const flatInfo = $('#marker-info');
+    if (flatInfo) flatInfo.hidden = true;
+    return;
+  }
+  flat.selected = -1;
   if (globe && globe.pointOfView) {
     // Zoom by how much of the world the route covers: a domestic parcel gets a country-level view.
     let spread = 0;
@@ -801,8 +820,24 @@ function focusPoint(index) {
   }
   const info = $('#marker-info');
   const event = point.lastEvent || point.firstEvent;
-  info.hidden = false;
-  info.textContent = pointSummary(point) || (event ? (event.note || event.title) : '');
+  if (info) {
+    info.hidden = false;
+    info.textContent = pointSummary(point) || (event ? (event.note || event.title) : '');
+  }
+}
+
+/* After a lookup the whole journey should be in frame, not one stop. */
+function focusRoute() {
+  const view = state.view;
+  if (!view || !view.points.length) return;
+  const latest = Number.isFinite(view.latestIndex) && view.latestIndex >= 0 ? view.latestIndex : view.points.length - 1;
+  if (state.mapMode === 'flat') {
+    fitFlat();
+    showFlatTip(latest);
+    flat.hover = -1;
+  } else {
+    frameRoute();
+  }
 }
 
 /* Canvas fallback — same drawing as the original, driven by dynamic data. */
@@ -1004,6 +1039,754 @@ function softwareGlobe(host) {
 }
 
 /* ------------------------------------------------------------------ *
+ * 2D flat map — an equirectangular panorama drawn from vector coastlines.
+ *   One local TopoJSON is decoded once into rings; every pan, zoom and
+ *   relabel is a canvas repaint, so there is no tile server, no per-pan
+ *   image request and nothing to blur at high zoom. Points, arcs and the
+ *   last confirmed stop come from the same view model as the globe, so
+ *   switching is only a change of projection.
+ * ------------------------------------------------------------------ */
+
+const WORLD_URL = 'world-110m.json';
+
+const flat = {
+  root: null, canvas: null, ctx: null, tip: null, tipTitle: null, tipBody: null, pulse: null,
+  dpr: 1, w: 0, h: 0,
+  lon: 0, lat: 12, scale: 0, minScale: 1, maxScale: 40,
+  shapes: null, loading: false, failed: false,
+  hits: [], hover: -1, selected: -1, tipIndex: -1,
+  drag: null, pinch: null, pointers: new Map()
+};
+
+/* TopoJSON → one array of rings per polygon, each ring a list of [lng, lat].
+   Quantized arcs are delta-encoded, so they are summed and scaled first; a
+   negative arc index means the same arc walked backwards. */
+/* The stop the parcel is at now — the last place it was actually seen, which
+   is not always the last point on a route that returns somewhere. */
+function lastStopIndex(view) {
+  if (!view || !view.points || !view.points.length) return -1;
+  if (Number.isFinite(view.latestIndex) && view.latestIndex >= 0) return view.latestIndex;
+  return view.points.length - 1;
+}
+
+function decodeWorld(topo) {
+  const objects = (topo && topo.objects) || {};
+  const collection = objects.countries || objects.land;
+  if (!collection) return [];
+  const transform = topo.transform;
+  const arcs = (topo.arcs || []).map((arc) => {
+    let x = 0;
+    let y = 0;
+    return arc.map((point) => {
+      if (!transform) return [point[0], point[1]];
+      x += point[0];
+      y += point[1];
+      return [x * transform.scale[0] + transform.translate[0], y * transform.scale[1] + transform.translate[1]];
+    });
+  });
+  const join = (list) => {
+    const ring = [];
+    for (const index of list) {
+      const source = index < 0 ? (arcs[~index] || []).slice().reverse() : (arcs[index] || []);
+      for (let i = ring.length ? 1 : 0; i < source.length; i += 1) ring.push(source[i]);
+    }
+    return ring;
+  };
+  const shapes = [];
+  /* A ring that crosses the antimeridian (Russia, Fiji) is stored with both
+     179° and -179°; unwrapping it keeps one continuous outline instead of a
+     line drawn straight across the whole map. */
+  const addShape = (rings) => {
+    const out = [];
+    let minLng = Infinity;
+    let maxLng = -Infinity;
+    let anchor = 0;
+    rings.forEach((ring, ringIndex) => {
+      const unwrapped = [];
+      let prev = null;
+      for (const [lng, lat] of ring) {
+        let value = lng;
+        if (prev != null) {
+          while (value - prev > 180) value -= 360;
+          while (value - prev < -180) value += 360;
+        }
+        unwrapped.push([value, lat]);
+        prev = value;
+      }
+      /* Holes follow the outer ring's sheet of the world. */
+      if (ringIndex === 0) {
+        if (unwrapped.length) anchor = unwrapped.reduce((sum, p) => sum + p[0], 0) / unwrapped.length;
+      } else if (unwrapped.length) {
+        const mean = unwrapped.reduce((sum, p) => sum + p[0], 0) / unwrapped.length;
+        const shift = Math.round((anchor - mean) / 360) * 360;
+        if (shift) for (const p of unwrapped) p[0] += shift;
+      }
+      for (const p of unwrapped) {
+        if (p[0] < minLng) minLng = p[0];
+        if (p[0] > maxLng) maxLng = p[0];
+      }
+      out.push(unwrapped);
+    });
+    if (!out.length || !out[0].length) return;
+    /* Keep a polygon that landed entirely past the pole back on the map. */
+    if (maxLng - minLng < 360 && (minLng > 180 || maxLng < -180)) {
+      const shift = minLng > 180 ? -360 : 360;
+      for (const ring of out) for (const p of ring) p[0] += shift;
+      minLng += shift;
+      maxLng += shift;
+    }
+    if (out[0].length > 2) shapes.push({ rings: out, minLng, maxLng });
+  };
+  const walk = (geometry) => {
+    if (!geometry) return;
+    if (geometry.type === 'Polygon') addShape((geometry.arcs || []).map(join));
+    else if (geometry.type === 'MultiPolygon') (geometry.arcs || []).forEach((polygon) => addShape(polygon.map(join)));
+    else if (geometry.type === 'GeometryCollection') (geometry.geometries || []).forEach(walk);
+  };
+  (collection.geometries || [collection]).forEach(walk);
+  return shapes;
+}
+
+function loadWorld() {
+  if (flat.shapes || flat.loading) return;
+  flat.failed = false;
+  /* Tests (and an inline build) can hand the topology in directly. */
+  if (window.WIMP_WORLD) {
+    flat.shapes = decodeWorld(window.WIMP_WORLD);
+    if (state.mapMode === 'flat') drawFlat();
+    return;
+  }
+  if (typeof fetch !== 'function') return;
+  flat.loading = true;
+  fetch(WORLD_URL, { headers: { accept: 'application/json' } })
+    .then((res) => (res && res.ok ? res.json() : Promise.reject(new Error('world map ' + (res && res.status)))))
+    .then((topo) => { flat.shapes = decodeWorld(topo); })
+    .catch(() => { flat.failed = true; })
+    .then(() => {
+      flat.loading = false;
+      if (state.mapMode === 'flat') drawFlat();
+    });
+}
+
+function sizeFlat() {
+  if (!flat.root || !flat.canvas) return;
+  const w = Math.max(1, Math.round(flat.root.clientWidth || 0));
+  const h = Math.max(1, Math.round(flat.root.clientHeight || 0));
+  const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+  const first = !flat.w;
+  flat.w = w;
+  flat.h = h;
+  flat.dpr = dpr;
+  flat.canvas.width = Math.round(w * dpr);
+  flat.canvas.height = Math.round(h * dpr);
+  flat.minScale = w / 360;
+  flat.maxScale = Math.max(flat.minScale * 20, 12);
+  if (first || !flat.scale) {
+    flat.scale = flat.minScale;
+    flat.lon = 0;
+    flat.lat = 12;
+  }
+  flat.scale = Math.max(flat.minScale, Math.min(flat.maxScale, flat.scale));
+  clampFlatLat();
+  drawFlat();
+}
+
+function wrapFlatLon() {
+  flat.lon = ((((flat.lon + 180) % 360) + 360) % 360) - 180;
+}
+
+/* Keep the visible band inside the poles whenever the map is taller than the
+   panel; when the whole world fits, the map is simply centred on the equator. */
+function clampFlatLat() {
+  const half = flat.h / 2 / (flat.scale || 1);
+  if (half >= 90) flat.lat = 0;
+  else flat.lat = Math.max(-90 + half, Math.min(90 - half, flat.lat));
+}
+
+function drawFlat() {
+  const ctx = flat.ctx;
+  if (!ctx || !flat.w || !flat.scale) return;
+  const w = flat.w;
+  const h = flat.h;
+  const scale = flat.scale;
+  ctx.setTransform(flat.dpr, 0, 0, flat.dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const sea = ctx.createLinearGradient(0, 0, 0, h);
+  sea.addColorStop(0, '#0a131e');
+  sea.addColorStop(0.55, '#080f19');
+  sea.addColorStop(1, '#060c13');
+  ctx.fillStyle = sea;
+  ctx.fillRect(0, 0, w, h);
+
+  /* When the whole world fits with room to spare (a tall phone), the map is a
+     band across the middle; clip the chart to it so the band reads as the map
+     rather than as a grid that stops nowhere. */
+  const bandTop = h / 2 - 90 * scale;
+  const bandBottom = h / 2 + 90 * scale;
+  const framed = bandTop > 0.5 || bandBottom < h - 0.5;
+  ctx.save();
+  if (framed) {
+    ctx.beginPath();
+    ctx.rect(0, Math.max(0, bandTop), w, Math.min(h, bandBottom) - Math.max(0, bandTop));
+    ctx.clip();
+  }
+  drawGraticule(ctx);
+  if (flat.shapes) drawLand(ctx);
+  ctx.restore();
+  if (framed) {
+    ctx.strokeStyle = 'rgba(58,88,113,.45)';
+    ctx.lineWidth = 1;
+    for (const y of [bandTop, bandBottom]) {
+      if (y > 0.5 && y < h - 0.5) {
+        ctx.beginPath();
+        ctx.moveTo(0, Math.round(y) + 0.5);
+        ctx.lineTo(w, Math.round(y) + 0.5);
+        ctx.stroke();
+      }
+    }
+  }
+
+  drawArcs(ctx);
+  drawPoints(ctx);
+  placePulse();
+  if (flat.tipIndex >= 0) placeTip();
+}
+
+function drawGraticule(ctx) {
+  const w = flat.w;
+  const h = flat.h;
+  const step = 360 * flat.scale;
+  /* The grid tightens as the map zooms in, so a close view is not an empty sea. */
+  const grid = flat.scale > flat.minScale * 12 ? 5 : flat.scale > flat.minScale * 4 ? 10 : 30;
+  ctx.save();
+  ctx.lineWidth = 1;
+  for (let lng = -180; lng <= 180; lng += grid) {
+    let x = w / 2 + (lng - flat.lon) * flat.scale;
+    while (x < -1) x += step;
+    for (; x < w + 1; x += step) {
+      ctx.strokeStyle = lng === 0 ? '#1c2d3e' : '#131f2b';
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x) + 0.5, 0);
+      ctx.lineTo(Math.round(x) + 0.5, h);
+      ctx.stroke();
+    }
+  }
+  for (let lat = -60; lat <= 60; lat += grid) {
+    const y = h / 2 - (lat - flat.lat) * flat.scale;
+    if (y < -1 || y > h + 1) continue;
+    ctx.strokeStyle = lat === 0 ? '#1c2d3e' : '#131f2b';
+    ctx.beginPath();
+    ctx.moveTo(0, Math.round(y) + 0.5);
+    ctx.lineTo(w, Math.round(y) + 0.5);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLand(ctx) {
+  const w = flat.w;
+  const h = flat.h;
+  const scale = flat.scale;
+  const land = ctx.createLinearGradient(0, 0, 0, h);
+  land.addColorStop(0, '#1a2f42');
+  land.addColorStop(0.6, '#152536');
+  land.addColorStop(1, '#101d29');
+  const reach = w / 2 / scale + 6;
+  const left = flat.lon - reach;
+  const right = flat.lon + reach;
+  ctx.save();
+  ctx.lineJoin = 'round';
+  /* A slightly heavier hairline as the map zooms keeps the 1:110m coastlines
+     reading as a drawn chart instead of pixel steps. */
+  ctx.lineWidth = Math.max(0.7, Math.min(1.6, scale / 60));
+  ctx.strokeStyle = 'rgba(96,144,178,.55)';
+  for (const shape of flat.shapes) {
+    /* Shapes are unwrapped, so they repeat every 360° instead of at ±180°. */
+    const from = Math.max(-1, Math.ceil((left - shape.maxLng) / 360));
+    const to = Math.min(1, Math.floor((right - shape.minLng) / 360));
+    for (let k = from; k <= to; k += 1) {
+      const dx = k * 360;
+      ctx.beginPath();
+      for (const ring of shape.rings) {
+        for (let i = 0; i < ring.length; i += 1) {
+          const x = w / 2 + (ring[i][0] + dx - flat.lon) * scale;
+          const y = h / 2 - (ring[i][1] - flat.lat) * scale;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+      }
+      ctx.fillStyle = land;
+      ctx.fill('evenodd');
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/* Great-circle path of an arc, in screen pixels. Longitudes are unwrapped so
+   the line never jumps at the antimeridian, then shifted as one piece to the
+   copy of the world nearest the camera. */
+function arcScreenPoints(arc) {
+  const lat1 = arc.startLat * DEG;
+  const lat2 = arc.endLat * DEG;
+  const lng1 = arc.startLng * DEG;
+  const lng2 = arc.endLng * DEG;
+  const v1 = [Math.cos(lat1) * Math.cos(lng1), Math.cos(lat1) * Math.sin(lng1), Math.sin(lat1)];
+  const v2 = [Math.cos(lat2) * Math.cos(lng2), Math.cos(lat2) * Math.sin(lng2), Math.sin(lat2)];
+  const dot = Math.max(-1, Math.min(1, v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]));
+  const omega = Math.acos(dot);
+  const steps = 72;
+  const pts = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    let v = v1;
+    if (omega > 1e-6) {
+      const a = Math.sin((1 - t) * omega) / Math.sin(omega);
+      const b = Math.sin(t * omega) / Math.sin(omega);
+      v = [v1[0] * a + v2[0] * b, v1[1] * a + v2[1] * b, v1[2] * a + v2[2] * b];
+    }
+    const lat = Math.asin(Math.max(-1, Math.min(1, v[2]))) / DEG;
+    const lng = Math.atan2(v[1], v[0]) / DEG;
+    pts.push([lng, lat]);
+  }
+  for (let i = 1; i < pts.length; i += 1) {
+    let lng = pts[i][0];
+    const prev = pts[i - 1][0];
+    while (lng - prev > 180) lng -= 360;
+    while (lng - prev < -180) lng += 360;
+    pts[i][0] = lng;
+  }
+  const mid = pts[Math.floor(pts.length / 2)][0];
+  const shift = Math.round((flat.lon - mid) / 360) * 360;
+  return pts.map(([lng, lat]) => [
+    flat.w / 2 + (lng + shift - flat.lon) * flat.scale,
+    flat.h / 2 - (lat - flat.lat) * flat.scale
+  ]);
+}
+
+function drawArcs(ctx) {
+  const view = state.view;
+  if (!view || !view.arcs.length) return;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const arc of view.arcs) {
+    if (!Number.isFinite(arc.startLat) || !Number.isFinite(arc.startLng)) continue;
+    if (!Number.isFinite(arc.endLat) || !Number.isFinite(arc.endLng)) continue;
+    const pts = arcScreenPoints(arc);
+    if (pts.length < 2) continue;
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    if (arc.planned) {
+      ctx.setLineDash([5, 6]);
+      ctx.strokeStyle = 'rgba(196,216,238,.72)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.strokeStyle = 'rgba(183,243,115,.15)';
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.strokeStyle = '#b7f373';
+      ctx.lineWidth = 1.7;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function chipPath(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+function drawPoints(ctx) {
+  flat.hits = [];
+  const view = state.view;
+  if (!view) return;
+  const w = flat.w;
+  const h = flat.h;
+  ctx.save();
+  ctx.font = '11px "DM Sans","Noto Sans KR",system-ui,sans-serif';
+  ctx.textBaseline = 'middle';
+  view.points.forEach((point, index) => {
+    if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return;
+    let lng = point.lng;
+    while (lng - flat.lon > 180) lng -= 360;
+    while (lng - flat.lon < -180) lng += 360;
+    const x = w / 2 + (lng - flat.lon) * flat.scale;
+    const y = h / 2 - (point.lat - flat.lat) * flat.scale;
+    if (x < -50 || x > w + 50 || y < -34 || y > h + 34) return;
+    flat.hits.push({ index, x, y });
+    const active = Boolean(point.active);
+    const pending = Boolean(view.demo && index === lastStopIndex(view) && view.points.length > 1);
+    const selected = flat.selected === index;
+
+    if (active || selected) {
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, 24);
+      glow.addColorStop(0, active ? 'rgba(183,243,115,.34)' : 'rgba(183,243,115,.18)');
+      glow.addColorStop(1, 'rgba(183,243,115,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, 24, 0, 7);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, active ? 4.6 : 3.4, 0, 7);
+    ctx.fillStyle = active ? '#b7f373' : '#e8f0ff';
+    ctx.fill();
+    if (pending) {
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, 7);
+      ctx.setLineDash([2, 2]);
+      ctx.strokeStyle = 'rgba(201,217,238,.9)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (point.hideLabel && !active) return;
+
+    const text = point.name + (pending ? ' ○' : '');
+    const width = ctx.measureText(text).width || 40;
+    const padX = 6;
+    const boxH = 19;
+    let boxX = x + 9;
+    if (boxX + width + padX * 2 > w - 6) boxX = x - 9 - width - padX * 2;
+    if (boxX < 6) boxX = 6;
+    const boxY = y - boxH - 8;
+    chipPath(ctx, boxX, boxY, width + padX * 2, boxH, 4);
+    ctx.fillStyle = active ? 'rgba(24,42,26,.9)' : 'rgba(11,21,37,.86)';
+    ctx.fill();
+    ctx.strokeStyle = active ? 'rgba(183,243,115,.6)' : 'rgba(69,97,116,.55)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = active ? '#b7f373' : '#e8f0ff';
+    ctx.fillText(text, boxX + padX, boxY + boxH / 2 + 0.5);
+  });
+  ctx.restore();
+}
+
+/* The last confirmed stop gets a CSS-driven ping so the canvas never has to
+   repaint for an animation. */
+function placePulse() {
+  const el = flat.pulse;
+  if (!el) return;
+  const view = state.view;
+  const last = lastStopIndex(view);
+  const hit = last >= 0 ? flat.hits.find((entry) => entry.index === last) : null;
+  if (!hit || state.mapMode !== 'flat') {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.style.transform = 'translate(' + Math.round(hit.x) + 'px,' + Math.round(hit.y) + 'px)';
+}
+
+function placeTip() {
+  if (!flat.tip || flat.tipIndex < 0) return;
+  const hit = flat.hits.find((entry) => entry.index === flat.tipIndex);
+  if (!hit) {
+    hideFlatTip();
+    return;
+  }
+  flat.tip.hidden = false;
+  const tw = flat.tip.offsetWidth || 180;
+  const th = flat.tip.offsetHeight || 46;
+  let x = hit.x + 16;
+  let y = hit.y - th - 10;
+  if (x + tw > flat.w - 8) x = hit.x - tw - 16;
+  if (x < 8) x = 8;
+  if (y < 8) y = hit.y + 16;
+  if (y + th > flat.h - 8) y = flat.h - th - 8;
+  flat.tip.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+}
+
+function showFlatTip(index) {
+  const view = state.view;
+  if (!view || !view.points[index]) return;
+  const point = view.points[index];
+  const event = point.lastEvent || point.firstEvent;
+  flat.tipIndex = index;
+  if (flat.tipTitle) flat.tipTitle.textContent = pair(point);
+  if (flat.tipBody) {
+    const when = event ? (event.timeLabel || formatTime(event.time)) : '';
+    const what = event ? (event.note || event.title) : '';
+    flat.tipBody.textContent = [when, what].filter(Boolean).join(' · ');
+  }
+  placeTip();
+}
+
+function hideFlatTip() {
+  flat.tipIndex = -1;
+  if (flat.tip) flat.tip.hidden = true;
+}
+
+function flatHitAt(x, y, radius) {
+  let best = -1;
+  let bestD = radius * radius;
+  for (const hit of flat.hits) {
+    const d = (hit.x - x) * (hit.x - x) + (hit.y - y) * (hit.y - y);
+    if (d <= bestD) {
+      bestD = d;
+      best = hit.index;
+    }
+  }
+  return best;
+}
+
+function zoomFlat(factor, anchorX, anchorY) {
+  if (!flat.scale) return;
+  const ax = Number.isFinite(anchorX) ? anchorX : flat.w / 2;
+  const ay = Number.isFinite(anchorY) ? anchorY : flat.h / 2;
+  const lng = flat.lon + (ax - flat.w / 2) / flat.scale;
+  const lat = flat.lat + (flat.h / 2 - ay) / flat.scale;
+  flat.scale = Math.max(flat.minScale, Math.min(flat.maxScale, flat.scale * factor));
+  flat.lon = lng - (ax - flat.w / 2) / flat.scale;
+  flat.lat = lat - (flat.h / 2 - ay) / flat.scale;
+  wrapFlatLon();
+  clampFlatLat();
+  drawFlat();
+}
+
+/* Frame every stop of the current lookup; a single city keeps a region-level
+   zoom instead of filling the panel with one dot. */
+function fitFlat() {
+  if (!flat.w || !flat.scale) return;
+  const view = state.view;
+  const pts = (view ? view.points : []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  if (!pts.length) {
+    flat.scale = flat.minScale;
+    flat.lon = 0;
+    flat.lat = 12;
+    clampFlatLat();
+    drawFlat();
+    return;
+  }
+  const lngs = pts.map((p) => p.lng).sort((a, b) => a - b);
+  let gap = lngs[0] + 360 - lngs[lngs.length - 1];
+  let gapAt = lngs.length - 1;
+  for (let i = 1; i < lngs.length; i += 1) {
+    const span = lngs[i] - lngs[i - 1];
+    if (span > gap) {
+      gap = span;
+      gapAt = i - 1;
+    }
+  }
+  const spanLng = lngs.length > 1 ? 360 - gap : 0;
+  let centerLng = lngs[(gapAt + 1) % lngs.length] + spanLng / 2;
+  if (centerLng > 180) centerLng -= 360;
+  const lats = pts.map((p) => p.lat);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const spanLat = maxLat - minLat;
+  const sx = (flat.w * 0.8) / Math.max(14, spanLng);
+  const sy = (flat.h * 0.8) / Math.max(9, spanLat);
+  /* Stop at a regional view: the coastline set is 1:110m, and a domestic route
+     zoomed to city level would only show a chunky silhouette. */
+  flat.scale = Math.max(flat.minScale, Math.min(flat.maxScale, flat.minScale * 9, Math.min(sx, sy)));
+  flat.lon = centerLng;
+  flat.lat = (minLat + maxLat) / 2;
+  wrapFlatLon();
+  clampFlatLat();
+  if (state.view) flat.selected = lastStopIndex(state.view);
+  drawFlat();
+}
+
+function bindFlat() {
+  const canvas = flat.canvas;
+  if (!canvas) return;
+  const local = (event) => {
+    const box = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
+    return { x: event.clientX - box.left, y: event.clientY - box.top };
+  };
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (event.button != null && event.button !== 0 && event.pointerType !== 'touch') return;
+    const p = local(event);
+    flat.pointers.set(event.pointerId == null ? 1 : event.pointerId, p);
+    try { canvas.setPointerCapture(event.pointerId); } catch (err) { /* no capture */ }
+    if (flat.pointers.size === 1) {
+      flat.drag = { x: p.x, y: p.y, lon: flat.lon, lat: flat.lat, moved: false };
+      flat.pinch = null;
+    } else if (flat.pointers.size === 2) {
+      const [a, b] = [...flat.pointers.values()];
+      flat.pinch = {
+        dist: Math.hypot(a.x - b.x, a.y - b.y),
+        scale: flat.scale,
+        lon: flat.lon,
+        lat: flat.lat,
+        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+      };
+      flat.drag = null;
+    }
+  });
+
+  canvas.addEventListener('pointermove', (event) => {
+    const p = local(event);
+    if (flat.pointers.has(event.pointerId)) flat.pointers.set(event.pointerId, p);
+
+    if (flat.pinch && flat.pointers.size >= 2) {
+      const [a, b] = [...flat.pointers.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      if (flat.pinch.dist > 0 && dist > 0) {
+        const scale = Math.max(flat.minScale, Math.min(flat.maxScale, flat.pinch.scale * (dist / flat.pinch.dist)));
+        const anchorLng = flat.pinch.lon + (flat.pinch.mid.x - flat.w / 2) / flat.pinch.scale;
+        const anchorLat = flat.pinch.lat + (flat.h / 2 - flat.pinch.mid.y) / flat.pinch.scale;
+        flat.scale = scale;
+        flat.lon = anchorLng - (mid.x - flat.w / 2) / scale;
+        flat.lat = anchorLat - (flat.h / 2 - mid.y) / scale;
+        wrapFlatLon();
+        clampFlatLat();
+        hideFlatTip();
+        drawFlat();
+      }
+      return;
+    }
+
+    if (flat.drag) {
+      const dx = p.x - flat.drag.x;
+      const dy = p.y - flat.drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) flat.drag.moved = true;
+      flat.lon = flat.drag.lon - dx / flat.scale;
+      flat.lat = flat.drag.lat + dy / flat.scale;
+      wrapFlatLon();
+      clampFlatLat();
+      if (flat.hover >= 0) {
+        flat.hover = -1;
+        hideFlatTip();
+      }
+      drawFlat();
+      return;
+    }
+
+    const index = flatHitAt(p.x, p.y, 22);
+    if (index !== flat.hover) {
+      flat.hover = index;
+      if (index >= 0) showFlatTip(index);
+      else if (flat.selected < 0) hideFlatTip();
+    }
+    if (index >= 0) placeTip();
+  });
+
+  const finish = (event, allowClick) => {
+    const box = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
+    const p = { x: event.clientX - box.left, y: event.clientY - box.top };
+    if (flat.pointers.has(event.pointerId)) flat.pointers.delete(event.pointerId);
+    try { canvas.releasePointerCapture(event.pointerId); } catch (err) { /* no capture */ }
+    if (flat.pinch) {
+      if (flat.pointers.size < 2) flat.pinch = null;
+      flat.drag = null;
+      return;
+    }
+    const drag = flat.drag;
+    flat.drag = null;
+    if (!drag) return;
+    if (!drag.moved && allowClick) {
+      const index = flatHitAt(p.x, p.y, 26);
+      if (index >= 0) focusPoint(index);
+    }
+  };
+  canvas.addEventListener('pointerup', (event) => finish(event, true));
+  canvas.addEventListener('pointercancel', (event) => finish(event, false));
+
+  canvas.addEventListener('pointerleave', () => {
+    if (flat.drag || flat.pinch) return;
+    flat.hover = -1;
+    if (flat.selected < 0) hideFlatTip();
+    else placeTip();
+    drawFlat();
+  });
+
+  canvas.addEventListener('wheel', (event) => {
+    if (event.preventDefault) event.preventDefault();
+    if (!flat.scale) return;
+    const p = local(event);
+    const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+    zoomFlat(Math.exp(-Math.max(-120, Math.min(120, delta)) * 0.0018), p.x, p.y);
+  }, { passive: false });
+
+  canvas.addEventListener('dblclick', (event) => {
+    const p = local(event);
+    zoomFlat(1.8, p.x, p.y);
+  });
+}
+
+function initFlatMap() {
+  const root = $('#flat-map');
+  const canvas = $('#flat-canvas');
+  if (!root || !canvas) return;
+  flat.root = root;
+  flat.canvas = canvas;
+  flat.tip = $('#flat-tip');
+  flat.tipTitle = $('#flat-tip-title');
+  flat.tipBody = $('#flat-tip-body');
+  flat.pulse = $('#flat-pulse');
+  flat.ctx = canvas.getContext ? canvas.getContext('2d') : null;
+  if (!flat.ctx) return;
+  const panel = $('#map-panel');
+  if (panel) panel.dataset.map = state.mapMode;
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => sizeFlat()).observe(root);
+  bindFlat();
+  sizeFlat();
+  /* Warm the coastline file while the globe is on screen, so the first
+     switch to 2D is already painted. */
+  if ('requestIdleCallback' in window) window.requestIdleCallback(() => loadWorld(), { timeout: 3000 });
+  else setTimeout(loadWorld, 1200);
+}
+
+function setMapMode(mode) {
+  const next = mode === 'flat' ? 'flat' : 'globe';
+  if (state.mapMode === next) return;
+  state.mapMode = next;
+  const panel = $('#map-panel');
+  if (panel) panel.dataset.map = next;
+  const globeRoot = $('#globe');
+  if (globeRoot) globeRoot.setAttribute('aria-hidden', next === 'flat' ? 'true' : 'false');
+  const flatRoot = $('#flat-map');
+  if (flatRoot) flatRoot.setAttribute('aria-hidden', next === 'flat' ? 'false' : 'true');
+  [['#view-globe', 'globe'], ['#view-flat', 'flat']].forEach(([selector, key]) => {
+    const button = $(selector);
+    if (!button) return;
+    button.setAttribute('aria-pressed', next === key ? 'true' : 'false');
+  });
+  const hint = $('#map-hint');
+  if (hint) {
+    hint.dataset.i = next === 'flat' ? 'dragFlat' : 'drag';
+    hint.textContent = t()[hint.dataset.i] || '';
+  }
+  const credit = $('#map-credit');
+  if (credit) credit.textContent = next === 'flat' ? 'Map data · Natural Earth' : 'Earth imagery · NASA';
+  hideFlatTip();
+  const info = $('#marker-info');
+  if (info) info.hidden = true;
+
+  if (next === 'flat') {
+    loadWorld();
+    sizeFlat();
+    if (state.view) fitFlat();
+    else drawFlat();
+  } else {
+    if (globe && globe.width && globeRoot) globe.width(globeRoot.clientWidth).height(globeRoot.clientHeight);
+    const controls = globe && globe.controls ? globe.controls() : null;
+    if (controls) controls.autoRotate = !state.view;
+    renderGlobe(state.view);
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * Rendering
  * ------------------------------------------------------------------ */
 
@@ -1037,7 +1820,17 @@ function render() {
   renderSteps();
   renderCountries();
   renderMapStatus();
+  renderMap();
+}
+
+/* Both views read the same view model; only the visible one is repainted. */
+function renderMap() {
   renderGlobe(state.view);
+  if (state.mapMode === 'flat') drawFlat();
+  else {
+    placePulse();
+    if (state.view) placeTip();
+  }
 }
 
 function renderParcels() {
@@ -1398,7 +2191,7 @@ async function lookup(number, carrier) {
     state.error = null;
     state.notice = null;
     render();
-    frameRoute();
+    focusRoute();
   } catch (err) {
     if (sameNumber) {
       state.notice = errorFor({ code: 'NETWORK' });
@@ -1535,7 +2328,11 @@ function chooseLanguage(code, restoreFocus) {
   syncLanguageUrl();
   if (changed) render();
   else updateLanguageControl(langInfo());
-  if (state.view) focusPoint(Number.isFinite(state.view.latestIndex) ? state.view.latestIndex : state.view.points.length - 1);
+  if (state.view && state.mapMode === 'flat') {
+    if (flat.tipIndex >= 0) showFlatTip(flat.tipIndex);
+  } else if (state.view) {
+    focusPoint(Number.isFinite(state.view.latestIndex) && state.view.latestIndex >= 0 ? state.view.latestIndex : state.view.points.length - 1);
+  }
   if (restoreFocus && langButton) langButton.focus();
 }
 
@@ -1610,20 +2407,44 @@ $('#interval').onchange = (e) => {
 };
 
 $('#plus').onclick = () => {
+  if (state.mapMode === 'flat') {
+    zoomFlat(0.72);
+    return;
+  }
   if (!globe) return;
   const p = globe.pointOfView();
   globe.pointOfView({ ...p, altitude: Math.max(0.35, p.altitude * 0.75) }, 350);
 };
 $('#minus').onclick = () => {
+  if (state.mapMode === 'flat') {
+    zoomFlat(1.38);
+    return;
+  }
   if (!globe) return;
   const p = globe.pointOfView();
   globe.pointOfView({ ...p, altitude: Math.min(5, p.altitude * 1.3) }, 350);
 };
 $('#reset').onclick = () => {
+  $('#marker-info').hidden = true;
+  if (state.mapMode === 'flat') {
+    flat.selected = -1;
+    hideFlatTip();
+    fitFlat();
+    return;
+  }
   if (!globe) return;
   globe.pointOfView({ lat: 37, lng: 67, altitude: 1.85 }, 900);
-  $('#marker-info').hidden = true;
 };
+
+/* 3D ↔ 2D: both views already hold the same lookup, so this only repaints. */
+const mapSwitch = $('#map-switch');
+if (mapSwitch) {
+  mapSwitch.onclick = (event) => {
+    const target = event.target;
+    const button = target && target.closest ? target.closest('[data-view]') : null;
+    if (button) setMapMode(button.dataset.view);
+  };
+}
 
 /* ------------------------------------------------------------------ *
  * Boot
@@ -1631,8 +2452,19 @@ $('#reset').onclick = () => {
 
 buildLanguageList();
 initGlobe();
+initFlatMap();
 state.view = null;
 state.number = '';
 state.carrier = 'auto';
 render();
 if (globe) globe.pointOfView({ lat: 30, lng: 60, altitude: 1.95 }, 0);
+
+/* Small read-only hook for the 2D view's state — used by the UI tests and by
+   support when a report says “the flat map shows nothing”. */
+window.WIMP_MAP = {
+  get mode() { return state.mapMode; },
+  get points() { return state.view ? state.view.points.length : 0; },
+  get arcs() { return state.view ? state.view.arcs.length : 0; },
+  get world() { return flat.shapes ? flat.shapes.length : 0; },
+  get camera() { return { lon: flat.lon, lat: flat.lat, scale: flat.scale }; }
+};
