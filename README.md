@@ -150,6 +150,7 @@ GET /api/track?number=<운송장번호>&carrier=<auto|CJ|EPOST|HANJIN|LOTTE|LOGE
       "location": { "name": "대전동부", "city": "대전", "countryCode": "KR", "lat": 36.3504, "lng": 127.3845, "precision": "hub" } }
   ],
   "route": [ { "lat": 36.35, "lng": 127.38, "name": "대전", "detail": "대전동부", "countryCode": "KR" } ],
+  "plannedDestination": null,
   "countries": ["KR"],
   "meta": { "source": "cjlogistics", "cached": false, "demo": false, "fetchedAt": "2026-11-28T00:41:00.000Z", "elapsedMs": 812 }
 }
@@ -173,6 +174,7 @@ GET /api/track?number=<운송장번호>&carrier=<auto|CJ|EPOST|HANJIN|LOTTE|LOGE
 `estimatedDelivery` 는 택배사가 예상 도착일을 줄 때만 `YYYY-MM-DD`(한국 날짜)로 내려가고, 모르면 `null` 입니다.
 `meta.source` 는 `cjlogistics`·`epost`·`hanjin`·`lotte`·`dhl`·`lastscanned` 중 하나이고, `meta.upstream` 은 lastscanned가 실제로 사용한 택배사 id입니다.
 `events[].location.precision` 은 `hub`(내장 허브 표), `geocoded`(Nominatim), `country`(국가 중심점 근사) 중 하나입니다.
+`plannedDestination` 은 **아직 도착하지 않은 목적지**입니다. 택배사의 `destination` 필드(예: `{"city":"SEOUL","country":"KR"}`)를 먼저 쓰고, 없으면 사전 통관 스캔이 가리키는 입항지(예: `Customs clearance status updated - INCHEON` → 인천)를 씁니다. `route`·`countries`에는 절대 섞이지 않고, 지도에서는 '현재 마지막 위치 → 목적지' 점선(예정 경로)으로만 그려집니다. 배달 완료·반송이거나 마지막 위치가 이미 그 도시/국가에 있으면 `null` 입니다.
 
 ---
 

@@ -21,6 +21,8 @@
 .map-status.is-error{border-color:#4b3238}
 .map-status.is-error .pulse{background:#ff8b7d;box-shadow:0 0 0 5px #ff8b7d18}
 .globe-label.pending{border-style:dashed;color:#c9d9ee}
+/* Where it is going, not where it has been: a muted, dashed marker. */
+.globe-label.planned{border-style:dashed;border-color:#7e93aa99;color:#b9cbe1;background:#0b152599;cursor:default}
 .carrier-logo{font-style:normal}
 .carrier-logo[data-carrier="CJ"]{background:#ff6a1a;color:#fff}
 .carrier-logo[data-carrier="EPOST"]{background:#e8452c;color:#fff}

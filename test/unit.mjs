@@ -300,6 +300,94 @@ await test('DHL: a destination customs notice never becomes a stop (BG → DE, n
   assert.deepEqual(out.body.route.map((p) => p.countryCode), ['BG', 'DE'], 'Sofia then Leipzig only');
   assert.equal(out.body.route.at(-1).name, 'Leipzig');
   assert.equal(out.body.route.at(-1).active, true);
+  /* The notice is paperwork, so it comes back as the leg still ahead. */
+  assert.equal(out.body.plannedDestination.name, 'Incheon');
+  assert.equal(out.body.plannedDestination.countryCode, 'KR');
+  assert.ok(out.body.plannedDestination.lat > 37 && out.body.plannedDestination.lng > 126);
+});
+
+await test('DHL: the API destination field is the planned destination, the gateway only a fallback', async () => {
+  const json = dhlPreclearanceJson();
+  json.shipments[0].destination = { address: { addressLocality: 'Seoul', countryCode: 'KR' } };
+  stub({ 'api-eu.dhl.com/track/shipments': json });
+  process.env.DHL_API_KEY = 'test-key-123';
+  const out = await call('2746217160', 'DHL');
+  delete process.env.DHL_API_KEY;
+  assert.equal(out.body.plannedDestination.name, 'Seoul', 'the address wins over the customs port');
+  assert.equal(out.body.plannedDestination.countryCode, 'KR');
+  assert.ok(Math.abs(out.body.plannedDestination.lat - 37.5665) < 0.05, 'the hub table places Seoul, no network needed');
+  assert.deepEqual(out.body.route.map((p) => p.name), ['Sofia', 'Leipzig'], 'the destination is not a stop');
+  assert.deepEqual(out.body.countries, ['BG', 'DE']);
+});
+
+await test('route: no planned leg once it is delivered or already in the destination country', async () => {
+  const json = dhlPreclearanceJson();
+  json.shipments[0].events.push({
+    timestamp: '2026-12-01T10:00:00+09:00',
+    location: { address: { addressLocality: 'Seoul', countryCode: 'KR' } },
+    statusCode: 'delivered',
+    status: 'Delivered',
+  });
+  json.shipments[0].destination = { address: { addressLocality: 'Seoul', countryCode: 'KR' } };
+  stub({ 'api-eu.dhl.com/track/shipments': json });
+  process.env.DHL_API_KEY = 'test-key-123';
+  const out = await call('2746217156', 'DHL');
+
+  // Same shipment, but not yet delivered: the destination is still ahead. (cache holds the first answer)
+  assert.deepEqual(out.body.route.map((p) => p.countryCode), ['BG', 'DE', 'KR']);
+  assert.equal(out.body.status.code, 'DELIVERED');
+  assert.equal(out.body.plannedDestination, null, 'delivered: nothing left to draw');
+  delete process.env.DHL_API_KEY;
+});
+
+await test('lastscanned: the destination field becomes the planned leg, never a stop', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'api.lastscanned.com': lastscannedJson({
+        carrier: 'dhl',
+        trackingNumber: '2746217154',
+        status: 'in_transit',
+        statusDescription: 'Shipment has departed from a DHL facility LEIPZIG - GERMANY',
+        deliveredAt: null,
+        destination: { city: 'SEOUL', state: null, country: 'KR' },
+        estimatedDelivery: '2026-12-01',
+        events: [
+          { timestamp: '2026-11-27T23:08:00Z', status: 'in_transit', description: 'Shipment has departed from a DHL facility LEIPZIG - GERMANY', location: 'LEIPZIG, GERMANY' },
+          { timestamp: '2026-11-27T07:08:00Z', status: 'in_transit', description: 'Customs clearance status updated. Note - The Customs clearance process may start while the shipment is in transit to the destination.', location: 'INCHEON OUTSKIRT OF SEOUL, KOREA, REPUBLIC OF (SOUTH K.)' },
+          { timestamp: '2026-11-26T21:36:00Z', status: 'in_transit', description: 'Arrived at DHL Sort Facility LEIPZIG - GERMANY', location: 'LEIPZIG, GERMANY' },
+          { timestamp: '2026-11-26T13:57:00Z', status: 'in_transit', description: 'Shipment picked up', location: 'SOFIA, BULGARIA' },
+        ],
+      }),
+    });
+    const out = await call('2746217154', 'AUTO');
+    assert.equal(out.status, 200);
+    assert.deepEqual(out.body.route.map((p) => p.name), ['Sofia', 'Leipzig'], 'confirmed stops only');
+    assert.deepEqual(out.body.countries, ['BG', 'DE'], 'the planned country stays out of countries');
+    assert.equal(out.body.plannedDestination.name, 'Seoul');
+    assert.equal(out.body.plannedDestination.countryCode, 'KR');
+    assert.equal(out.body.plannedDestination.code, 'SEL');
+  });
+});
+
+await test('lastscanned: a domestic destination in the last-seen country draws no planned leg', async () => {
+  await withLastscannedKey(async () => {
+    stub({
+      'api.lastscanned.com': lastscannedJson({
+        carrier: 'ups',
+        trackingNumber: '1Z000Y770414233111',
+        status: 'out_for_delivery',
+        statusDescription: 'Out for delivery',
+        deliveredAt: null,
+        destination: { city: 'Ditzingen', state: '', country: 'DE' },
+        events: [
+          { timestamp: '2026-07-31T08:10:00Z', status: 'out_for_delivery', description: 'OUT FOR DELIVERY', location: 'STUTTGART, DE' },
+          { timestamp: '2026-07-30T21:40:00Z', status: 'in_transit', description: 'ARRIVAL SCAN', location: 'KOELN, DE' },
+        ],
+      }),
+    });
+    const out = await call('1Z000Y770414233111', 'AUTO');
+    assert.equal(out.body.plannedDestination, null, 'already in Germany: it is there');
+  });
 });
 
 await test('route: repeated scans at one city become one marker with a count', async () => {

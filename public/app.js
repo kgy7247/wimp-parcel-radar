@@ -372,6 +372,7 @@ function buildDataset(api, demo) {
   const lastIndex = visits.length ? visits[visits.length - 1] : -1;
   points.forEach((p, i) => { p.active = i === lastIndex; });
   const latestPoint = points[lastIndex] || null;
+  const delivered = Boolean(api.status && api.status.delivered);
 
   // Labels: first stop, last stop, and every country change. Points crowded together become dots.
   const seenCountry = new Set();
@@ -394,6 +395,18 @@ function buildDataset(api, demo) {
       startLat: from.lat, startLng: from.lng,
       endLat: to.lat, endLng: to.lng,
       planned: Boolean(demo && i === visits.length - 1)
+    });
+  }
+
+  /* The leg still ahead — current stop → destination. It comes from the
+     carrier's destination field or the customs notice at the gateway, and is
+     drawn dashed and muted: never a stop, never in points/visits/countries. */
+  const planned = plannedDestination(api, events, points, latestPoint, delivered);
+  if (planned && latestPoint) {
+    arcs.push({
+      startLat: latestPoint.lat, startLng: latestPoint.lng,
+      endLat: planned.lat, endLng: planned.lng,
+      planned: true
     });
   }
 
@@ -434,6 +447,7 @@ function buildDataset(api, demo) {
     events,
     points,
     arcs,
+    planned,
     countries,
     international: countries.some((c) => c.code && c.code !== 'KR'),
     latestLocation: latestPoint ? pair(latestPoint) : '',
@@ -443,6 +457,51 @@ function buildDataset(api, demo) {
     latestPoint,
     fetchedAt: (api.meta && api.meta.fetchedAt) || new Date().toISOString(),
     cached: Boolean(api.meta && api.meta.cached)
+  };
+}
+
+/* Where the parcel is headed.
+   The API states it (carrier destination field or the customs notice at the
+   port of entry). An older cached payload carries only the events, so the same
+   rule is applied here: a notice outside the origin and the last-seen country,
+   a place the parcel has not really been. */
+function plannedDestination(api, events, points, last, delivered) {
+  if (delivered || !last) return null;
+  /* The API's answer wins, including its “there is none”. */
+  if (api.plannedDestination !== undefined) {
+    const given = api.plannedDestination;
+    return given && Number.isFinite(given.lat) && Number.isFinite(given.lng) ? given : null;
+  }
+  const keys = new Set(points.map((p) => locationKey(p)));
+  const originCc = points[0] ? points[0].countryCode : '';
+  const ahead = (loc) => {
+    if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) return false;
+    const cc = String(loc.countryCode || '').toUpperCase();
+    if (!cc || cc === last.countryCode) return false;
+    if (originCc && cc === originCc) return false;
+    if (keys.has(locationKey(loc))) return false;
+    return !(Math.abs(loc.lat - last.lat) < 0.02 && Math.abs(loc.lng - last.lng) < 0.02);
+  };
+  let customs = null;
+  let notice = null;
+  for (const ev of events) {
+    if (ev.physical || !ev.location || !ahead(ev.location)) continue;
+    if (!isDocumentScan(`${ev.note || ''} ${ev.title || ''}`)) continue;
+    if (isCustomsScan(ev)) customs = ev.location;
+    else notice = ev.location;
+  }
+  const found = customs || notice;
+  if (!found) return null;
+  return {
+    lat: found.lat,
+    lng: found.lng,
+    name: found.city || found.name,
+    detail: found.name,
+    code: found.code || '',
+    country: found.country || '',
+    countryEn: found.countryEn || '',
+    countryCode: found.countryCode || '',
+    precision: found.precision || 'country'
   };
 }
 
@@ -667,7 +726,11 @@ function routeViewAltitude(points, center) {
 function frameRoute() {
   const view = state.view;
   if (!view) return;
-  const usable = view.points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  /* The destination still ahead belongs in the frame, or the dashed leg would
+     run off the edge of the globe. */
+  const usable = [...view.points, ...(view.planned ? [view.planned] : [])].filter(
+    (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)
+  );
   const last = currentPoint(view);
   if (!last || !Number.isFinite(last.lat)) return;
   const info = $('#marker-info');
@@ -718,10 +781,10 @@ function initGlobe() {
       .htmlAltitude(0.015)
       .htmlElement((d) => {
         const el = document.createElement('button');
-        el.className = 'globe-label' + (d.active ? ' active' : '') + (d.pending ? ' pending' : '') + (d.hideLabel ? ' dot' : '');
+        el.className = 'globe-label' + (d.active ? ' active' : '') + (d.pending ? ' pending' : '') + (d.planned ? ' planned' : '') + (d.hideLabel ? ' dot' : '');
         const count = d.count > 1 ? ` · ${d.count}` : '';
-        el.textContent = d.hideLabel ? '' : `• ${d.name}${count}${d.pending ? ' ○' : ''}`;
-        el.title = pointSummary(d);
+        el.textContent = d.hideLabel ? '' : `• ${d.name}${count}${d.planned ? ` (${t().plannedTag})` : ''}${d.pending ? ' ○' : ''}`;
+        el.title = d.planned ? `${pair(d)} · ${t().plannedTag}` : pointSummary(d);
         el.onclick = () => focusPoint(d.index);
         return el;
       });
@@ -782,6 +845,11 @@ function renderGlobe(view) {
     // A merged stop can sit first in the list yet be where the parcel is now.
     p.hideLabel = !(i === 0 || p.active) && (sameCountryAsPrev || crowded);
   });
+  /* The destination still ahead gets its own muted marker: a place it is
+     going to, not one it has been. */
+  if (view.planned) {
+    labels.push({ ...view.planned, index: -1, planned: true, pending: false, hideLabel: false });
+  }
   globe.htmlElementsData(labels);
   globe.arcsData(routeArcs(view.arcs));
 }
@@ -1000,7 +1068,9 @@ function softwareGlobe(host) {
       const r = (Math.min(w, h) * 0.68) / Math.sqrt(alt);
       points.forEach((c, i) => {
         const p = project(c.lat, c.lng, r);
-        if (p[2] > 0 && Math.hypot(e.clientX - box.left - p[0], e.clientY - box.top - p[1]) < 35) focusPoint(i);
+        if (p[2] > 0 && Math.hypot(e.clientX - box.left - p[0], e.clientY - box.top - p[1]) < 35) {
+          focusPoint(Number.isFinite(c.index) ? c.index : i);
+        }
       });
     }
     drag = null;
@@ -1499,7 +1569,44 @@ function drawPoints(ctx) {
     ctx.fillStyle = active ? '#b7f373' : '#e8f0ff';
     ctx.fillText(text, boxX + padX, boxY + boxH / 2 + 0.5);
   });
+  // The destination still ahead: a hollow dashed ring, not a stop it has been.
+  if (view.planned) drawPlannedPoint(ctx, view.planned);
   ctx.restore();
+}
+
+function drawPlannedPoint(ctx, point) {
+  if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return;
+  let lng = point.lng;
+  while (lng - flat.lon > 180) lng -= 360;
+  while (lng - flat.lon < -180) lng += 360;
+  const x = flat.w / 2 + (lng - flat.lon) * flat.scale;
+  const y = flat.h / 2 - (point.lat - flat.lat) * flat.scale;
+  if (x < -60 || x > flat.w + 60 || y < -40 || y > flat.h + 40) return;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 5.2, 0, 7);
+  ctx.setLineDash([2.4, 2.4]);
+  ctx.strokeStyle = 'rgba(196,216,238,.9)';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const text = `${point.name} (${t().plannedTag})`;
+  const width = ctx.measureText(text).width || 40;
+  const padX = 6;
+  const boxH = 19;
+  let boxX = x + 9;
+  if (boxX + width + padX * 2 > flat.w - 6) boxX = x - 9 - width - padX * 2;
+  if (boxX < 6) boxX = 6;
+  const boxY = y - boxH - 8;
+  chipPath(ctx, boxX, boxY, width + padX * 2, boxH, 4);
+  ctx.fillStyle = 'rgba(11,21,37,.72)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120,150,180,.45)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#c6d8ee';
+  ctx.fillText(text, boxX + padX, boxY + boxH / 2 + 0.5);
 }
 
 /* The last confirmed stop gets a CSS-driven ping so the canvas never has to
@@ -1589,7 +1696,9 @@ function zoomFlat(factor, anchorX, anchorY) {
 function fitFlat() {
   if (!flat.w || !flat.scale) return;
   const view = state.view;
-  const pts = (view ? view.points : []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  const pts = [...(view ? view.points : []), ...(view && view.planned ? [view.planned] : [])].filter(
+    (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)
+  );
   if (!pts.length) {
     flat.scale = flat.minScale;
     flat.lon = 0;
@@ -2064,13 +2173,25 @@ function renderCountries() {
   const wrap = $('#countries');
   wrap.replaceChildren();
   const view = state.view;
-  if (!view || !view.countries.length) {
+  if (!view || (!view.countries.length && !view.planned)) {
     wrap.style.visibility = 'hidden';
     return;
   }
   wrap.style.visibility = 'visible';
 
-  view.countries.forEach((country, i) => {
+  /* The stops it really made, then — separated by a dashed connector — where
+     it is headed. The planned city never counts as a stop. */
+  const chips = view.countries.slice();
+  if (view.planned) {
+    chips.push({
+      code: view.planned.countryCode,
+      flag: flagOf(view.planned.countryCode),
+      city: view.planned.name,
+      planned: true
+    });
+  }
+
+  chips.forEach((country, i) => {
     if (i > 0) {
       const sep = document.createElement('span');
       sep.textContent = country.planned ? '┄┄' : '━━';
@@ -2494,6 +2615,7 @@ window.WIMP_MAP = {
   get mode() { return state.mapMode; },
   get points() { return state.view ? state.view.points.length : 0; },
   get arcs() { return state.view ? state.view.arcs.length : 0; },
+  get planned() { return state.view && state.view.planned ? state.view.planned.name : null; },
   get world() { return flat.shapes ? flat.shapes.length : 0; },
   get camera() { return { lon: flat.lon, lat: flat.lat, scale: flat.scale }; }
 };

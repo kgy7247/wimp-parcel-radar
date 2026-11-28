@@ -122,6 +122,14 @@ const DHL_ARRIVED_RESPONSE = {
   meta: { source: 'dhl', cached: false, demo: false, fetchedAt: '2026-11-28T01:00:00.000Z' }
 };
 
+/* The API's own answer: the carrier's destination field names Seoul, while the
+   customs notice sits at Incheon. The declared destination has to win. */
+const DHL_PLANNED_RESPONSE = {
+  ...DHL_PRECLEARANCE_RESPONSE,
+  plannedDestination: { lat: 37.5665, lng: 126.978, name: 'SEOUL', detail: 'SEOUL, KOREA', code: 'SEL', country: '대한민국', countryEn: 'South Korea', countryCode: 'KR', precision: 'hub' },
+  meta: { source: 'lastscanned', cached: false, demo: false, fetchedAt: '2026-11-28T01:00:00.000Z' }
+};
+
 const DHL_RESPONSE = {
   ok: true,
   carrier: { code: 'DHL', name: 'DHL', site: 'https://www.dhl.com/kr-ko/home/tracking.html' },
@@ -200,6 +208,7 @@ function buildDom(url = 'https://www.wimp911.com/', browserLanguage = 'ko-KR') {
         if (mode === 'cj') payload = CJ_RESPONSE;
         else if (mode === 'dhl') payload = DHL_RESPONSE;
         else if (mode === 'dhl-pre') payload = DHL_PRECLEARANCE_RESPONSE;
+        else if (mode === 'dhl-planned') payload = DHL_PLANNED_RESPONSE;
         else if (mode === 'dhl-arrived') payload = DHL_ARRIVED_RESPONSE;
         else if (mode === 'upstream') payload = UPSTREAM_RESPONSE;
         else payload = NOT_FOUND_RESPONSE;
@@ -584,12 +593,36 @@ await test('route: a destination customs notice never becomes a stop', async () 
 
   const chips = [...document.querySelectorAll('#countries div')]
     .map((n) => `${n.querySelector('b').textContent} ${n.querySelector('small').textContent}`);
-  assert.deepEqual(chips, ['BG Sofia', 'DE Leipzig'], 'only the physical stops, in order');
+  assert.deepEqual(chips, ['BG Sofia', 'DE Leipzig', 'KR 인천 (예정)'], 'the stops it made, then where it is headed');
   assert.equal($('#location').textContent, 'Leipzig, 독일');
 
   const notice = [...$('#events').querySelectorAll('.event')].find((e) => /이동 스캔 아님/.test(e.querySelector('small').textContent));
   assert.ok(notice, 'the customs notice still appears in the timeline');
   assert.equal(notice.querySelector('h3').textContent, '통관 정보가 갱신되었습니다');
+});
+
+await test('route: the planned leg is drawn dashed from the last stop to the destination', async () => {
+  assert.equal(window.WIMP_MAP.planned, '인천', 'the destination came back from the notice');
+  assert.equal(window.WIMP_MAP.arcs, 2, 'one confirmed leg + one planned leg');
+  assert.equal($('#legend-planned').style.display, 'flex', 'the legend explains the dashed line');
+  assert.equal($('#legend-planned').textContent.trim(), '예정 경로');
+
+  $('#view-flat').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal(window.WIMP_MAP.arcs, 2, 'the 2D map draws the same two legs');
+  assert.equal(window.WIMP_MAP.planned, '인천');
+  $('#view-globe').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+});
+
+await test('route: the carrier destination field beats the customs port', async () => {
+  mode = 'dhl-planned';
+  submit();
+  await tick(120);
+  const chips = [...document.querySelectorAll('#countries div')]
+    .map((n) => `${n.querySelector('b').textContent} ${n.querySelector('small').textContent}`);
+  assert.deepEqual(chips, ['BG Sofia', 'DE Leipzig', 'KR SEOUL (예정)'], 'SEOUL is the address, INCHEON only the gateway');
+  assert.equal($('#location').textContent, 'Leipzig, 독일', 'the destination is not a stop');
+  const codes = [...$('#events').querySelectorAll('.event small')].map((n) => n.textContent);
+  assert.ok(codes.some((t) => /이동 스캔 아님/.test(t)), 'the notice is still labelled as paperwork');
 });
 
 await test('route: a parcel that really lands shows its destination country once, at the end', async () => {
@@ -599,6 +632,8 @@ await test('route: a parcel that really lands shows its destination country once
   const codes = [...document.querySelectorAll('#countries div b')].map((b) => b.textContent);
   assert.deepEqual(codes, ['BG', 'DE', 'KR']);
   assert.equal($('#location').textContent, '인천, 대한민국');
+  assert.equal(window.WIMP_MAP.planned, null, 'arrived: no planned leg left to draw');
+  assert.equal($('#legend-planned').style.display, 'none');
 });
 
 await test('globe: repeated scans at one city collapse into a single marker with its count', async () => {

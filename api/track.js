@@ -1406,6 +1406,7 @@ default a US or French event to Germany. */
     events,
     source: 'dhl',
     carrier: CARRIERS.DHL,
+    destination: shipment.destination || null,
     estimatedDelivery: estimatedDate(null, [shipment.estimatedTimeOfDelivery, shipment.estimatedDeliveryDate]),
   };
 }
@@ -1549,6 +1550,7 @@ async function trackLastscanned(number, carrierId) {
     upstreamCarrier: payload.carrier || carrierId || null,
     carrier: carrierForLastscanned(payload.carrier || carrierId),
     declaredStatus: declared,
+    destination: payload.destination || null,
     estimatedDelivery: estimatedDate(payload.estimatedDelivery, [payload.estimatedDeliveryAt]),
     service: payload.service || null,
     message: payload.message || null,
@@ -1772,6 +1774,88 @@ function routeCountries(points, visits) {
   return countries;
 }
 
+/* ------------------------------------------------------------------ *
+ * Planned destination
+ *   Where a parcel is headed is not a place it has been. The carrier's
+ *   own destination field (“SEOUL, KR”) and the customs notice that opens
+ *   the file at the port of entry (“Customs clearance status updated –
+ *   INCHEON”) both name it, and both are paperwork: they feed only the
+ *   dashed planned leg (current stop → destination) and never route,
+ *   countries or the “last seen” strip.
+ * ------------------------------------------------------------------ */
+
+/** lastscanned `{city,state,country}`, DHL `{address:{addressLocality,countryCode}}` or a plain string. */
+function destinationLocation(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'string') return makeLocation(raw);
+  /* Already resolved (and maybe geocoded) by the handler. */
+  if (Number.isFinite(raw.lat) && Number.isFinite(raw.lng)) return raw;
+  const address = raw.address || raw;
+  const city =
+    address.addressLocality || address.city || address.name || raw.city || raw.name || '';
+  const cc = String(address.countryCode || raw.countryCode || raw.country || '').toUpperCase();
+  const hint = COUNTRY[cc] ? cc : '';
+  if (city) return makeLocation(city, hint ? { countryCode: hint } : undefined);
+  return hint ? makeLocation(COUNTRY[hint].nameEn, { countryCode: hint }) : null;
+}
+
+function sameSpot(a, b) {
+  return Boolean(a && b && Math.abs(a.lat - b.lat) < 0.02 && Math.abs(a.lng - b.lng) < 0.02);
+}
+
+function describeDestination(loc) {
+  return {
+    lat: loc.lat,
+    lng: loc.lng,
+    name: loc.city || loc.name,
+    detail: loc.name,
+    code: loc.code || '',
+    country: loc.country || '',
+    countryEn: loc.countryEn || '',
+    countryCode: loc.countryCode || '',
+    precision: loc.precision || 'country',
+  };
+}
+
+/**
+ * The destination still ahead of the parcel, or null.
+ *   Nothing is drawn once it is delivered or on its way back, when the last
+ *   stop already sits in the destination city/country, or when the only hint
+ *   points at the sender's own country.
+ */
+function plannedDestinationFor(route, ordered, declared) {
+  const lastIndex = route.visits.length ? route.visits[route.visits.length - 1] : -1;
+  const last = lastIndex >= 0 ? route.points[lastIndex] : null;
+  if (!last || !Number.isFinite(last.lat) || !Number.isFinite(last.lng)) return null;
+
+  const routeKeys = new Set(route.points.map((p) => locationKey(p)));
+  const originCc = (route.points[0] && route.points[0].countryCode) || '';
+  const ahead = (loc) => {
+    if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) return false;
+    const cc = String(loc.countryCode || '').toUpperCase();
+    // Same country as the last confirmed stop: it is already there.
+    if (!cc || cc === last.countryCode) return false;
+    // Paperwork at the sender's end is not where the parcel is going.
+    if (originCc && cc === originCc) return false;
+    // A place it has really been is a stop, not a destination.
+    if (routeKeys.has(locationKey(loc))) return false;
+    return !sameSpot(loc, last);
+  };
+
+  if (ahead(declared)) return describeDestination(declared);
+
+  /* No usable destination field: the customs file still names the gateway. */
+  let customs = null;
+  let notice = null;
+  for (const ev of ordered) {
+    if (!isDocumentScan(ev) || !ev.location || !ahead(ev.location)) continue;
+    if (isCustomsScan(ev)) customs = ev.location;
+    else notice = ev.location;
+  }
+  const found = customs || notice;
+  return found ? describeDestination(found) : null;
+}
+
 function summarise(carrierCode, number, events, meta, extra) {
   const opts = extra || {};
   const ordered = sortEvents(dedupeEvents(events));
@@ -1800,6 +1884,10 @@ function summarise(carrierCode, number, events, meta, extra) {
 
   const route = routeModel(ordered);
   const countries = routeCountries(route.points, route.visits);
+  const headingBack = code === 'DELIVERED' || code === 'RETURNED';
+  const plannedDestination = headingBack
+    ? null
+    : plannedDestinationFor(route, ordered, destinationLocation(opts.destination));
 
   return {
     ok: true,
@@ -1830,6 +1918,8 @@ function summarise(carrierCode, number, events, meta, extra) {
       physical: !isDocumentScan(ev),
     })),
     route: route.points,
+    /* The leg still ahead: current stop → destination. Never part of route. */
+    plannedDestination,
     countries,
     meta,
   };
@@ -2040,6 +2130,15 @@ async function handler(req, res) {
         }
       }
 
+      /* The destination is often a city the hub table does not know
+         (“SEOUL” is fine, a suburb is not); give it one lookup too, so the
+         planned leg ends on the town and not on the country's centre. */
+      let destination = destinationLocation(result.destination);
+      if (destination && destination.needsGeocode && Date.now() - startedAt < 5000) {
+        const geo = await geocodeRemote(destination);
+        if (geo && Number.isFinite(geo.lat)) destination = { ...destination, ...geo };
+      }
+
       const meta = {
         source: result.source,
         via: step.via,
@@ -2056,6 +2155,7 @@ async function handler(req, res) {
       const payload = summarise(step.carrier, number, result.events, meta, {
         carrier: result.carrier,
         declaredStatus: result.declaredStatus,
+        destination,
         estimatedDelivery: result.estimatedDelivery,
       });
       cacheSet(cacheKey, payload);
@@ -2168,6 +2268,8 @@ module.exports._internal = {
   buildRoute,
   routeModel,
   routeCountries,
+  plannedDestinationFor,
+  destinationLocation,
   isDocumentScan,
   isCustomsScan,
   locationKey,
